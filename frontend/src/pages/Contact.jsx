@@ -455,7 +455,7 @@ const Contact = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {/* here navigate this button to sign up */}
             <button
-              onClick={() => navigate("/job-creation")}
+              onClick={() => navigate("/drive-creation")}
               className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
             >
               Start Your Drive Now

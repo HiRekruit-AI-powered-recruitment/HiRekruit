@@ -144,7 +144,7 @@ const Drives = () => {
   });
 
   const handleCreateNewDrive = () => {
-    navigate("/job-creation");
+    navigate("/drive-creation");
   };
 
   const handleViewDrive = (driveId) => {

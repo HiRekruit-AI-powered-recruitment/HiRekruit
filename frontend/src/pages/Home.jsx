@@ -128,7 +128,7 @@ const Home = () => {
     });
 
     // Navigate to the Job Creation page
-    navigate("/job-creation");
+    navigate("/drive-creation");
   };
   // Typewriter effect
   useEffect(() => {
@@ -896,7 +896,7 @@ const Home = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate("/job-creation")}
+              onClick={() => navigate("/drive-creation")}
               className="bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-xl hover:shadow-2xl transform hover:scale-105 duration-200"
             >
               Start Your Drive Now

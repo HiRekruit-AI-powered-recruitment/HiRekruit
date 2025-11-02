@@ -21,7 +21,7 @@ const JobCreation = () => {
     company_id: "",
     job_id: "",
     role: "",
-    rounds: [{ type: "Technical", description: "" }],
+    rounds: [{ type: "HR", description: "" }],
     start_date: "",
     end_date: "",
     location: "",
@@ -317,6 +317,9 @@ const JobCreation = () => {
       const data = await response.json();
       console.log("Drive created successfully!", data);
 
+      // **FIX: Save job data to localStorage before navigating**
+      localStorage.setItem("currentJobData", JSON.stringify(jobData));
+
       toast.success("Drive created successfully!", {
         position: "top-right",
         autoClose: 3000,
@@ -340,8 +343,8 @@ const JobCreation = () => {
   };
 
   const roundTypes = [
-    "Technical",
     "HR",
+    "Technical",
     "Behavioral",
     "System Design",
     "Coding",

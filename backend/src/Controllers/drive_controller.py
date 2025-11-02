@@ -673,7 +673,8 @@ def get_shortlisted_candidates_by_job():
                 "current_round": current_round,
                 "rounds_completed": sum(1 for rs in rounds_status if rs.get("completed") == "yes"),
                 "total_rounds": len(rounds_status),
-                "rounds_status": rounds_status
+                "rounds_status": rounds_status,
+                "resume_score" : cand.get("resume_score")
             })
 
         print(f"Total candidates returned: {len(result)}")

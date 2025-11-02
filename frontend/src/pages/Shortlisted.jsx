@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, Award } from "lucide-react";
 
 import Loader from "../components/Loader";
 
@@ -14,7 +14,6 @@ const ShortlistedResumes = () => {
   const [jobId, setJobId] = useState("");
 
   const candidatesPerPage = 5;
-  console.log(BASE_URL)
 
   // Fetch shortlisted candidates for a given Job ID
   const fetchShortlistedCandidates = async (jobIdValue) => {
@@ -28,7 +27,7 @@ const ShortlistedResumes = () => {
     setError(null);
 
     try {
-      // Step 1: Fetch shortlisted candidate IDs
+      // Step 1: Fetch shortlisted candidate IDs with scores
       const response = await fetch(
         `${BASE_URL}/api/drive/job/shortlisted?job_id=${jobIdValue}`
       );
@@ -36,42 +35,62 @@ const ShortlistedResumes = () => {
         throw new Error("Failed to fetch shortlisted candidates");
 
       const data = await response.json();
-      const candidateIds = data.candidates?.map((c) => c.candidate_id) || [];
+      console.log("Full API Response:", data);
+      console.log("Candidates array:", data.candidates);
 
-      if (candidateIds.length === 0) {
+      // Extract candidate info including resume_score
+      const candidateInfo =
+        data.candidates?.map((c) => {
+          console.log("Processing candidate:", c);
+          console.log("Resume score:", c.resume_score);
+          return {
+            candidate_id: c.candidate_id,
+            resume_score: c.resume_score !== undefined ? c.resume_score : null,
+          };
+        }) || [];
+
+      console.log("Extracted candidate info:", candidateInfo);
+
+      if (candidateInfo.length === 0) {
         setCandidates([]);
         setCurrentPage(1);
         return;
       }
 
       // Step 2: Fetch candidate details for each candidate_id
-      const candidateDetailsPromises = candidateIds.map(async (candidateId) => {
-        console.log(candidateId)
+      const candidateDetailsPromises = candidateInfo.map(async (info) => {
         try {
           const res = await fetch(
-            `${BASE_URL}/api/user/candidate?candidate_id=${candidateId}`
+            `${BASE_URL}/api/user/candidate?candidate_id=${info.candidate_id}`
           );
           if (!res.ok)
-            throw new Error(`Failed to fetch candidate ${candidateId}`);
+            throw new Error(`Failed to fetch candidate ${info.candidate_id}`);
           const candidateData = await res.json();
-          const candidateInfo =
+          const candidateDetails =
             candidateData.candidate || candidateData.data || candidateData;
-          return {
-            id: candidateId,
-            name: candidateInfo?.name || "N/A",
-            email: candidateInfo?.email || "N/A",
+
+          const result = {
+            id: info.candidate_id,
+            name: candidateDetails?.name || "N/A",
+            email: candidateDetails?.email || "N/A",
+            resume_score: info.resume_score,
           };
+
+          console.log("Final candidate object:", result);
+          return result;
         } catch (err) {
           console.error(err);
           return {
-            id: candidateId,
+            id: info.candidate_id,
             name: "Error loading",
             email: "Error loading",
+            resume_score: info.resume_score,
           };
         }
       });
 
       const candidateDetails = await Promise.all(candidateDetailsPromises);
+      console.log("All candidate details:", candidateDetails);
       setCandidates(candidateDetails);
       setCurrentPage(1);
     } catch (err) {
@@ -106,6 +125,15 @@ const ShortlistedResumes = () => {
       .map((n) => n[0])
       .join("")
       .toUpperCase();
+  };
+
+  const getScoreColor = (score) => {
+    if (score === null || score === undefined)
+      return "text-gray-600 bg-gray-50 border-gray-200";
+    if (score >= 80) return "text-green-600 bg-green-50 border-green-200";
+    if (score >= 60) return "text-blue-600 bg-blue-50 border-blue-200";
+    if (score >= 40) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+    return "text-red-600 bg-red-50 border-red-200";
   };
 
   if (loading) return <Loader />;
@@ -175,16 +203,38 @@ const ShortlistedResumes = () => {
               key={candidate.id}
               className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-medium text-sm flex-shrink-0">
-                  {getInitials(candidate.name)}
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-medium text-sm flex-shrink-0">
+                    {getInitials(candidate.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                      {candidate.name}
+                    </h3>
+                    <p className="text-gray-600 text-sm">{candidate.email}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-medium text-gray-900 mb-1">
-                    {candidate.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm">{candidate.email}</p>
-                </div>
+
+                {/* Resume Score Badge */}
+                {candidate.resume_score !== null &&
+                  candidate.resume_score !== undefined && (
+                    <div
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${getScoreColor(
+                        candidate.resume_score
+                      )}`}
+                    >
+                      <Award className="w-4 h-4" />
+                      <div className="text-right">
+                        <div className="text-xs font-medium opacity-75">
+                          Resume Score
+                        </div>
+                        <div className="text-2xl font-bold">
+                          {candidate.resume_score}
+                        </div>
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           ))}

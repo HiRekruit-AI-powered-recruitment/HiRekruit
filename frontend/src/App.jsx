@@ -77,7 +77,7 @@ function AppContent() {
 
         {/* Protected Routes */}
         <Route
-          path="/job-creation"
+          path="/drive-creation"
           element={
             <ProtectedRoute>
               <Layout>

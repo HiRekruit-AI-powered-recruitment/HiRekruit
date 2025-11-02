@@ -11,9 +11,7 @@ import "react-toastify/dist/ReactToastify.css";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const Dashboard = () => {
-  const queryParams = new URLSearchParams(window.location.search);
-  const { drive_id } = useParams(); // get the :drive_id from URL
-
+  const { drive_id } = useParams();
   const navigate = useNavigate();
   const [files, setFiles] = useState([]);
   const [processing, setProcessing] = useState(false);
@@ -22,14 +20,19 @@ const Dashboard = () => {
   // Load job data from localStorage when component mounts
   useEffect(() => {
     const savedJobData = localStorage.getItem("currentJobData");
+    console.log("Raw localStorage data:", savedJobData);
+
     if (savedJobData) {
       try {
         const parsedJobData = JSON.parse(savedJobData);
+        console.log("Parsed job data:", parsedJobData);
         setJobData(parsedJobData);
       } catch (error) {
         console.error("Error parsing job data:", error);
         toast.error("Error loading job data");
       }
+    } else {
+      console.log("No job data found in localStorage");
     }
   }, []);
 
@@ -91,7 +94,7 @@ const Dashboard = () => {
 
   const handleCreateNewJob = () => {
     localStorage.removeItem("currentJobData");
-    navigate("/job-creation");
+    navigate("/drive-creation");
   };
 
   return (
@@ -139,62 +142,120 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Job ID:</span>
-              <p className="font-medium">{jobData.job_id}</p>
+              <p className="font-medium">{jobData.job_id || "N/A"}</p>
             </div>
             <div>
               <span className="text-gray-600">Role:</span>
-              <p className="font-medium">{jobData.role}</p>
+              <p className="font-medium">{jobData.role || "N/A"}</p>
             </div>
             <div>
               <span className="text-gray-600">Location:</span>
-              <p className="font-medium">{jobData.location}</p>
+              <p className="font-medium">{jobData.location || "N/A"}</p>
             </div>
             <div>
               <span className="text-gray-600">Start Date:</span>
-              <p className="font-medium">{jobData.start_date}</p>
+              <p className="font-medium">{jobData.start_date || "N/A"}</p>
             </div>
             <div>
               <span className="text-gray-600">End Date:</span>
-              <p className="font-medium">{jobData.end_date}</p>
+              <p className="font-medium">{jobData.end_date || "N/A"}</p>
             </div>
+            <div>
+              <span className="text-gray-600">Job Type:</span>
+              <p className="font-medium capitalize">
+                {jobData.job_type || "N/A"}
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-600">Candidates to Hire:</span>
+              <p className="font-medium">
+                {jobData.candidates_to_hire || "N/A"}
+              </p>
+            </div>
+            {jobData.job_type === "internship" &&
+              jobData.internship_duration && (
+                <div>
+                  <span className="text-gray-600">Duration:</span>
+                  <p className="font-medium">{jobData.internship_duration}</p>
+                </div>
+              )}
             <div>
               <span className="text-gray-600">Interview Rounds:</span>
               <p className="font-medium">
                 {jobData.rounds?.length || 0} rounds
               </p>
             </div>
-            <div>
-              <span className="text-gray-600 font-medium block mb-2">
-                Skills Required:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {jobData.skills && jobData.skills.length > 0 ? (
-                  jobData.skills.map((skill, index) => (
+          </div>
+
+          {/* Skills Section */}
+          {jobData.skills &&
+            (Array.isArray(jobData.skills)
+              ? jobData.skills.length > 0
+              : jobData.skills.trim()) && (
+              <div className="mt-4">
+                <span className="text-gray-600 font-medium block mb-2">
+                  Skills Required:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {(Array.isArray(jobData.skills)
+                    ? jobData.skills
+                    : jobData.skills.split(",").map((s) => s.trim())
+                  ).map((skill, index) => (
                     <span
                       key={index}
                       className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700 font-light shadow-sm hover:bg-blue-200 transition"
                     >
                       {skill}
                     </span>
-                  ))
-                ) : (
-                  <span className="text-gray-400">N/A</span>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
+            )}
 
+          {/* Rounds Section */}
           {jobData.rounds && jobData.rounds.length > 0 && (
             <div className="mt-4">
-              <span className="text-gray-600 text-sm">Rounds:</span>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-gray-600 font-medium block mb-2">
+                Rounds:
+              </span>
+              <div className="flex flex-wrap gap-2">
                 {jobData.rounds.map((round, index) => (
                   <span
                     key={index}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs"
+                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                   >
                     {index + 1}. {round.type}
+                    {round.description && ` - ${round.description}`}
                   </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Coding Questions Section */}
+          {jobData.coding_questions && jobData.coding_questions.length > 0 && (
+            <div className="mt-4">
+              <span className="text-gray-600 font-medium block mb-2">
+                Coding Questions: {jobData.coding_questions.length}
+              </span>
+              <div className="space-y-2">
+                {jobData.coding_questions.map((question, index) => (
+                  <div
+                    key={question.id || index}
+                    className="p-3 bg-gray-50 rounded-md border border-gray-200"
+                  >
+                    <p className="font-medium text-sm text-gray-900">
+                      {index + 1}. {question.title}
+                    </p>
+                    {question.constraints && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Constraints: {question.constraints}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Test Cases: {question.testCases?.length || 0}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>
