@@ -30,7 +30,7 @@ import CustomSignUp from "./pages/CustomSignUp";
 import CustomSignIn from "./pages/CustomSignIn";
 import { UserProfile } from "@clerk/clerk-react";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
-
+import Calendar from "./components/Calender";
 import ProtectedRoute from "./components/ProtectedRoute";
 import useGTMPageView from "./pages/useGTMPageView";
 import Loader from "./components/Loader";
@@ -158,6 +158,16 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <Analytics />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calender"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Calendar />
               </Layout>
             </ProtectedRoute>
           }

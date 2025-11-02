@@ -9,6 +9,7 @@ import {
   Star,
   BarChart3,
   Briefcase,
+  Calendar,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
@@ -19,6 +20,7 @@ const items = [
   { label: "All Applicants", icon: FileText, path: "/resumes" },
   { label: "Shortlisted", icon: Star, path: "/shortlisted" },
   { label: "Analytics", icon: BarChart3, path: "/analytics" },
+  { label: "Calender", icon: Calendar, path: "/calender" },
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
