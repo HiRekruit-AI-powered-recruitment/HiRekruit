@@ -59,7 +59,7 @@ class MockInterviewAgent:
             - Use exactly this format:
             {
             "decision": "SELECT" or "REJECT",
-            "feedback": "Detailed constructive feedback focusing on interview performance, specific examples from conversation, strengths, areas for improvement, and actionable recommendations"
+            
             }
             """
 
@@ -97,3 +97,5 @@ class MockInterviewAgent:
             }
 
         return result
+    
+# # "feedback": "Detailed constructive feedback focusing on interview performance, specific examples from conversation, strengths, areas for improvement, and actionable recommendations"
