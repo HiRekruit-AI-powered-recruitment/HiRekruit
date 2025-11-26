@@ -22,8 +22,8 @@ class InterviewSchedulingAgent:
         interview_datetime = interview_datetime.replace(hour=10, minute=0, second=0, microsecond=0)
 
         # Base meeting link
-        meeting_link = "https://hirekruit.com/start-interview"
-        # meeting_link = "http://localhost:5173/start-interview"
+        # meeting_link = "https://hirekruit.com/start-interview"
+        meeting_link = "http://localhost:5173/start-interview"
 
         # Fetch shortlisted candidates from the database based on drive_id
         shortlisted_candidates = list(db.drive_candidates.find({

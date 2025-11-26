@@ -14,38 +14,37 @@ SMTP_PORT = int(os.getenv("SMTP_PORT"))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
+# print(SMTP_PORT)
+# print(EMAIL_USER)
+# print(EMAIL_PASSWORD)
+# print(SMTP_SERVER)
+
+def get_email_config():
+    SMTP_SERVER = os.getenv("SMTP_SERVER")
+    SMTP_PORT = os.getenv("SMTP_PORT")
+    EMAIL_USER = os.getenv("EMAIL_USER")
+    EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+    if not all([SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD]):
+        raise ValueError("Email configuration missing in environment variables")
+
+    return SMTP_SERVER, int(SMTP_PORT), EMAIL_USER, EMAIL_PASSWORD
+
 # Simplified task names - remove the "src.Tasks.tasks" prefix
 @celery.task(name="email_candidates_task", bind=True)
 def email_candidates_task(self, drive_id):
-    """Send emails to all candidates for a drive"""
     try:
-        print(f"\n{'='*60}")
-        print(f"CELERY TASK STARTED: email_candidates_task")
-        print(f"Drive ID: {drive_id}")
-        print(f"{'='*60}\n")
-        
-        # Validate environment variables
-        if not all([SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD]):
-            raise ValueError("Email configuration missing in environment variables")
-        
+        SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD = get_email_config()
+
         email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
         emailing_agent = EmailingAgent(email_service)
         emailing_agent.send_mail_to_all_candidates(drive_id)
-        
-        print(f"\n{'='*60}")
-        print(f"CELERY TASK COMPLETED: email_candidates_task")
-        print(f"{'='*60}\n")
-        
+
         return {"status": "success", "drive_id": drive_id}
-        
+
     except Exception as e:
-        print(f"\n{'='*60}")
-        print(f"CELERY TASK FAILED: email_candidates_task")
-        print(f"Error: {str(e)}")
-        print(f"{'='*60}\n")
-        import traceback
-        traceback.print_exc()
         raise self.retry(exc=e, countdown=60, max_retries=3)
+
 
 @celery.task(name="send_final_selection_emails_task", bind=True)
 def send_final_selection_emails_task(self, drive_id):

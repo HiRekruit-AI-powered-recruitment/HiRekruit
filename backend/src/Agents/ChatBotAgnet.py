@@ -30,6 +30,7 @@ class ChatBotAgent:
 
         # Call Groq LLM
         response = self.llm.invoke(messages)
+        print("chatbot response",response)
 
         # Extract reply content
         try:

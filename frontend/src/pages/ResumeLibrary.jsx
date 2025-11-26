@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, FileText, ChevronDown } from "lucide-react";
+import { Search, FileText, ChevronDown, Download } from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
 import { toast } from "react-hot-toast";
 import Loader from "../components/Loader";
@@ -113,6 +113,52 @@ const ResumeLibrary = () => {
 
     fetchCandidates();
   }, [selectedDriveId]);
+
+  // Handle resume download
+  const handleResumeDownload = async (resumeUrl, candidateName) => {
+    try {
+      const loadingToast = toast.loading("Downloading resume...");
+      
+      let blob;
+      
+      // Check if it's a base64 data URL
+      if (resumeUrl.startsWith('data:')) {
+        // Extract base64 data
+        const base64Data = resumeUrl.split(',')[1];
+        const mimeType = resumeUrl.match(/data:([^;]+)/)?.[1] || 'application/pdf';
+        
+        // Convert base64 to blob
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        blob = new Blob([byteArray], { type: mimeType });
+      } else {
+        // Regular URL - fetch it
+        const response = await fetch(resumeUrl);
+        if (!response.ok) throw new Error("Failed to fetch resume");
+        blob = await response.blob();
+      }
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${candidateName.replace(/\s+/g, '_')}_Resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.dismiss(loadingToast);
+      toast.success("Resume downloaded successfully!");
+    } catch (error) {
+      toast.error("Failed to download resume");
+      console.error("Download error:", error);
+    }
+  };
 
   // Filter candidates based on search term
   const filteredCandidates = useMemo(() => {
@@ -234,18 +280,17 @@ const ResumeLibrary = () => {
                       <h3 className="text-lg font-medium text-gray-900 mb-1">
                         {candidate.name}
                       </h3>
-                      <p className="text-gray-600 text-sm mb-2">
+                      <p className="text-gray-600 text-sm mb-3">
                         {candidate.email}
                       </p>
                       {candidate.resume_url && (
-                        <a
-                          href={candidate.resume_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                        <button
+                          onClick={() => handleResumeDownload(candidate.resume_url, candidate.name)}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                         >
-                          View Resume
-                        </a>
+                          <Download className="w-4 h-4" />
+                          Download Resume
+                        </button>
                       )}
                     </div>
                   </div>
