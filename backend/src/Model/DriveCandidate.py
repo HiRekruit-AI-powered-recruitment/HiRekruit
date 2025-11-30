@@ -20,10 +20,10 @@ def create_drive_candidate(
         "candidate_id": candidate_id,
         "drive_id": drive_id,
         "resume_shortlisted": resume_shortlisted,
-        "resume_score": resume_score,  # Score assigned after resume shortlisting (e.g., 0-100, or custom range)
+        "resume_score": resume_score,  # Score assigned after resume shortlisting
         "email_sent": email_sent,
-        "rounds_status": rounds_status or [],  # [{"round_number": 1, "round_type": "Technical", "scheduled": "no", "completed": "no", "result": "pending", "feedback": ""}]
-        "current_round": 0,  # Which round the candidate is currently in
+        "rounds_status": rounds_status or [],
+        "current_round": 0,
         "selected": selected,
         "feedback": feedback,
         "final_email_sent": final_email_sent,
@@ -35,6 +35,7 @@ def create_drive_candidate(
 def initialize_candidate_rounds(drive_rounds):
     """
     Initialize rounds_status for a candidate based on drive rounds.
+    Added 'score' field for each round.
     """
     rounds_status = []
     for idx, round_info in enumerate(drive_rounds):
@@ -46,6 +47,7 @@ def initialize_candidate_rounds(drive_rounds):
             "result": "pending",  # pending, passed, failed
             "feedback": "",
             "scheduled_date": None,
-            "completed_date": None
+            "completed_date": None,
+            "score": None    #NEW FIELD → Score for each round
         })
     return rounds_status

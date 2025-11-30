@@ -121,7 +121,7 @@ class EmailingAgent:
         print(f"Success: {success_count}, Errors: {error_count}")
 
     def send_final_selection_emails(self, drive_id):
-        """Send final selection/rejection emails after interviews"""
+        """Send final selection/rejection emails after evaluation results"""
         print(f"\n=== Starting final selection email process for drive: {drive_id} ===")
         
         company_name = "HiRekruit"
@@ -134,24 +134,25 @@ class EmailingAgent:
             
         job_role = drive.get("role", "the position")
         
-        # Fetch all candidates who completed the interview
+        # Fetch all candidates who finished interviews (evaluated)
         candidates = list(db.drive_candidates.find({
-            "drive_id": drive_id, 
-            "interview_completed": "yes"
+            "drive_id": drive_id,
+            "interview_completed": "yes",
+            "evaluation_result": {"$exists": True}  # <-- NEW: must have evaluation JSON
         }))
         
-        print(f"Found {len(candidates)} candidates who completed interviews")
+        print(f"Found {len(candidates)} candidates with completed interviews & evaluation")
         
         if not candidates:
-            print("No candidates found with completed interviews!")
+            print("No evaluated candidates found!")
             return
         
         # Get all candidate IDs
         candidate_ids = [ObjectId(c["candidate_id"]) for c in candidates]
         
-        # Fetch all candidate info in one query
+        # Fetch candidate info in one query
         candidate_info_map = {
-            str(c["_id"]): c 
+            str(c["_id"]): c
             for c in db.candidates.find({"_id": {"$in": candidate_ids}})
         }
         
@@ -162,58 +163,69 @@ class EmailingAgent:
             candidate_info = candidate_info_map.get(person["candidate_id"])
             
             if not candidate_info:
-                print(f"✗ Candidate info not found for ID: {person['candidate_id']}")
+                print(f"✗ Candidate info missing: {person['candidate_id']}")
                 error_count += 1
                 continue
             
             try:
-                decision = person.get("selected", "no").lower()
-                feedback = person.get("feedback", "No feedback provided.")
+                evaluation = person.get("evaluation_result", {})
                 
-                print(f"\nProcessing candidate: {candidate_info['name']} - Decision: {decision}")
+                # Extract scores safely
+                final_score = evaluation.get("final_round_score", 0)
+                decision = evaluation.get("decision", "FAIL").upper()
+                feedback = evaluation.get("feedback", "No feedback provided.")
                 
-                # Prepare email content based on decision
-                if decision == "yes":
+                print(f"\nProcessing: {candidate_info['name']} → Score: {final_score}, Decision: {decision}")
+                
+                # Auto-mark selected or rejected
+                is_selected = "yes" if decision == "PASS" else "no"
+                
+                # Prepare email
+                if decision == "PASS":
                     subject = f"Congratulations! Job Offer from {company_name}"
                     body = (
                         f"Dear {candidate_info['name']},\n\n"
-                        f"Congratulations! You have been selected for the {job_role} position at {company_name}. "
-                        "Please check the attached offer letter for details.\n\n"
-                        "Feel free to reach out with any questions.\n\n"
-                        f"Best regards,\n{company_name} Recruitment Team"
+                        f"Congratulations! You have cleared the final interview for the {job_role} position at {company_name}.\n\n"
+                        f"Your final evaluation score: {final_score}\n\n"
+                        "Please check the attached offer letter for further details.\n\n"
+                        "Best regards,\n"
+                        f"{company_name} Recruitment Team"
                     )
                 else:
                     subject = f"Interview Outcome from {company_name}"
                     body = (
                         f"Dear {candidate_info['name']},\n\n"
-                        f"Thank you for participating in the interview process for the {job_role} role at {company_name}. "
-                        "After careful consideration, we regret to inform you that we will not be moving forward at this time.\n\n"
-                        f"Feedback from the interview:\n{feedback}\n\n"
-                        "We encourage you to apply for future opportunities.\n\n"
+                        f"Thank you for interviewing for the {job_role} position at {company_name}.\n"
+                        "Unfortunately, you were not selected at this time.\n\n"
+                        f"Your Evaluation Score: {final_score}\n"
+                        f"Feedback:\n{feedback}\n\n"
+                        "We encourage you to apply again in the future.\n\n"
                         f"Best regards,\n{company_name} Recruitment Team"
                     )
                 
-                # Send email
+                # Send Email
                 print(f"Sending email to: {candidate_info['email']}")
                 self.email_service.send_email(candidate_info["email"], subject, body)
                 
-                # Update final email status
+                # Update DB
                 db.drive_candidates.update_one(
                     {"_id": person["_id"]},
                     {"$set": {
-                        "final_selection_email_sent": "yes", 
+                        "selected": is_selected,
+                        "total_score": final_score,
+                        "final_selection_email_sent": "yes",
                         "final_email_sent": "yes"
                     }}
                 )
                 
                 success_count += 1
-                print(f"✓ Decision email sent successfully")
-                
+                print(f"✓ Email sent successfully")
+            
             except Exception as e:
                 print(f"✗ Error sending email to {candidate_info.get('email', 'unknown')}: {e}")
                 import traceback
                 traceback.print_exc()
                 error_count += 1
         
-        print(f"\n=== Final Selection Email Process Complete ===")
+        print("\n=== Final Selection Email Process Complete ===")
         print(f"Success: {success_count}, Errors: {error_count}")

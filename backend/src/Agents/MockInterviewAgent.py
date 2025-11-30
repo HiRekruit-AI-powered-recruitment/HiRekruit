@@ -1,4 +1,4 @@
-from src.LLM.Groq import GroqLLM 
+from src.LLM.Groq import GroqLLM
 from src.Prompts.PromptBuilder import PromptBuilder
 from src.Utils.Database import db
 import json
@@ -7,82 +7,71 @@ groq = GroqLLM()
 llm = groq.get_model()
 
 
-
 class MockInterviewAgent:
 
     def evaluate_interview(self, resume_text, transcript):
         print("Evaluating interview MockInterview agent ...")
         
         system_message = """
-            You are an expert HR evaluator with 10+ years of experience in technical hiring. 
-            Your job is to evaluate the candidate's interview performance based on their conversation with the interviewer.
+        You are an expert HR + Technical interviewer evaluator with 10+ years of experience.
+        Your job is to evaluate the candidate’s interview performance and assign a numerical score
+        for this interview round.
 
-            ⚠️ EVALUATION CRITERIA:
+        ⚠️ SCORING RULES (Return all values between 0–100):
 
-            **PRIMARY FOCUS - INTERVIEW PERFORMANCE (80% weight):**
-            1. **Communication Skills** (25%)
-            - Clarity and articulation of responses
-            - Ability to explain technical concepts simply
-            - Active listening and responding appropriately to questions
-            - Professional demeanor and confidence
+        1. Communication Skills (25%)
+           - clarity, explanation ability, confidence
 
-            2. **Technical Knowledge & Problem-Solving** (25%)
-            - Depth of understanding in mentioned technologies
-            - Logical approach to problem-solving questions
-            - Ability to discuss projects and challenges coherently
-            - Quality of technical explanations and examples
+        2. Technical Knowledge & Problem-Solving (25%)
+           - technical depth, logical thinking, project understanding
 
-            3. **Behavioral & Soft Skills** (20%)
-            - Teamwork and collaboration examples
-            - Handling of challenging situations
-            - Learning mindset and adaptability
-            - Leadership potential and initiative
+        3. Behavioral & Soft Skills (20%)
+           - teamwork, leadership, adaptability, attitude
 
-            4. **Interview Engagement** (10%)
-            - Enthusiasm and interest in the role
-            - Quality of questions asked to interviewer
-            - Overall engagement throughout conversation
-            - Cultural fit indicators
+        4. Interview Engagement (10%)
+           - interest, enthusiasm, participation
 
-            **SECONDARY REFERENCE - RESUME ALIGNMENT (20% weight):**
-            - Use resume only to verify if candidate can substantiate their claims
-            - Check consistency between written experience and verbal explanations
-            - Assess if they can elaborate on projects/skills listed
+        5. Resume Alignment (20%)
+           - validation of resume claims based on their spoken answers
 
-            ⚠️ DECISION GUIDELINES:
-            - **SELECT**: Candidate demonstrates strong interview performance with good communication, technical depth, and professional behavior
-            - **REJECT**: Poor communication, inability to explain experience, unprofessional behavior, or major red flags
+        ⚠️ FINAL ROUND SCORE:
+        final_round_score = 
+            (communication_score * 0.25) +
+            (technical_score * 0.25) +
+            (behavioral_score * 0.20) +
+            (engagement_score * 0.10) +
+            (resume_alignment_score * 0.20)
 
-            ⚠️ IMPORTANT FORMATTING:
-            - Always return ONLY valid JSON
-            - No explanations outside JSON structure
-            - Use exactly this format:
-            {
-            "decision": "SELECT" or "REJECT",
-            
-            }
-            """
+        DECISION RULE:
+        - PASS if final_round_score >= 60
+        - FAIL if final_round_score < 60
+
+        ⚠️ OUTPUT FORMAT — VERY IMPORTANT:
+        Return ONLY valid JSON with this exact structure:
+
+        {
+          "communication_score": number,
+          "technical_score": number,
+          "behavioral_score": number,
+          "engagement_score": number,
+          "resume_alignment_score": number,
+          "final_round_score": number,
+          "decision": "PASS" or "FAIL",
+          "feedback": "string feedback with strengths & improvements"
+        }
+        """
 
         human_message = f"""
-            **CANDIDATE RESUME (For Reference Only):**
-            {resume_text}
+        **CANDIDATE RESUME (Reference Only):**
+        {resume_text}
 
-            **INTERVIEW CONVERSATION (Primary Evaluation Source):**
-            {transcript}
+        **INTERVIEW TRANSCRIPT (Primary Evaluation Source):**
+        {transcript}
 
-            **EVALUATION TASK:**
-            Evaluate this candidate's interview performance based primarily on their conversation with the interviewer. Focus on:
+        Evaluate the candidate based ONLY on the transcript. 
+        Provide category-wise scores and overall decision.
+        """
 
-            1. How well did they communicate and explain their thoughts?
-            2. Did they demonstrate technical knowledge when discussing their experience?
-            3. How did they handle behavioral and situational questions?
-            4. Were they engaged and professional throughout?
-            5. Can they substantiate the experience mentioned in their resume through their responses?
-
-            Provide specific examples from the conversation to support your evaluation.
-            """
-
-        # Build prompt with system + human message
         prompt = PromptBuilder.build(system_message, human_message)
         response = llm.invoke(prompt)
 
@@ -92,10 +81,14 @@ class MockInterviewAgent:
             print("Evaluation Result:", result)
         except Exception:
             result = {
-                "decision": "REJECT",
+                "communication_score": 0,
+                "technical_score": 0,
+                "behavioral_score": 0,
+                "engagement_score": 0,
+                "resume_alignment_score": 0,
+                "final_round_score": 0,
+                "decision": "FAIL",
                 "feedback": "Could not parse structured output."
             }
 
         return result
-    
-# # "feedback": "Detailed constructive feedback focusing on interview performance, specific examples from conversation, strengths, areas for improvement, and actionable recommendations"
