@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   useLocation,
+  Outlet,
 } from "react-router-dom";
 import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 
@@ -38,6 +39,11 @@ import Loader from "./components/Loader";
 import Assessment from "./pages/Assessment";
 import Instructions from "./pages/Instructions";
 import AssessmentSubmission from "./components/CodingAssessment/AssessmentSubmission";
+
+// admin pages
+import AdminCompanies from "./components/AdminDashboard/AdminCompanies";
+import AdminDashboard from "./components/AdminDashboard/AdminDashboard";
+import AdminLayout from "./components/AdminDashboard/AdminLayout";
 
 function AppContent() {
   const location = useLocation();
@@ -197,6 +203,19 @@ function AppContent() {
           path="/assessment-submission"
           element={<AssessmentSubmission />}
         />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminLayout>
+              <Outlet />
+            </AdminLayout>
+          }
+        >
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="companies" element={<AdminCompanies />} />
+        </Route>
       </Routes>
 
       {showChatbot && <Chatbot />}
