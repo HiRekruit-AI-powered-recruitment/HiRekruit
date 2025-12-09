@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   Mic,
@@ -10,6 +10,8 @@ import {
   Monitor,
   Loader2,
   AlertCircle,
+  Camera,
+  CameraOff,
 } from "lucide-react";
 
 import Vapi from "@vapi-ai/web";
@@ -21,6 +23,12 @@ const InterviewPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { userData, prompt } = location.state || {};
+
+  const videoRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const animationFrameRef = useRef(null);
 
   const [resumeText, setResumeText] = useState(userData?.resume_content || "");
   const [isMuted, setIsMuted] = useState(false);
@@ -36,6 +44,13 @@ const InterviewPage = () => {
   const [isCheckingCompletion, setIsCheckingCompletion] = useState(true);
   const [interviewAlreadyCompleted, setInterviewAlreadyCompleted] =
     useState(false);
+  const [cameraPermission, setCameraPermission] = useState("prompt");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  // Avatar animation states
+  const [mouthOpen, setMouthOpen] = useState(0);
+  const [blinkState, setBlinkState] = useState(false);
 
   const checkInterviewCompletion = useCallback(async () => {
     if (!driveId) {
@@ -68,6 +83,117 @@ const InterviewPage = () => {
       setIsCheckingCompletion(false);
     }
   }, [driveId]);
+
+  // Initialize webcam
+  const initializeCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: true,
+      });
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      mediaStreamRef.current = stream;
+      setCameraPermission("granted");
+
+      // Setup audio visualization
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+
+      analyser.fftSize = 256;
+      source.connect(analyser);
+
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      return stream;
+    } catch (error) {
+      console.error("Error accessing camera:", error);
+      setCameraPermission("denied");
+      setConnectionError(
+        "Camera access denied. Please allow camera permissions."
+      );
+      return null;
+    }
+  }, []);
+
+  // Stop webcam
+  const stopCamera = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+  }, []);
+
+  // Toggle video
+  const toggleVideo = useCallback(() => {
+    if (mediaStreamRef.current) {
+      const videoTrack = mediaStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
+    }
+  }, []);
+
+  // Toggle audio
+  const toggleAudio = useCallback(() => {
+    if (mediaStreamRef.current) {
+      const audioTrack = mediaStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  }, []);
+
+  // Simulate AI speaking with audio visualization
+  useEffect(() => {
+    if (interviewStarted && isSpeaking) {
+      const interval = setInterval(() => {
+        const randomLevel = Math.random() * 0.8 + 0.2;
+        setAudioLevel(randomLevel);
+        setMouthOpen(randomLevel);
+      }, 100);
+
+      return () => clearInterval(interval);
+    } else {
+      setAudioLevel(0);
+      setMouthOpen(0);
+    }
+  }, [interviewStarted, isSpeaking]);
+
+  // Blink animation for avatar
+  useEffect(() => {
+    const blinkInterval = setInterval(() => {
+      setBlinkState(true);
+      setTimeout(() => setBlinkState(false), 150);
+    }, 3000 + Math.random() * 2000);
+
+    return () => clearInterval(blinkInterval);
+  }, []);
+
+  // Simulate speaking patterns
+  useEffect(() => {
+    if (interviewStarted) {
+      const speakingInterval = setInterval(() => {
+        setIsSpeaking((prev) => !prev);
+      }, 5000);
+
+      return () => clearInterval(speakingInterval);
+    }
+  }, [interviewStarted]);
 
   const initializeVapi = useCallback(() => {
     if (interviewAlreadyCompleted) return null;
@@ -116,12 +242,14 @@ const InterviewPage = () => {
         setIsRecording(true);
         setIsConnecting(false);
         setCurrentQuestion("Interview started. Please introduce yourself.");
+        setIsSpeaking(true);
       });
 
       client.on("call-end", async () => {
         setInterviewStarted(false);
         setIsRecording(false);
         setIsConnecting(false);
+        setIsSpeaking(false);
 
         const conversationOnly = finalMessages
           .filter((m) => m.role === "user" || m.role === "assistant")
@@ -143,6 +271,13 @@ const InterviewPage = () => {
                 driveId,
               }),
             });
+
+            if (!res.ok) {
+              throw new Error(`Evaluation failed: ${res.status}`);
+            }
+
+            const evaluationData = await res.json();
+            console.log("Interview evaluated:", evaluationData);
           } catch (err) {
             console.error("Evaluation error:", err);
           }
@@ -154,6 +289,7 @@ const InterviewPage = () => {
         setIsConnecting(false);
         setInterviewStarted(false);
         setIsRecording(false);
+        setIsSpeaking(false);
       });
 
       setVapiClient(client);
@@ -229,6 +365,11 @@ const InterviewPage = () => {
   }, [checkInterviewCompletion]);
 
   useEffect(() => {
+    initializeCamera();
+    return () => stopCamera();
+  }, [initializeCamera, stopCamera]);
+
+  useEffect(() => {
     let client = null;
     if (
       resumeText &&
@@ -266,7 +407,8 @@ const InterviewPage = () => {
       resumeText &&
       !interviewStarted &&
       !isConnecting &&
-      !interviewAlreadyCompleted
+      !interviewAlreadyCompleted &&
+      cameraPermission === "granted"
     ) {
       const timer = setTimeout(() => {
         handleStartInterview();
@@ -281,6 +423,7 @@ const InterviewPage = () => {
     isConnecting,
     handleStartInterview,
     interviewAlreadyCompleted,
+    cameraPermission,
   ]);
 
   const ConnectionStatus = () => {
@@ -343,6 +486,90 @@ const InterviewPage = () => {
     );
   };
 
+  // Animated Avatar Component
+  const AnimatedAvatar = () => {
+    const eyeHeight = blinkState ? 2 : 12;
+    const mouthHeight = mouthOpen * 20;
+
+    return (
+      <div className="relative w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <svg
+          width="200"
+          height="200"
+          viewBox="0 0 200 200"
+          className="drop-shadow-lg"
+        >
+          {/* Head */}
+          <circle cx="100" cy="100" r="80" fill="#6366f1" />
+
+          {/* Eyes */}
+          <ellipse cx="75" cy="85" rx="12" ry={eyeHeight} fill="white" />
+          <ellipse cx="125" cy="85" rx="12" ry={eyeHeight} fill="white" />
+
+          {/* Pupils */}
+          {!blinkState && (
+            <>
+              <circle cx="75" cy="85" r="6" fill="#1e293b" />
+              <circle cx="125" cy="85" r="6" fill="#1e293b" />
+            </>
+          )}
+
+          {/* Mouth */}
+          <ellipse
+            cx="100"
+            cy="120"
+            rx="25"
+            ry={Math.max(3, mouthHeight)}
+            fill="#e11d48"
+            className="transition-all duration-100"
+          />
+
+          {/* Audio level indicator */}
+          {isSpeaking && (
+            <>
+              <circle
+                cx="100"
+                cy="100"
+                r={80 + audioLevel * 20}
+                fill="none"
+                stroke="#818cf8"
+                strokeWidth="2"
+                opacity={audioLevel * 0.5}
+                className="transition-all duration-100"
+              />
+              <circle
+                cx="100"
+                cy="100"
+                r={80 + audioLevel * 30}
+                fill="none"
+                stroke="#818cf8"
+                strokeWidth="1"
+                opacity={audioLevel * 0.3}
+                className="transition-all duration-100"
+              />
+            </>
+          )}
+        </svg>
+
+        {isSpeaking && (
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-1">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 bg-indigo-500 rounded-full transition-all duration-100"
+                style={{
+                  height: `${
+                    (Math.sin(Date.now() / 100 + i) * 0.5 + 0.5) * 20 + 10
+                  }px`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (interviewAlreadyCompleted) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -393,7 +620,7 @@ const InterviewPage = () => {
                       interviewStarted ? "bg-green-500" : "bg-gray-400"
                     }`}
                   ></div>
-                  {userData?.name || "Candidate"} • Mock Interview
+                  {userData?.name || "Candidate"} • Interview
                 </div>
                 <ConnectionStatus />
               </div>
@@ -411,16 +638,9 @@ const InterviewPage = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           {/* AI Interviewer Section */}
           <div className="bg-white border-2 border-black rounded-lg overflow-hidden">
-            <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center relative">
-              <div className="text-center p-4">
-                <h3 className="text-black text-lg font-medium mb-2">
-                  AI Interviewer
-                </h3>
-                {isConnecting && (
-                  <Loader2 className="w-6 h-6 text-black animate-spin mx-auto" />
-                )}
-              </div>
-              {interviewStarted && (
+            <div className="aspect-video relative">
+              <AnimatedAvatar />
+              {interviewStarted && isSpeaking && (
                 <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium border border-green-700">
                   Speaking
                 </div>
@@ -445,16 +665,45 @@ const InterviewPage = () => {
 
           {/* Candidate Video Section */}
           <div className="bg-white border-2 border-black rounded-lg overflow-hidden relative">
-            <div className="aspect-video bg-gray-900 flex items-center justify-center relative">
-              <div className="text-gray-400 text-center">
-                <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Video will be implemented here</p>
-              </div>
+            <div className="aspect-video bg-gray-900 flex items-center justify-center relative overflow-hidden">
+              {cameraPermission === "granted" && !isVideoOff ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              ) : cameraPermission === "denied" ? (
+                <div className="text-gray-400 text-center p-4">
+                  <CameraOff className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Camera access denied</p>
+                  <p className="text-xs mt-1">
+                    Please enable camera in settings
+                  </p>
+                </div>
+              ) : isVideoOff ? (
+                <div className="text-gray-400 text-center">
+                  <VideoOff className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Video is off</p>
+                </div>
+              ) : (
+                <div className="text-gray-400 text-center">
+                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-50 animate-pulse" />
+                  <p className="text-sm">Requesting camera access...</p>
+                </div>
+              )}
 
               {isRecording && (
                 <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs flex items-center gap-2 font-medium border border-red-700">
                   <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                   Recording
+                </div>
+              )}
+
+              {isMuted && (
+                <div className="absolute top-4 right-4 bg-red-600 text-white p-2 rounded-full">
+                  <MicOff className="w-4 h-4" />
                 </div>
               )}
 
@@ -498,7 +747,7 @@ const InterviewPage = () => {
         {/* Controls */}
         <div className="bg-white border-2 border-black rounded-lg p-4 flex items-center justify-center gap-4">
           <button
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={toggleAudio}
             disabled={!interviewStarted}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors border-2 ${
               !interviewStarted
@@ -516,7 +765,7 @@ const InterviewPage = () => {
           </button>
 
           <button
-            onClick={() => setIsVideoOff(!isVideoOff)}
+            onClick={toggleVideo}
             disabled={!interviewStarted}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors border-2 ${
               !interviewStarted
@@ -537,10 +786,18 @@ const InterviewPage = () => {
             <button
               onClick={handleStartInterview}
               disabled={
-                !isVapiReady || !resumeText || isConnecting || !!connectionError
+                !isVapiReady ||
+                !resumeText ||
+                isConnecting ||
+                !!connectionError ||
+                cameraPermission !== "granted"
               }
               className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors border-2 ${
-                isVapiReady && resumeText && !isConnecting && !connectionError
+                isVapiReady &&
+                resumeText &&
+                !isConnecting &&
+                !connectionError &&
+                cameraPermission === "granted"
                   ? "bg-green-500 hover:bg-green-600 text-white border-green-600"
                   : "bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300"
               }`}

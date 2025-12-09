@@ -297,11 +297,11 @@ const InterviewCompletionPage = () => {
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2 text-gray-700 px-3 py-2 border border-gray-300 rounded-lg">
                 <Mail className="w-4 h-4" />
-                <span>hr@company.com</span>
+                <span>hirekruit@gmail.com</span>
               </div>
               <div className="flex items-center gap-2 text-gray-700 px-3 py-2 border border-gray-300 rounded-lg">
                 <Phone className="w-4 h-4" />
-                <span>+1 (555) 123-4567</span>
+                <span>+91 6202908328</span>
               </div>
             </div>
           </div>
