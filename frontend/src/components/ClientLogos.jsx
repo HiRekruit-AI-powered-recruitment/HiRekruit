@@ -63,7 +63,7 @@ const ClientLogos = () => {
             Trusted by Industry Leaders
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Join thousands of companies who rely on our platform
+            Join hundreds of companies who rely on our platform
           </p>
         </div>
 

@@ -506,7 +506,7 @@ const Home = () => {
               What Our Users Say
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Join thousands of companies transforming their hiring process
+              Join hundreds of companies transforming their hiring process
             </p>
           </div>
           <div>

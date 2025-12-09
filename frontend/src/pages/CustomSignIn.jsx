@@ -1,10 +1,19 @@
 import { useSignIn } from "@clerk/clerk-react";
 import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle, User, Building } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  LogIn,
+  AlertCircle,
+  User,
+  Building,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function CustomSignIn() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const { isLoaded, signIn, setActive } = useSignIn();
 
   const [name, setName] = useState("");
@@ -30,7 +39,7 @@ export default function CustomSignIn() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-        
+
         // Optional: Send additional profile data to backend if needed
         try {
           const res = await fetch("http://localhost:5000/api/user/login", {
@@ -58,7 +67,9 @@ export default function CustomSignIn() {
       if (err.errors) {
         setErrors(err.errors);
       } else {
-        setErrors([{ message: "Invalid email or password. Please try again." }]);
+        setErrors([
+          { message: "Invalid email or password. Please try again." },
+        ]);
       }
     } finally {
       setIsLoading(false);
@@ -66,14 +77,14 @@ export default function CustomSignIn() {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSignIn();
     }
   };
 
   const renderErrors = (errorList) => {
     if (!errorList || errorList.length === 0) return null;
-    
+
     return (
       <div className="mb-4 p-3 bg-gray-50 border border-gray-300 rounded-lg">
         <div className="flex items-start">
@@ -102,7 +113,7 @@ export default function CustomSignIn() {
       <div className="relative w-full max-w-md">
         {/* CAPTCHA container - required for Clerk */}
         <div id="clerk-captcha" className="mb-4"></div>
-        
+
         <div className="bg-white/80 backdrop-blur-lg shadow-2xl rounded-3xl p-8 border border-white/20">
           <div className="space-y-6">
             <div className="text-center">
@@ -118,7 +129,7 @@ export default function CustomSignIn() {
             {renderErrors(errors)}
 
             <div className="space-y-4">
-              <div className="relative">
+              {/* <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" />
                 </div>
@@ -131,7 +142,7 @@ export default function CustomSignIn() {
                   onKeyPress={handleKeyPress}
                   required
                 />
-              </div>
+              </div> */}
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -148,7 +159,7 @@ export default function CustomSignIn() {
                 />
               </div>
 
-              <div className="relative">
+              {/* <div className="relative">
                 <select
                   className="block w-full px-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50/50 backdrop-blur-sm appearance-none"
                   value={role}
@@ -159,13 +170,23 @@ export default function CustomSignIn() {
                   <option value="employee">Employee</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
-              </div>
+              </div> */}
 
-              <div className="relative">
+              {/* <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Building className="h-5 w-5 text-gray-400" />
                 </div>
@@ -178,7 +199,7 @@ export default function CustomSignIn() {
                   onKeyPress={handleKeyPress}
                   required
                 />
-              </div>
+              </div> */}
 
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -214,7 +235,10 @@ export default function CustomSignIn() {
                     type="checkbox"
                     className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600">
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-sm text-gray-600"
+                  >
                     Remember me
                   </label>
                 </div>
@@ -228,7 +252,7 @@ export default function CustomSignIn() {
 
               <button
                 onClick={handleSignIn}
-                disabled={isLoading || !name || !email || !companyName || !password}
+                disabled={isLoading || !email || !password}
                 className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:scale-100 shadow-lg hover:shadow-xl"
               >
                 {isLoading ? (
@@ -242,11 +266,13 @@ export default function CustomSignIn() {
               </button>
             </div>
 
-
             <div className="text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
-                <button className="font-medium text-black hover:text-gray-700 transition-colors cursor-pointer hover:underline" onClick={() => navigate("/signup")}>
+                <button
+                  className="font-medium text-black hover:text-gray-700 transition-colors cursor-pointer hover:underline"
+                  onClick={() => navigate("/signup")}
+                >
                   Sign up
                 </button>
               </p>
