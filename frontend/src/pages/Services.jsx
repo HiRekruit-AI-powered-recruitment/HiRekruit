@@ -277,7 +277,7 @@ const Services = () => {
       </section>
 
       {/* Pricing Plans */}
-      <section className="py-20 px-6 bg-white">
+      {/* <section className="py-20 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
@@ -412,7 +412,7 @@ const Services = () => {
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
       <section className="py-16 px-6 bg-gradient-to-r from-black to-gray-800">

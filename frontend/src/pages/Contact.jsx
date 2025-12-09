@@ -443,7 +443,7 @@ const Contact = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 px-6 bg-gradient-to-r from-gray-900 to-gray-800">
+      <section className="py-16 px-6 bg-gradient-to-r from-black to-gray-800">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
             Ready to Get Started?

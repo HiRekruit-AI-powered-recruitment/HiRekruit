@@ -24,6 +24,7 @@ import {
   Shield,
 } from "lucide-react";
 import Testimonials from "../components/Testimonials";
+import ClientLogos from "../components/ClientLogos";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -508,7 +509,7 @@ const Home = () => {
               Join thousands of companies transforming their hiring process
             </p>
           </div>
-          <div className="overflow-hidden">
+          <div>
             <Testimonials />
           </div>
         </div>
@@ -530,7 +531,10 @@ const Home = () => {
             {/* Problem Card */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-white p-8 md:p-12 rounded-3xl border-2 border-gray-300 shadow-lg hover:shadow-2xl transition-all duration-500 hover:border-gray-400">
+              <div
+                className="relative bg-gradient-to-r from-white to-gray-300
+ p-8 md:p-12 rounded-3xl border-2 border-gray-300 shadow-lg hover:shadow-2xl transition-all duration-500 hover:border-gray-400"
+              >
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-gray-900 p-4 rounded-2xl shadow-lg">
                     <svg
@@ -596,7 +600,7 @@ const Home = () => {
             {/* Solution Card */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-gray-900 p-8 md:p-12 rounded-3xl border-2 border-gray-800 shadow-lg hover:shadow-2xl transition-all duration-500">
+              <div className="relative bg-gradient-to-r from-black to-gray-800 p-8 md:p-12 rounded-3xl border-2 border-gray-800 shadow-lg hover:shadow-2xl transition-all duration-500">
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-white p-4 rounded-2xl shadow-lg">
                     <svg
@@ -664,6 +668,8 @@ const Home = () => {
           </div>
         </div>
       </section>
+      {/* Our Clients*/}
+      <ClientLogos />
 
       {/* How It Works */}
       <section className="py-20 px-6 bg-white">
@@ -682,7 +688,11 @@ const Home = () => {
             {/* Step 1 */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-white p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center">
+              <div
+                className="relative bg-gradient-to-r from-gray-200 to-white
+
+ p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
+              >
                 <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">1</span>
                 </div>
@@ -699,7 +709,10 @@ const Home = () => {
             {/* Step 2 */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-white p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center">
+              <div
+                className="relative bg-gradient-to-r from-gray-200 to-white
+ p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
+              >
                 <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">2</span>
                 </div>
@@ -716,7 +729,10 @@ const Home = () => {
             {/* Step 3 */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-white p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center">
+              <div
+                className="relative bg-gradient-to-r from-gray-200 to-white
+ p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
+              >
                 <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">3</span>
                 </div>
@@ -733,7 +749,10 @@ const Home = () => {
             {/* Step 4 */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-              <div className="relative bg-white p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center">
+              <div
+                className="relative bg-gradient-to-r from-gray-200 to-white
+ p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
+              >
                 <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">4</span>
                 </div>
@@ -772,7 +791,10 @@ const Home = () => {
             {features.map((feature, index) => (
               <div key={index} className="relative group">
                 <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
-                <div className="relative bg-white p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl">
+                <div
+                  className="relative bg-gradient-to-r from-gray-200 to-white
+ p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl"
+                >
                   <div className="w-14 h-14 bg-gray-900 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                     <feature.icon className="w-7 h-7 text-white" />
                   </div>
@@ -885,7 +907,7 @@ const Home = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-24 px-6 bg-gray-900">
+      <section className="py-16 px-6 bg-gradient-to-r from-black to-gray-800">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
             Ready to Transform Your Hiring?
