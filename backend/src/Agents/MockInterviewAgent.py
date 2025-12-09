@@ -14,10 +14,10 @@ class MockInterviewAgent:
         
         system_message = """
         You are an expert HR + Technical interviewer evaluator with 10+ years of experience.
-        Your job is to evaluate the candidate’s interview performance and assign a numerical score
+        Your job is to evaluate the candidate's interview performance and assign a numerical score
         for this interview round.
 
-        ⚠️ SCORING RULES (Return all values between 0–100):
+        ⚠️ SCORING RULES (Return all values between 0-100):
 
         1. Communication Skills (25%)
            - clarity, explanation ability, confidence

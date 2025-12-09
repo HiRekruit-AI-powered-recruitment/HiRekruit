@@ -14,7 +14,7 @@ class InterviewSchedulingAgent:
         """
         shortlisted_candidates: list of dicts -> [{'name': 'John Doe', 'email': 'john@example.com'}, ...]
         interview_datetime: datetime object for interview (default: tomorrow 10 AM)
-        meeting_link: base link to the interview (default: Google Meet link)
+        meeting_link: base link to the interview 
         """
 
         # For simplicity, scheduling all interviews for tomorrow at 10 AM

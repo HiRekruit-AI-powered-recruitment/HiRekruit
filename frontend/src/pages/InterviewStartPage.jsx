@@ -67,13 +67,8 @@ const InterviewStartPage = () => {
           className="bg-white border-2 border-black rounded-lg p-6 mb-6"
         >
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-black mb-2">
-              AI Mock Interview
-            </h1>
-            <p className="text-gray-700">
-              Prepare for your next opportunity with AI-powered interview
-              simulation
-            </p>
+            <h1 className="text-3xl font-bold text-black mb-2">AI Interview</h1>
+            <p className="text-gray-700">AI-powered interview simulation</p>
           </div>
         </motion.div>
 
@@ -175,7 +170,7 @@ const InterviewStartPage = () => {
               className="bg-white border-2 border-black rounded-lg p-8 text-center"
             >
               <h3 className="text-xl font-semibold text-black mb-4">
-                Ready to Start Your Mock Interview?
+                Ready to Start Your Interview?
               </h3>
               <motion.button
                 onClick={handleStartInterview}
