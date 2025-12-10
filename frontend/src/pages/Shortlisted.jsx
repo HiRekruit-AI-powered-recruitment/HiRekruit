@@ -151,7 +151,38 @@ const ShortlistedResumes = () => {
       </div>
 
       {/* Filters */}
-      <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
+        {/* Job ID Search Input */}
+        <div className="flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Enter Job ID..."
+            value={jobId}
+            onChange={(e) => setJobId(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter") fetchShortlistedCandidates(jobId);
+            }}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm transition-colors"
+          />
+        </div>
+
+        {/* Search and Clear Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fetchShortlistedCandidates(jobId)}
+            className="px-6 py-3 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-black transition-colors"
+          >
+            Search
+          </button>
+          <button
+            onClick={() => setJobId("")}
+            className="px-6 py-3 rounded-lg text-sm font-medium bg-gray-900 text-white hover:bg-black transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+
+        {/* Name/Email Search Input */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -164,25 +195,6 @@ const ShortlistedResumes = () => {
             }}
             className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 bg-white focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm transition-colors"
           />
-        </div>
-
-        <div className="flex gap-2 flex-1 max-w-md">
-          <input
-            type="text"
-            placeholder="Enter Job ID..."
-            value={jobId}
-            onChange={(e) => setJobId(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") fetchShortlistedCandidates(jobId);
-            }}
-            className="flex-1 px-3 py-3 rounded-lg border border-gray-300 bg-white focus:ring-1 focus:ring-gray-400 focus:border-gray-400 text-sm transition-colors"
-          />
-          <button
-            onClick={() => fetchShortlistedCandidates(jobId)}
-            className="px-6 py-3 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-          >
-            Search
-          </button>
         </div>
       </div>
 

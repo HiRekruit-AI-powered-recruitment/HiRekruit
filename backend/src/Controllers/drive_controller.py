@@ -605,6 +605,125 @@ def get_drive_candidates(drive_id):
         return jsonify({"error": str(e)}), 400
 
 
+def get_drive_candidates_by_job(job_id):
+    """
+    Find drive by job_id and return all candidates for that drive.
+    """
+    try:
+        if not job_id:
+            return jsonify({"error": "job_id is required"}), 400
+
+        print(f"Fetching candidates for job_id: {job_id}")
+
+        drive = db.drives.find_one({"job_id": job_id})
+        if not drive:
+            return jsonify({"error": "No drive found for this job_id"}), 404
+
+        drive_id = str(drive.get("_id")) if drive and "_id" in drive else None
+        if not drive_id:
+            return jsonify({"error": "Drive id not found"}), 404
+
+        # Find all drive_candidate records for this drive
+        drive_candidates = list(db.drive_candidates.find({"drive_id": drive_id}))
+
+        # Collect unique candidate_ids referenced by drive_candidates
+        candidate_ids = []
+        for dc in drive_candidates:
+            cid = dc.get("candidate_id") or dc.get("candidateId") or dc.get("candidate")
+            if cid and cid not in candidate_ids:
+                candidate_ids.append(cid)
+
+        # Fetch candidate documents from candidates collection
+        result_candidates = []
+        for cid in candidate_ids:
+            try:
+                # Try ObjectId lookup first
+                obj_id = ObjectId(cid)
+                cand = db.candidates.find_one({"_id": obj_id})
+            except Exception:
+                # Fallback: try to find by a string id field
+                cand = db.candidates.find_one({"_id": cid}) or db.candidates.find_one({"candidate_id": cid})
+
+            if not cand:
+                # candidate document not found; skip
+                print(f"Candidate document not found for id: {cid}")
+                continue
+
+            # Normalize candidate schema: include only candidate fields
+            cand_doc = {
+                "_id": str(cand.get("_id")),
+                "name": cand.get("name"),
+                "email": cand.get("email"),
+                "resume_content": cand.get("resume_content"),
+                "resume_url": cand.get("resume_url"),
+                "created_at": cand.get("created_at"),
+                "updated_at": cand.get("updated_at")
+            }
+            result_candidates.append(cand_doc)
+
+        return jsonify({"candidates": result_candidates, "count": len(result_candidates), "drive_id": drive_id}), 200
+    except Exception as e:
+        print(f"Error in get_drive_candidates_by_job: {str(e)}")
+        return jsonify({"error": str(e)}), 400
+
+
+def remove_application_by_job(job_id, candidate_id):
+    """
+    Remove (delete) a drive_candidate record for the given job_id and candidate_id.
+    This deletes only the drive_candidate document (application), not the candidate document itself.
+    """
+    try:
+        if not job_id or not candidate_id:
+            return jsonify({"error": "job_id and candidate_id are required"}), 400
+
+        print(f"Removing application for job_id: {job_id}, candidate_id: {candidate_id}")
+
+        drive = db.drives.find_one({"job_id": job_id})
+        if not drive:
+            return jsonify({"error": "No drive found for this job_id"}), 404
+
+        drive_id = str(drive.get("_id")) if drive and "_id" in drive else None
+        if not drive_id:
+            return jsonify({"error": "Drive id not found"}), 404
+
+        # Build deletion query: match drive_id and candidate_id (try ObjectId or string)
+        base_query = {"drive_id": drive_id}
+        deleted_count = 0
+
+        # Try ObjectId candidate_id match first
+        try:
+            obj_cid = ObjectId(candidate_id)
+            query = {**base_query, "$or": [{"candidate_id": obj_cid}, {"candidate_id": candidate_id}, {"candidateId": candidate_id}]}
+            res = db.drive_candidates.delete_one(query)
+            deleted_count = res.deleted_count
+        except Exception:
+            # candidate_id is not a valid ObjectId or ObjectId lookup failed, try string matches
+            query = {**base_query, "$or": [{"candidate_id": candidate_id}, {"candidateId": candidate_id}]}
+            res = db.drive_candidates.delete_one(query)
+            deleted_count = res.deleted_count
+
+        if deleted_count == 0:
+            # Second attempt: try to delete by drive_candidate _id
+            try:
+                obj_dc = ObjectId(candidate_id)
+                res2 = db.drive_candidates.delete_one({"_id": obj_dc, "drive_id": drive_id})
+                deleted_count = res2.deleted_count
+            except Exception:
+                pass
+
+        if deleted_count == 0:
+            return jsonify({"error": "No application found to delete"}), 404
+
+        print(f"Deleted {deleted_count} drive_candidate records for candidate {candidate_id} in drive {drive_id}")
+        return jsonify({"message": "Application removed successfully", "deleted_count": deleted_count}), 200
+
+    except Exception as e:
+        print(f"Error in remove_application_by_job: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
 def get_drive_id_by_job():
     """
     Get drive IDs by job ID.
