@@ -160,42 +160,44 @@ const Process = () => {
 
   const determineCurrentStep = (drive, dynamicSteps) => {
     const status = drive.status;
-    const currentRound = drive.current_round || 0;
     const roundStatuses = drive.round_statuses || [];
+    const roundsCount = drive.rounds?.length || 0;
 
-    // If in resume phase
-    if (status === "resumeUploaded") return 0;
-    if (status === "resumeShortlisted") return 1;
-    if (status === "emailSent") return 2;
-
-    // If in rounds phase
-    if (currentRound > 0) {
-      // Find the step index for the current round
-      const roundStepIndex = dynamicSteps.findIndex(
-        (step) => step.isRound && step.roundNumber === currentRound
-      );
-
-      if (roundStepIndex !== -1) {
-        // Check if current round is completed
-        const currentRoundStatus = roundStatuses.find(
-          (rs) => rs.round_number === currentRound
-        );
-
-        if (currentRoundStatus && currentRoundStatus.status === "completed") {
-          // Move to next round or final step
-          return roundStepIndex + 1;
-        }
-
-        return roundStepIndex;
-      }
-    }
-
-    // If all rounds completed or final selection
+    // Fast-complete
     if (status === "selectionEmailSent" || status === "completed") {
       return dynamicSteps.length - 1;
     }
 
-    return 0;
+    // Base steps according to status
+    let completedSteps = 0;
+    if (status === "resumeUploaded") completedSteps = 1;
+    else if (status === "resumeShortlisted") completedSteps = 2;
+    else if (status === "emailSent") completedSteps = 3;
+
+    // Count completed rounds
+    const completedRounds = (roundStatuses || []).filter(
+      (rs) => rs.status === "completed"
+    ).length;
+    completedSteps += completedRounds;
+
+    // If there's an in-progress round that isn't completed, add half-step
+    const hasInProgress = (roundStatuses || []).some(
+      (rs) => rs.status === "in_progress"
+    );
+    if (hasInProgress) completedSteps += 0.5;
+
+    // Ensure completedSteps doesn't exceed totalSteps - 1
+    const totalSteps = 4 + roundsCount;
+    if (completedSteps > totalSteps - 1) completedSteps = totalSteps - 1;
+
+    // Map completedSteps to step index in dynamicSteps
+    // dynamicSteps: [0:resume_upload, 1:resume_shortlist, 2:email_sent, 3..3+roundsCount-1:rounds, 3+roundsCount:selection_email]
+    let stepIndex = Math.floor(completedSteps);
+
+    // Clamp to valid range
+    stepIndex = Math.max(0, Math.min(stepIndex, dynamicSteps.length - 1));
+
+    return stepIndex;
   };
 
   const updateDriveStatus = async (step) => {

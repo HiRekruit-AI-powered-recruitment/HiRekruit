@@ -44,7 +44,24 @@ class EmailingAgent:
         print(f"\n=== Starting email process for drive: {drive_id} ===")
         
         templates = self.create_email_templates()
+        # Resolve company name from drive -> company document
         company_name = "HiRekruit"
+        try:
+            drive = db.drives.find_one({"_id": ObjectId(drive_id)}, {"company_id": 1})
+            if drive:
+                comp_id = drive.get("company_id")
+                if comp_id:
+                    # try ObjectId lookup first, fall back to raw value
+                    try:
+                        company_doc = db.companies.find_one({"_id": ObjectId(comp_id)})
+                    except Exception:
+                        company_doc = db.companies.find_one({"_id": comp_id}) or db.companies.find_one({"company_id": comp_id})
+
+                    if company_doc and company_doc.get("name"):
+                        company_name = company_doc.get("name")
+        except Exception:
+            # on any lookup failure, keep default company_name
+            pass
 
         # Get all candidates for this drive
         candidates = list(db.drive_candidates.find({"drive_id": drive_id}))
@@ -124,10 +141,25 @@ class EmailingAgent:
         """Send final selection/rejection emails after evaluation results"""
         print(f"\n=== Starting final selection email process for drive: {drive_id} ===")
         
+        # Resolve company name from drive -> company document
         company_name = "HiRekruit"
+        try:
+            drive = db.drives.find_one({"_id": ObjectId(drive_id)}, {"role": 1, "company_id": 1})
+            if drive:
+                comp_id = drive.get("company_id")
+                if comp_id:
+                    try:
+                        company_doc = db.companies.find_one({"_id": ObjectId(comp_id)})
+                    except Exception:
+                        company_doc = db.companies.find_one({"_id": comp_id}) or db.companies.find_one({"company_id": comp_id})
+
+                    if company_doc and company_doc.get("name"):
+                        company_name = company_doc.get("name")
+        except Exception:
+            pass
         
         # Fetch job role
-        drive = db.drives.find_one({"_id": ObjectId(drive_id)}, {"role": 1})
+        drive = drive or db.drives.find_one({"_id": ObjectId(drive_id)}, {"role": 1})
         if not drive:
             print(f"✗ Drive not found: {drive_id}")
             return

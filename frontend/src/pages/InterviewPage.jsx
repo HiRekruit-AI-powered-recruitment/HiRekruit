@@ -19,10 +19,18 @@ import Vapi from "@vapi-ai/web";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const InterviewPage = () => {
-  const { driveId } = useParams();
+  const params = useParams();
+  const routeDriveId = params.driveId;
   const location = useLocation();
   const navigate = useNavigate();
   const { userData, prompt } = location.state || {};
+  // The ID passed from the form may actually be a driveCandidate id (sometimes named `driveId` in state).
+  // Prefer an explicit `driveCandidateId` from location.state, fall back to `driveId` or route param.
+  const stateDriveId =
+    (location &&
+      (location.state?.driveCandidateId || location.state?.driveId)) ||
+    null;
+  const driveCandidateId = stateDriveId || routeDriveId;
 
   const videoRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -53,8 +61,8 @@ const InterviewPage = () => {
   const [blinkState, setBlinkState] = useState(false);
 
   const checkInterviewCompletion = useCallback(async () => {
-    if (!driveId) {
-      setConnectionError("Drive ID is required");
+    if (!driveCandidateId) {
+      setConnectionError("Drive Candidate ID is required");
       setIsCheckingCompletion(false);
       return;
     }
@@ -62,7 +70,7 @@ const InterviewPage = () => {
     try {
       setIsCheckingCompletion(true);
       const response = await fetch(
-        `${BASE_URL}/api/interview/candidate/${driveId}`
+        `${BASE_URL}/api/interview/candidate/${driveCandidateId}`
       );
 
       if (!response.ok) {
@@ -70,7 +78,7 @@ const InterviewPage = () => {
       }
 
       const data = await response.json();
-
+      console.log("candidate info :", data);
       if (data.interview_completed && data.interview_completed !== "no") {
         setInterviewAlreadyCompleted(true);
       } else {
@@ -82,7 +90,7 @@ const InterviewPage = () => {
     } finally {
       setIsCheckingCompletion(false);
     }
-  }, [driveId]);
+  }, [driveCandidateId]);
 
   // Initialize webcam
   const initializeCamera = useCallback(async () => {
@@ -268,7 +276,7 @@ const InterviewPage = () => {
               body: JSON.stringify({
                 resumeText,
                 transcript: conversationOnly,
-                driveId,
+                driveId: driveCandidateId,
               }),
             });
 
@@ -303,7 +311,7 @@ const InterviewPage = () => {
       setIsVapiReady(false);
       return null;
     }
-  }, [resumeText, driveId, interviewAlreadyCompleted]);
+  }, [resumeText, driveCandidateId, interviewAlreadyCompleted]);
 
   const handleStartInterview = useCallback(async () => {
     if (!vapiClient || !resumeText || !prompt) {
@@ -356,9 +364,21 @@ const InterviewPage = () => {
     setIsConnecting(false);
 
     navigate("/interview-completion", {
-      state: { userData, driveId, resumeText, conversation: conversationData },
+      state: {
+        userData,
+        driveId: driveCandidateId,
+        resumeText,
+        conversation: conversationData,
+      },
     });
-  }, [vapiClient, conversation, navigate, userData, driveId, resumeText]);
+  }, [
+    vapiClient,
+    conversation,
+    navigate,
+    userData,
+    driveCandidateId,
+    resumeText,
+  ]);
 
   useEffect(() => {
     checkInterviewCompletion();

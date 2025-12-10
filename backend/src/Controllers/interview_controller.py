@@ -3,7 +3,7 @@ import io, json, os
 from flask import jsonify, request
 from src.Utils.VapiService import upload_resume
 import pdfplumber
-
+from bson import ObjectId
 from dotenv import load_dotenv
 from src.Utils.Database import db
 from datetime import datetime
@@ -80,24 +80,42 @@ def evaluate_interview_controller(resume_text, transcript, driveId):
         # Call the Mock Interview Agent
         result = mock_interview_agent.evaluate_interview(resume_text, conversation_only)
 
-        decision = result.get("decision", "REJECT")
+        decision = result.get("decision", "FAIL")
         feedback = result.get("feedback", "No feedback provided")
+        final_round_score = result.get("final_round_score", 0)
 
         # here we will update drive candidate and update the interview_completed and selected field status in db
         if driveId:
-            drive_candidate = db.drive_candidates.find_one({"_id": ObjectId(driveId)}, sort=[("created_at", -1)])
+            drive_candidate = db.drive_candidates.find_one({"_id": ObjectId(driveId)})
             if drive_candidate:
+                current_round = drive_candidate.get("current_round", 0)
+                rounds_status = drive_candidate.get("rounds_status", [])
+
+                # Find and update the current round status
+                updated_rounds = False
+                for round_info in rounds_status:
+                    if round_info.get("round_number") == current_round:
+                        round_info["completed"] = "yes"
+                        round_info["completed_date"] = datetime.utcnow()
+                        round_info["result"] = "passed" if decision == "PASS" else "failed"
+                        round_info["feedback"] = feedback
+                        round_info["score"] = final_round_score
+                        updated_rounds = True
+                        print(f"Updated round {current_round} for candidate {driveId}")
+                        break
+
                 db.drive_candidates.update_one(
                     {"_id": drive_candidate["_id"]},
                     {
                         "$set": {
-                            "interview_completed": "yes",
-                            "selected": "yes" if decision == "SELECT" else "no",
+                            "rounds_status": rounds_status,
+                            "selected": "yes" if decision == "PASS" else "no",
                             "feedback": feedback,
                             "updated_at": datetime.utcnow()
                         }
                     }
                 )
+                print(f"Drive candidate {driveId} updated with round completion status")
             else:
                 print(f"No drive candidate found for driveId: {driveId}")
         else:
@@ -110,7 +128,7 @@ def evaluate_interview_controller(resume_text, transcript, driveId):
 
         return jsonify({"error": str(e)}), 500
 
-from bson import ObjectId
+
 
 def get_candidate_info(drive_candidate_id):
     try:

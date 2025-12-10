@@ -43,8 +43,8 @@ class MockInterviewAgent:
             (resume_alignment_score * 0.20)
 
         DECISION RULE:
-        - PASS if final_round_score >= 60
-        - FAIL if final_round_score < 60
+        - PASS if final_round_score >= 70
+        - FAIL if final_round_score < 70
 
         ⚠️ OUTPUT FORMAT — VERY IMPORTANT:
         Return ONLY valid JSON with this exact structure:

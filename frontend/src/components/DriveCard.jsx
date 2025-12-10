@@ -32,69 +32,72 @@ const DriveCard = ({ drive, onView }) => {
 
   // Get drive progress based on rounds
   const getDriveProgress = () => {
+    // Steps: 1) resumeUploaded, 2) resumeShortlisted, 3) emailSent,
+    // then one step per round, then final selection email => totalSteps = 4 + rounds.length
+    const roundsCount = rounds?.length || 0;
+    const totalSteps = 4 + roundsCount;
+
+    // Completed steps (can be fractional for in-progress round)
+    let completedSteps = 0;
+
+    // Fast-complete
     if (status === "selectionEmailSent" || status === "completed") {
       return { text: "Completed", color: "green", percentage: 100 };
     }
 
-    if (!round_statuses || round_statuses.length === 0) {
-      // Legacy status handling
-      if (status === "resumeUploaded") {
-        return { text: "Resume Screening", color: "blue", percentage: 10 };
-      }
-      if (status === "resumeShortlisted") {
-        return {
-          text: "Candidates Shortlisted",
-          color: "blue",
-          percentage: 25,
-        };
-      }
-      if (status === "emailSent") {
-        return { text: "Emails Sent", color: "blue", percentage: 40 };
-      }
-    }
+    // Base steps according to status
+    if (status === "resumeUploaded") completedSteps = 1;
+    else if (status === "resumeShortlisted") completedSteps = 2;
+    else if (status === "emailSent") completedSteps = 3;
 
-    const totalRounds = round_statuses?.length || 0;
-    const currentRoundNum = current_round || 0;
+    // Count completed rounds
+    const completedRounds = (round_statuses || []).filter(
+      (rs) => rs.status === "completed"
+    ).length;
+    completedSteps += completedRounds;
 
-    if (currentRoundNum === 0) {
-      if (status === "resumeShortlisted") {
-        return {
-          text: "Candidates Shortlisted",
-          color: "blue",
-          percentage: 20,
-        };
-      }
-      return { text: "Resume Screening", color: "blue", percentage: 10 };
-    }
-
-    const currentRoundStatus = round_statuses?.find(
-      (rs) => rs.round_number === currentRoundNum
+    // If there's an in-progress round that isn't completed, add half-step
+    const hasInProgress = (round_statuses || []).some(
+      (rs) => rs.status === "in_progress"
     );
+    if (hasInProgress) completedSteps += 0.5;
 
-    if (currentRoundStatus) {
-      const basePercentage = ((currentRoundNum - 1) / totalRounds) * 80 + 20;
-      const roundProgress = currentRoundStatus.status === "completed" ? 1 : 0.5;
-      const percentage = Math.round(
-        basePercentage + (80 / totalRounds) * roundProgress
+    // Ensure completedSteps doesn't exceed totalSteps - 1 (final will be selectionEmailSent)
+    if (completedSteps > totalSteps - 1) completedSteps = totalSteps - 1;
+
+    const percentage = Math.round((completedSteps / totalSteps) * 100);
+
+    // Determine display text and color
+    let text = "";
+    let color = "blue";
+
+    if (completedSteps < 1) {
+      text = "Drive Created";
+      color = "gray";
+    } else if (completedSteps < 2) {
+      text = "Resume Screening";
+      color = "blue";
+    } else if (completedSteps < 3) {
+      text = "Candidates Shortlisted";
+      color = "blue";
+    } else if (completedSteps < 3 + roundsCount) {
+      // Round stage
+      const nextRound = Math.min(
+        roundsCount,
+        Math.max(1, Math.floor(completedSteps - 3) + 1)
       );
-
-      let statusText = `Round ${currentRoundNum}: ${currentRoundStatus.round_type}`;
-      let statusColor = "orange";
-
-      if (currentRoundStatus.status === "completed") {
-        statusColor = "green";
-      } else if (currentRoundStatus.status === "in_progress") {
-        statusColor = "blue";
-      }
-
-      return { text: statusText, color: statusColor, percentage };
+      const roundType =
+        rounds && rounds[nextRound - 1]
+          ? rounds[nextRound - 1].type
+          : `Round ${nextRound}`;
+      text = `Round ${nextRound}: ${roundType}`;
+      color = hasInProgress ? "orange" : "blue";
+    } else {
+      text = "Final Selection";
+      color = "orange";
     }
 
-    return {
-      text: `Round ${currentRoundNum}/${totalRounds}`,
-      color: "gray",
-      percentage: (currentRoundNum / totalRounds) * 80 + 20,
-    };
+    return { text, color, percentage };
   };
 
   const driveProgress = getDriveProgress();
