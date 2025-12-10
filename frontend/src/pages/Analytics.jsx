@@ -1,11 +1,26 @@
 import { useState } from "react";
 import { Users, CheckCircle, Send, Search } from "lucide-react";
 import { Doughnut, Bar } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement } from "chart.js";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+} from "chart.js";
 import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement);
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  BarElement
+);
 
 export default function Analytics() {
   const [jobId, setJobId] = useState("");
@@ -41,7 +56,9 @@ export default function Analytics() {
       if (!driveIdValue) throw new Error("No drive ID found for this Job ID");
       setDriveId(driveIdValue);
 
-      const totalRes = await fetch(`${BASE_URL}/api/drive/${driveIdValue}/candidates`);
+      const totalRes = await fetch(
+        `${BASE_URL}/api/drive/${driveIdValue}/candidates`
+      );
       if (!totalRes.ok) throw new Error("Failed to fetch total candidates");
       const totalData = await totalRes.json();
       const totalCandidates = Array.isArray(totalData)
@@ -51,14 +68,20 @@ export default function Analytics() {
       const shortlistedRes = await fetch(
         `${BASE_URL}/api/drive/job/shortlisted?job_id=${jobId}`
       );
-      if (!shortlistedRes.ok) throw new Error("Failed to fetch shortlisted candidates");
+      if (!shortlistedRes.ok)
+        throw new Error("Failed to fetch shortlisted candidates");
       const shortlistedData = await shortlistedRes.json();
       const shortlistedCount = Array.isArray(shortlistedData)
         ? shortlistedData.length
-        : shortlistedData.candidates?.length || shortlistedData.shortlisted?.length || 0;
+        : shortlistedData.candidates?.length ||
+          shortlistedData.shortlisted?.length ||
+          0;
 
-      const selectedRes = await fetch(`${BASE_URL}/api/drive/${driveIdValue}/candidates`);
-      if (!selectedRes.ok) throw new Error("Failed to fetch selected candidates");
+      const selectedRes = await fetch(
+        `${BASE_URL}/api/drive/${driveIdValue}/candidates`
+      );
+      if (!selectedRes.ok)
+        throw new Error("Failed to fetch selected candidates");
       const selectedData = await selectedRes.json();
       const selectedCount = Array.isArray(selectedData)
         ? selectedData.filter((c) => c.selected === "yes").length
@@ -81,14 +104,18 @@ export default function Analytics() {
 
   // Doughnut chart for distribution
   const doughnutData = {
-    labels: showOffers 
-      ? ["Shortlisted", "Selected", "Not Shortlisted"] 
+    labels: showOffers
+      ? ["Shortlisted", "Selected", "Not Shortlisted"]
       : ["Shortlisted", "Not Shortlisted"],
     datasets: [
       {
         label: "Candidates",
         data: showOffers
-          ? [stats.shortlisted, stats.selected, stats.total - stats.shortlisted - stats.selected]
+          ? [
+              stats.shortlisted,
+              stats.selected,
+              stats.total - stats.shortlisted - stats.selected,
+            ]
           : [stats.shortlisted, stats.total - stats.shortlisted],
         backgroundColor: showOffers
           ? ["#0369a1", "#a78bfa", "#4b5563"]
@@ -116,21 +143,24 @@ export default function Analytics() {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
-            const label = context.label || '';
+          label: function (context) {
+            const label = context.label || "";
             const value = context.parsed || 0;
             const total = context.dataset.data.reduce((a, b) => a + b, 0);
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            const percentage =
+              total > 0 ? ((value / total) * 100).toFixed(1) : 0;
             return `${label}: ${value} (${percentage}%)`;
-          }
-        }
-      }
+          },
+        },
+      },
     },
   };
 
   // Bar chart for percentages
-  const shortlistedPercentage = stats.total > 0 ? ((stats.shortlisted / stats.total) * 100).toFixed(1) : 0;
-  const selectedPercentage = stats.total > 0 ? ((stats.selected / stats.total) * 100).toFixed(1) : 0;
+  const shortlistedPercentage =
+    stats.total > 0 ? ((stats.shortlisted / stats.total) * 100).toFixed(1) : 0;
+  const selectedPercentage =
+    stats.total > 0 ? ((stats.selected / stats.total) * 100).toFixed(1) : 0;
 
   const barData = {
     labels: ["Shortlisted %", "Selected %"],
@@ -150,15 +180,15 @@ export default function Analytics() {
     maintainAspectRatio: true,
     animation: {
       duration: 1200,
-      easing: 'easeInOutQuart',
+      easing: "easeInOutQuart",
     },
     scales: {
       y: {
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: function(value) {
-            return value + '%';
+          callback: function (value) {
+            return value + "%";
           },
           font: { size: 11 },
           color: "#4b5563",
@@ -183,25 +213,32 @@ export default function Analytics() {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             return `${context.parsed.y}%`;
-          }
-        }
-      }
+          },
+        },
+      },
     },
   };
 
   if (loading) return <Loader />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Drive Analytics</h1>
+      <div className="bg-white border-b">
+        <div className="max-w-6xl mx-auto px-6 py-8">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+            Drive Analytics
+          </h1>
+          <p className="text-sm text-gray-600">
+            View complete drive analytics by Job ID
+          </p>
+        </div>
       </div>
 
       {/* Search Input */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 mb-8 max-w-xl">
+      <div className="flex flex-col sm:flex-row items-center gap-3 mb-8 max-w-xl py-6">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -286,8 +323,14 @@ export default function Analytics() {
             <Bar data={barData} options={barOptions} />
           </div>
           <div className="mt-4 text-center text-sm text-gray-600">
-            <p>Shortlisted: <span className="font-semibold">{shortlistedPercentage}%</span></p>
-            <p>Selected: <span className="font-semibold">{selectedPercentage}%</span></p>
+            <p>
+              Shortlisted:{" "}
+              <span className="font-semibold">{shortlistedPercentage}%</span>
+            </p>
+            <p>
+              Selected:{" "}
+              <span className="font-semibold">{selectedPercentage}%</span>
+            </p>
           </div>
         </div>
       </div>
@@ -309,4 +352,3 @@ function StatCard({ title, value, change, icon: Icon }) {
     </div>
   );
 }
-
