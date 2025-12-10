@@ -13,6 +13,7 @@ const JobCreation = () => {
   console.log(BASE_URL);
 
   const [loading, setLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [companyId, setCompanyId] = useState(null);
   const [fetchingHRInfo, setFetchingHRInfo] = useState(true);
   const [showCodingQuestions, setShowCodingQuestions] = useState(false);
@@ -26,6 +27,10 @@ const JobCreation = () => {
     end_date: "",
     location: "",
     skills: "",
+    // New experience fields
+    experience_type: "fresher", // 'fresher' or 'experienced'
+    experience_min: "",
+    experience_max: "",
     candidates_to_hire: "",
     job_type: "full-time",
     internship_duration: "",
@@ -236,6 +241,9 @@ const JobCreation = () => {
       candidates_to_hire,
       job_type,
       internship_duration,
+      experience_type,
+      experience_min,
+      experience_max,
     } = jobData;
 
     if (
@@ -272,6 +280,45 @@ const JobCreation = () => {
       return;
     }
 
+    // Validate experience range when hiring experienced candidates
+    if (experience_type === "experienced") {
+      const minStr = (experience_min || "").toString().trim();
+      const maxStr = (experience_max || "").toString().trim();
+
+      if (!minStr || !maxStr) {
+        toast.error(
+          "Please specify both minimum and maximum experience (years)",
+          {
+            position: "top-right",
+            autoClose: 3000,
+          }
+        );
+        setLoading(false);
+        return;
+      }
+
+      const minNum = Number(minStr);
+      const maxNum = Number(maxStr);
+
+      if (
+        Number.isNaN(minNum) ||
+        Number.isNaN(maxNum) ||
+        minNum < 0 ||
+        maxNum < 0 ||
+        minNum > maxNum
+      ) {
+        toast.error(
+          "Please provide a valid experience range where min <= max",
+          {
+            position: "top-right",
+            autoClose: 3000,
+          }
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     // Validate coding questions if coding round exists
     if (showCodingQuestions && jobData.coding_questions.length > 0) {
       for (const question of jobData.coding_questions) {
@@ -303,6 +350,17 @@ const JobCreation = () => {
     }
 
     console.log("Submitting job data:", jobData);
+
+    // show custom react modal to confirm submission
+    setLoading(false);
+    setShowConfirmModal(true);
+    return;
+  };
+
+  // Called when user confirms in the modal
+  const confirmSubmit = async () => {
+    setShowConfirmModal(false);
+    setLoading(true);
     try {
       const response = await fetch(`${BASE_URL}/api/drive/create`, {
         method: "POST",
@@ -317,7 +375,7 @@ const JobCreation = () => {
       const data = await response.json();
       console.log("Drive created successfully!", data);
 
-      // **FIX: Save job data to localStorage before navigating**
+      // Save job data to localStorage before navigating
       localStorage.setItem("currentJobData", JSON.stringify(jobData));
 
       toast.success("Drive created successfully!", {
@@ -373,6 +431,126 @@ const JobCreation = () => {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/20">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-4 max-h-[80vh] overflow-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-3">
+                Confirm Drive Details
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Please check the entered details carefully. You won't be able to
+                change them after submission.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-800 mb-4">
+                <div>
+                  <strong>Company ID:</strong> {jobData.company_id || "N/A"}
+                </div>
+                <div>
+                  <strong>Job ID:</strong> {jobData.job_id || "N/A"}
+                </div>
+                <div>
+                  <strong>Role:</strong> {jobData.role || "N/A"}
+                </div>
+                <div>
+                  <strong>Location:</strong> {jobData.location || "N/A"}
+                </div>
+                <div>
+                  <strong>Start Date:</strong> {jobData.start_date || "N/A"}
+                </div>
+                <div>
+                  <strong>End Date:</strong> {jobData.end_date || "N/A"}
+                </div>
+                <div>
+                  <strong>Job Type:</strong> {jobData.job_type || "N/A"}
+                </div>
+                <div>
+                  <strong>Candidates to Hire:</strong>{" "}
+                  {jobData.candidates_to_hire || "N/A"}
+                </div>
+                <div>
+                  <strong>Hiring Type:</strong>{" "}
+                  {jobData.experience_type === "experienced"
+                    ? "Experienced"
+                    : "Fresher"}
+                </div>
+                {jobData.experience_type === "experienced" && (
+                  <div>
+                    <strong>Experience Range:</strong>{" "}
+                    {jobData.experience_min || "N/A"} -{" "}
+                    {jobData.experience_max || "N/A"} years
+                  </div>
+                )}
+                <div className="md:col-span-2">
+                  <strong>Skills:</strong>
+                  <div className="mt-1 text-sm text-gray-700">
+                    {jobData.skills
+                      ? Array.isArray(jobData.skills)
+                        ? jobData.skills.join(", ")
+                        : jobData.skills
+                      : "N/A"}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <strong>Interview Rounds:</strong>
+                  <div className="mt-1 text-sm text-gray-700 space-y-1">
+                    {jobData.rounds && jobData.rounds.length > 0 ? (
+                      jobData.rounds.map((r, i) => (
+                        <div key={i} className="pl-2">
+                          {i + 1}. <span className="font-medium">{r.type}</span>
+                          {r.description ? ` - ${r.description}` : ""}
+                        </div>
+                      ))
+                    ) : (
+                      <div>N/A</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <strong>Coding Questions:</strong>
+                  <div className="mt-1 text-sm text-gray-700 space-y-1">
+                    {jobData.coding_questions &&
+                    jobData.coding_questions.length > 0 ? (
+                      jobData.coding_questions.map((q, idx) => (
+                        <div key={q.id || idx} className="pl-2">
+                          {idx + 1}.{" "}
+                          <span className="font-medium">
+                            {q.title || "Untitled"}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div>N/A</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSubmit}
+                  disabled={loading}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
+                  }`}
+                >
+                  {loading ? "Submitting..." : "Confirm & Submit"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <ToastContainer />
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -462,6 +640,76 @@ const JobCreation = () => {
             />
           </div>
         )}
+
+        {/* Experience (Fresher / Experienced) */}
+        <div className="mt-4">
+          <label className="block text-gray-700 mb-2 font-medium">
+            Hiring Type
+          </label>
+          <div className="flex items-center gap-4">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="experience_type"
+                value="fresher"
+                checked={jobData.experience_type === "fresher"}
+                onChange={(e) =>
+                  handleInputChange("experience_type", e.target.value)
+                }
+                className="form-radio"
+              />
+              <span>Fresher</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="experience_type"
+                value="experienced"
+                checked={jobData.experience_type === "experienced"}
+                onChange={(e) =>
+                  handleInputChange("experience_type", e.target.value)
+                }
+                className="form-radio"
+              />
+              <span>Experienced</span>
+            </label>
+          </div>
+
+          {jobData.experience_type === "experienced" && (
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Min Experience (years)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={jobData.experience_min}
+                  onChange={(e) =>
+                    handleInputChange("experience_min", e.target.value)
+                  }
+                  placeholder="e.g., 1"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">
+                  Max Experience (years)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={jobData.experience_max}
+                  onChange={(e) =>
+                    handleInputChange("experience_max", e.target.value)
+                  }
+                  placeholder="e.g., 5"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Skills */}
         <div>

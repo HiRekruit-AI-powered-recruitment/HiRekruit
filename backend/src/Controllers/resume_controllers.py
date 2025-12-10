@@ -1,8 +1,12 @@
 from flask import request, jsonify
 from werkzeug.utils import secure_filename
+from bson import ObjectId
+from datetime import datetime
 import cloudinary.uploader
 from src.Orchestrator.HiringOrchestrator import create_driveCandidate
 from src.Config.cloudinary_config import cloudinary
+from src.Utils.Database import db
+from src.Model.Drive import DriveStatus
 
 def upload_resumes():
     print("Received request to upload resumes")
@@ -36,6 +40,18 @@ def upload_resumes():
 
     # Pass URLs instead of file paths
     result = create_driveCandidate(uploaded_urls, skills, job_role, drive_id)
+
+    # Update drive status to resumeUploaded after successful resume upload
+    try:
+        drive_object_id = ObjectId(drive_id)
+        db.drives.update_one(
+            {"_id": drive_object_id},
+            {"$set": {"status": DriveStatus.RESUME_UPLOADED, "updated_at": datetime.utcnow()}}
+        )
+        print(f"Drive status updated to {DriveStatus.RESUME_UPLOADED} for drive_id: {drive_id}")
+    except Exception as e:
+        print(f"Error updating drive status: {str(e)}")
+        return jsonify({"error": f"Failed to update drive status: {str(e)}"}), 500
 
     return jsonify({
         "status": "success",

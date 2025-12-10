@@ -167,6 +167,25 @@ const Dashboard = () => {
               </p>
             </div>
             <div>
+              <span className="text-gray-600">Hiring Type:</span>
+              <p className="font-medium">
+                {jobData.experience_type
+                  ? jobData.experience_type === "experienced"
+                    ? "Experienced"
+                    : "Fresher"
+                  : "N/A"}
+              </p>
+            </div>
+            {jobData.experience_type === "experienced" && (
+              <div>
+                <span className="text-gray-600">Experience Range:</span>
+                <p className="font-medium">
+                  {jobData.experience_min || "N/A"} -{" "}
+                  {jobData.experience_max || "N/A"} years
+                </p>
+              </div>
+            )}
+            <div>
               <span className="text-gray-600">Candidates to Hire:</span>
               <p className="font-medium">
                 {jobData.candidates_to_hire || "N/A"}

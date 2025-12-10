@@ -42,6 +42,10 @@ def create_drive_controller():
     job_type = data.get("job_type", JobType.FULL_TIME)
     internship_duration = data.get("internship_duration")
     coding_questions = data.get("coding_questions", [])
+    # Experience fields from frontend
+    experience_type = data.get("experience_type")
+    experience_min = data.get("experience_min")
+    experience_max = data.get("experience_max")
 
     # Validation
     if not company_id:
@@ -112,7 +116,11 @@ def create_drive_controller():
             rounds=rounds,
             job_id=job_id,
             internship_duration=internship_duration,
-            coding_question_ids=coding_question_ids
+            coding_question_ids=coding_question_ids,
+            experience_type=experience_type,
+            experience_min=experience_min,
+            experience_max=experience_max,
+            status=DriveStatus.DRIVE_CREATED
         )
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
