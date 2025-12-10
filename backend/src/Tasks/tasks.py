@@ -61,15 +61,16 @@ def send_final_selection_emails_task(self, drive_id):
         raise self.retry(exc=e, countdown=60, max_retries=3)
 
 @celery.task(name="schedule_interviews_task", bind=True)
-def schedule_interviews_task(self, drive_id):
+def schedule_interviews_task(self, drive_id, round_type="hr"):
     """Schedule interviews for candidates"""
     try:
-        print(f"Starting interview scheduling process for drive {drive_id}")
+        print(f"Starting interview scheduling process for drive {drive_id} with round_type {round_type}")
         email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
         interview_agent = InterviewSchedulingAgent(email_service)
-        interview_agent.schedule_interviews(drive_id)
+        # Pass round_type through to the agent
+        interview_agent.schedule_interviews(drive_id, round_type)
         print(f"Interviews scheduled for drive {drive_id}")
-        return {"status": "success", "drive_id": drive_id}
+        return {"status": "success", "drive_id": drive_id, "round_type": round_type}
     except Exception as e:
         print(f"Error in schedule_interviews_task: {str(e)}")
         raise self.retry(exc=e, countdown=60, max_retries=3)

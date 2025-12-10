@@ -21,13 +21,9 @@ from src.Tasks.tasks import (
 
 
 def create_drive_controller():
-    """
-    Create a new drive with optional coding questions and dynamic round tracking.
-    """
     print("Create Drive Controller called.")
     data = request.get_json()
-    
-    # Extract required fields
+
     company_id = data.get("company_id")
     role = data.get("role")
     location = data.get("location")
@@ -35,74 +31,65 @@ def create_drive_controller():
     end_date = data.get("end_date")
     job_id = data.get("job_id")
     candidates_to_hire = data.get("candidates_to_hire")
-    
-    # Extract optional fields
+
     rounds = data.get("rounds", [])
     skills = data.get("skills", [])
     job_type = data.get("job_type", JobType.FULL_TIME)
     internship_duration = data.get("internship_duration")
     coding_questions = data.get("coding_questions", [])
-    # Experience fields from frontend
+
     experience_type = data.get("experience_type")
     experience_min = data.get("experience_min")
     experience_max = data.get("experience_max")
 
-    # Validation
+    # Required field validation
     if not company_id:
         return jsonify({"error": "company_id is required"}), 400
 
     if not job_id:
         return jsonify({"error": "job_id is required"}), 400
-    
+
     if not candidates_to_hire:
         return jsonify({"error": "candidates_to_hire is required"}), 400
-    
+
     try:
         candidates_to_hire = int(candidates_to_hire)
         if candidates_to_hire < 1:
-            return jsonify({"error": "candidates_to_hire must be a positive integer"}), 400
-    except (ValueError, TypeError):
-        return jsonify({"error": "candidates_to_hire must be a valid integer"}), 400
+            return jsonify({"error": "candidates_to_hire must be >= 1"}), 400
+    except:
+        return jsonify({"error": "candidates_to_hire must be integer"}), 400
 
-    # Check if job_id is unique
-    existing_drive = db.drives.find_one({"job_id": job_id})
-    if existing_drive:
+    # Unique job_id
+    if db.drives.find_one({"job_id": job_id}):
         return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
-    
-    # Validate job type and internship duration
-    if job_type == JobType.INTERNSHIP or job_type == "internship":
-        if not internship_duration:
-            return jsonify({"error": "internship_duration is required for internship job type"}), 400
 
-    # Process coding questions if provided
+    # Internship validation
+    if job_type == "internship" and not internship_duration:
+        return jsonify({"error": "internship_duration is required"}), 400
+
+    # Create coding questions
     coding_question_ids = []
-    if coding_questions and len(coding_questions) > 0:
+    if coding_questions:
         try:
-            for idx, question in enumerate(coding_questions):
-                # Create coding question document
-                coding_question = create_coding_question(
-                    title=question.get("title"),
-                    description=question.get("description"),
-                    test_cases=question.get("testCases", []),
-                    constraints=question.get("constraints", ""),
-                    difficulty=question.get("difficulty", "medium"),
-                    tags=question.get("tags", []),
-                    time_limit=question.get("time_limit"),
-                    memory_limit=question.get("memory_limit"),
+            for q in coding_questions:
+                cq = create_coding_question(
+                    title=q.get("title"),
+                    description=q.get("description"),
+                    test_cases=q.get("testCases", []),
+                    constraints=q.get("constraints", ""),
+                    difficulty=q.get("difficulty", "medium"),
+                    tags=q.get("tags", []),
+                    time_limit=q.get("time_limit"),
+                    memory_limit=q.get("memory_limit"),
                     company_id=company_id
                 )
-                
-                # Insert coding question into database
-                result = db.coding_questions.insert_one(coding_question)
+                result = db.coding_questions.insert_one(cq)
                 coding_question_ids.append(str(result.inserted_id))
-                
-            print(f"Created {len(coding_question_ids)} coding questions")
-        except ValueError as e:
-            return jsonify({"error": f"Invalid coding question data: {str(e)}"}), 400
+
         except Exception as e:
             return jsonify({"error": f"Error creating coding questions: {str(e)}"}), 500
 
-    # Create drive instance with dynamic round tracking
+    # Create drive
     try:
         drive = create_drive(
             company_id=company_id,
@@ -125,22 +112,17 @@ def create_drive_controller():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    # Insert drive into database
+    # Insert to DB
     result = db.drives.insert_one(drive)
-
-    # Convert _id to string before returning
     drive["_id"] = str(result.inserted_id)
-    
-    print(f"Drive created successfully with company_id: {company_id}, job_id: {job_id}")
-    print(f"Number of rounds: {len(rounds)}")
-    print(f"Number of coding questions: {len(coding_question_ids)}")
-    
+
     return jsonify({
         "message": "Drive created successfully",
         "drive": drive,
         "coding_questions_count": len(coding_question_ids),
         "rounds_count": len(rounds)
     }), 201
+
 
 
 def get_drives_by_company(company_id):
@@ -351,6 +333,18 @@ def update_drive_status(drive_id):
             print("Queueing email sending task...")
             task_result = email_candidates_task.delay(drive_id)
             print(f"Task queued with ID: {task_result.id}")
+            
+            # Increment currentStage to the next stage index
+            stages = drive.get("stages", [])
+            current_stage = drive.get("currentStage", 0)
+            if current_stage < len(stages) - 1:
+                next_stage_index = current_stage + 1
+            else:
+                next_stage_index = current_stage
+            db.drives.update_one(
+                {"_id": object_id},
+                {"$set": {"currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
+            )
 
         elif new_status == "ROUND_SCHEDULING":
             # Handle round-specific scheduling
@@ -370,7 +364,8 @@ def update_drive_status(drive_id):
                 print(f"Coding assessment task queued with ID: {task_result.id}")
             else:
                 print(f"Scheduling interviews for round {round_number} ({round_type})...")
-                task_result = schedule_interviews_task.delay(drive_id)
+                # Pass round_type to the celery task so the agent can include it in the interview URL
+                task_result = schedule_interviews_task.delay(drive_id, round_type)
                 print(f"Interview task queued with ID: {task_result.id}")
             
             # Update round status
@@ -385,6 +380,18 @@ def update_drive_status(drive_id):
                         "updated_at": datetime.utcnow()
                     }
                 }
+            )
+            
+            # Increment currentStage to match the scheduled round
+            stages = drive.get("stages", [])
+            current_stage = drive.get("currentStage", 0)
+            if current_stage < len(stages) - 1:
+                next_stage_index = current_stage + 1
+            else:
+                next_stage_index = current_stage
+            db.drives.update_one(
+                {"_id": object_id},
+                {"$set": {"currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
             )
             
             return jsonify({
@@ -454,16 +461,24 @@ def update_drive_status(drive_id):
 
         # Validate and update status if it's a standard status
         if new_status in DriveStatus._value2member_map_:
-            # Update the drive status
+            # Increment currentStage when transitioning to a new status
+            stages = drive.get("stages", [])
+            current_stage = drive.get("currentStage", 0)
+            if current_stage < len(stages) - 1:
+                next_stage_index = current_stage + 1
+            else:
+                next_stage_index = current_stage
+            
+            # Update the drive status and currentStage
             result = db.drives.update_one(
                 {"_id": object_id},
-                {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
+                {"$set": {"status": new_status, "currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
             )
 
             if result.modified_count == 0:
                 return jsonify({"error": "Failed to update drive status"}), 500
 
-            print(f"Drive status updated successfully to: {new_status}")
+            print(f"Drive status updated successfully to: {new_status}. Stage incremented to {next_stage_index}")
 
             return jsonify({
                 "message": "Drive status updated successfully", 

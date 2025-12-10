@@ -10,9 +10,9 @@ class InterviewSchedulingAgent:
         """
         self.email_service = email_service
 
-    def schedule_interviews(self, drive_id):
+    def schedule_interviews(self, drive_id, round_type="hr"):
         """
-        shortlisted_candidates: list of dicts -> [{'name': 'John Doe', 'email': 'john@example.com'}, ...]
+        Schedule interviews for shortlisted candidates with the specified round type.
         interview_datetime: datetime object for interview (default: tomorrow 10 AM)
         meeting_link: base link to the interview 
         """
@@ -32,24 +32,23 @@ class InterviewSchedulingAgent:
         }))
 
         for candidate in shortlisted_candidates:
-            #get candidate id from the drive candidate and candidate info from candidate collection
+            # Get candidate id from the drive candidate and candidate info from candidate collection
             candidate_id = candidate["candidate_id"]
             candidate_info = db.candidates.find_one({"_id": ObjectId(candidate_id)})
-
 
             # Check if candidate_info is valid
             if not candidate_info:
                 print(f"⚠️ Candidate info with candidate {candidate_id} not found in database.")
                 continue
 
+            # Construct the interview link with the drive_candidate id and round type
+            interview_url = f"{meeting_link}/{candidate['_id']}/{round_type.lower()}"
 
-            # Construct the interview link with the candidate's unique ID
-            interview_url = f"{meeting_link}/{candidate['_id']}"
+            subject = f"Interview Invitation - {round_type.capitalize()} Round - HiRekruit"
 
-            subject = "Interview Invitation - HiRekruit"
-            
             body = f"Dear {candidate_info['name']},\n\n" \
                 "Congratulations! You have been shortlisted for the next stage of our recruitment process.\n\n" \
+                f"Round: {round_type.capitalize()}\n" \
                 "We would like to invite you to an interview scheduled as follows:\n\n" \
                 f"📅 Date: {interview_datetime.strftime('%A, %d %B %Y')}\n" \
                 f"⏰ Time: {interview_datetime.strftime('%I:%M %p')}\n" \
@@ -60,13 +59,22 @@ class InterviewSchedulingAgent:
                 "HR Team"
 
             # Send the email using the email service
-            print(f"Sending interview email to {candidate_info['email']}...")
-            self.email_service.send_email(candidate_info['email'], subject, body)
+            print(f"Sending {round_type} interview email to {candidate_info['email']}...")
+            try:
+                self.email_service.send_email(candidate_info['email'], subject, body)
+            except Exception as e:
+                print(f"Failed to send interview email to {candidate_info['email']}: {e}")
 
-            #update the interview_scheduled status in drive_candidates collection
+            # Update the interview_scheduled status and record which round was scheduled
             db.drive_candidates.update_one(
                 {"_id": candidate["_id"]},
-                {"$set": {"interview_scheduled": "yes", "updated_at": datetime.utcnow()}}
+                {"$set": {
+                    "interview_scheduled": "yes",
+                    "interview_round": round_type.lower(),
+                    "interview_datetime": interview_datetime,
+                    "interview_link": interview_url,
+                    "updated_at": datetime.utcnow()
+                }}
             )
 
         print(f"Interview emails sent to {len(shortlisted_candidates)} candidates.")

@@ -78,20 +78,20 @@ const Process = () => {
       const drive = data.drive;
       setDriveData(drive);
 
-      // Build dynamic steps based on drive rounds
-      const dynamicSteps = buildStepsFromDrive(drive);
-      setSteps(dynamicSteps);
+      // Build steps from drive.stages
+      const stepsFromStages = buildStepsFromStages(drive);
+      setSteps(stepsFromStages);
 
-      // Determine current step based on drive status and round progress
-      const currentStepIndex = determineCurrentStep(drive, dynamicSteps);
-      setCurrentStep(currentStepIndex);
+      // Use drive.currentStage to set the current step index
+      const currentStageIndex = drive.currentStage || 0;
+      setCurrentStep(currentStageIndex);
 
       // Fetch round progress if available
       if (drive.round_progress) {
         setRoundProgress(drive.round_progress);
       }
 
-      console.log("Current step updated to:", currentStepIndex);
+      console.log("Current stage index:", currentStageIndex);
     } catch (err) {
       console.error("Error fetching drive status:", err);
       setError(`Failed to load drive status: ${err.message}`);
@@ -100,104 +100,102 @@ const Process = () => {
     }
   };
 
-  const buildStepsFromDrive = (drive) => {
-    const baseSteps = [
-      {
-        id: "resume_upload",
-        label: "Resume Upload",
-        shortLabel: "Resume Upload",
-        description: "Upload and collect candidate resumes",
-        icon: Upload,
-        status: "resumeUploaded",
-      },
-      {
-        id: "resume_shortlist",
-        label: "Resume Shortlisting",
-        shortLabel: "Shortlisting",
-        description: "Review and shortlist qualified candidates",
-        icon: Users,
-        status: "resumeShortlisted",
-      },
-      {
-        id: "email_sent",
-        label: "Send Email",
-        shortLabel: "Send Email",
-        description: "Send invitation emails to shortlisted candidates",
-        icon: Mail,
-        status: "emailSent",
-      },
-    ];
-
-    // Add round-based steps
-    const rounds = drive.rounds || [];
-    const roundSteps = rounds.map((round, index) => {
-      const roundNumber = index + 1;
-      const icon = roundTypeIcons[round.type] || Calendar;
-
-      return {
-        id: `round_${roundNumber}`,
-        label: `Round ${roundNumber}: ${round.type}`,
-        shortLabel: round.type,
-        description: round.description || `Complete ${round.type} round`,
-        icon: icon,
-        roundNumber: roundNumber,
-        roundType: round.type,
-        isRound: true,
-      };
-    });
-
-    const finalStep = {
+  // Map stage names to step objects
+  const stageToStepMap = {
+    resumeUploaded: {
+      id: "resume_upload",
+      label: "Resume Upload",
+      shortLabel: "Resume Upload",
+      description: "Upload and collect candidate resumes",
+      icon: Upload,
+      status: "resumeUploaded",
+    },
+    resumeShortlisted: {
+      id: "resume_shortlist",
+      label: "Resume Shortlisting",
+      shortLabel: "Shortlisting",
+      description: "Review and shortlist qualified candidates",
+      icon: Users,
+      status: "resumeShortlisted",
+    },
+    emailSent: {
+      id: "email_sent",
+      label: "Send Email",
+      shortLabel: "Send Email",
+      description: "Send invitation emails to shortlisted candidates",
+      icon: Mail,
+      status: "emailSent",
+    },
+    finalMail: {
       id: "selection_email",
       label: "Final Mail to Selected",
       shortLabel: "Final Selection",
       description: "Send final confirmation to hired candidates",
       icon: UserCheck,
       status: "selectionEmailSent",
-    };
-
-    return [...baseSteps, ...roundSteps, finalStep];
+    },
   };
 
-  const determineCurrentStep = (drive, dynamicSteps) => {
-    const status = drive.status;
-    const roundStatuses = drive.round_statuses || [];
-    const roundsCount = drive.rounds?.length || 0;
+  const buildStepsFromStages = (drive) => {
+    const stages = drive.stages || [];
+    const rounds = drive.rounds || [];
+    const steps = [];
 
-    // Fast-complete
-    if (status === "selectionEmailSent" || status === "completed") {
-      return dynamicSteps.length - 1;
+    for (const stage of stages) {
+      // Check if it's a base stage
+      if (stageToStepMap[stage]) {
+        steps.push(stageToStepMap[stage]);
+      } else if (stage.startsWith("schedule") && stage.endsWith("Round")) {
+        // Extract round type from stage name: "scheduleTechnicalRound" -> "Technical"
+        // First remove "schedule" prefix and "Round" suffix
+        let roundTypeName = stage
+          .replace(/^schedule/, "")
+          .replace(/Round$/, "");
+
+        // Handle cases where round type name is in camelCase or with spaces
+        // For example: "TechnicalRound" -> "Technical", "SystemDesignRound" -> "System Design"
+        // We need to split camelCase and rejoin with spaces
+        roundTypeName = roundTypeName
+          .replace(/([A-Z])/g, " $1") // Insert space before uppercase letters
+          .trim()
+          .replace(/\s+/g, " "); // Normalize multiple spaces
+
+        console.log(
+          "Looking for round type:",
+          roundTypeName,
+          "in rounds:",
+          rounds.map((r) => r.type)
+        );
+
+        // Find the corresponding round to get its details
+        // Case-insensitive comparison
+        const roundIndex = rounds.findIndex(
+          (r) => r.type.toLowerCase() === roundTypeName.toLowerCase()
+        );
+
+        console.log("Found round index:", roundIndex, "for stage:", stage);
+
+        if (roundIndex >= 0) {
+          const round = rounds[roundIndex];
+          const roundNumber = roundIndex + 1;
+          const icon = roundTypeIcons[round.type] || Calendar;
+
+          steps.push({
+            id: `round_${roundNumber}`,
+            label: `Round ${roundNumber}: ${round.type}`,
+            shortLabel: round.type,
+            description: round.description || `Complete ${round.type} round`,
+            icon: icon,
+            roundNumber: roundNumber,
+            roundType: round.type,
+            isRound: true,
+          });
+        }
+      }
     }
-
-    // Base steps according to status
-    let completedSteps = 0;
-    if (status === "resumeUploaded") completedSteps = 1;
-    else if (status === "resumeShortlisted") completedSteps = 2;
-    else if (status === "emailSent") completedSteps = 3;
-
-    // Count completed rounds
-    const completedRounds = (roundStatuses || []).filter(
-      (rs) => rs.status === "completed"
-    ).length;
-    completedSteps += completedRounds;
-
-    // If there's an in-progress round that isn't completed, add half-step
-    const hasInProgress = (roundStatuses || []).some(
-      (rs) => rs.status === "in_progress"
-    );
-    if (hasInProgress) completedSteps += 0.5;
-
-    // Ensure completedSteps doesn't exceed totalSteps - 1
-    const totalSteps = 4 + roundsCount;
-    if (completedSteps > totalSteps - 1) completedSteps = totalSteps - 1;
-
-    // Map completedSteps to step index in dynamicSteps
-    // dynamicSteps: [0:resume_upload, 1:resume_shortlist, 2:email_sent, 3..3+roundsCount-1:rounds, 3+roundsCount:selection_email]
-    let stepIndex = Math.floor(completedSteps);
-
-    // Clamp to valid range
-    stepIndex = Math.max(0, Math.min(stepIndex, dynamicSteps.length - 1));
-
-    return stepIndex;
+    console.log("all steps :", steps);
+    console.log("stages from drive:", stages);
+    return steps;
   };
 
   const updateDriveStatus = async (step) => {
@@ -215,10 +213,11 @@ const Process = () => {
 
       // Handle different step types
       if (step.isRound) {
-        // This is a round step
+        // This is a round step. Include round type so backend/tasks can schedule correctly.
         requestBody = {
           status: "ROUND_SCHEDULING",
           round_number: step.roundNumber,
+          round_type: step.roundType,
         };
       } else if (step.status) {
         // This is a standard status step
