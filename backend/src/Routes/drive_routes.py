@@ -10,7 +10,8 @@ from src.Controllers.drive_controller import (
     get_drive_candidates_by_job,
     remove_application_by_job,
     get_drive_id_by_job,
-    get_shortlisted_candidates_by_job
+    get_shortlisted_candidates_by_job,
+    get_selected_candidates_by_job
 )
 
 drive_bp = Blueprint("drive_bp", __name__, url_prefix="/api/drive")
@@ -39,6 +40,12 @@ def get_candidates_by_job(job_id):
 @drive_bp.route("/job/<job_id>/candidate/<candidate_id>", methods=["DELETE"])
 def remove_candidate_from_job(job_id, candidate_id):
     return remove_application_by_job(job_id, candidate_id)
+
+
+# Get selected candidates for a job
+@drive_bp.route("/job/selected", methods=["GET"])
+def job_selected_candidates():
+    return get_selected_candidates_by_job()
 
 # Get all drives (optional - for admin/debugging)
 drive_bp.route("/all", methods=["GET"])(get_all_drives)

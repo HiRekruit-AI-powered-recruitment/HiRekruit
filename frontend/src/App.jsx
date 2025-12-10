@@ -45,6 +45,8 @@ import AdminCompanies from "./components/AdminDashboard/AdminCompanies";
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard";
 import AdminLayout from "./components/AdminDashboard/AdminLayout";
 
+import SelectedCandidates from "./pages/SelectedCandidates";
+
 function AppContent() {
   const location = useLocation();
 
@@ -153,6 +155,17 @@ function AppContent() {
             <ProtectedRoute>
               <Layout>
                 <Shortlisted />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/selected-candidates"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <SelectedCandidates />
               </Layout>
             </ProtectedRoute>
           }

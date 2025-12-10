@@ -10,6 +10,7 @@ import {
   BarChart3,
   Briefcase,
   Calendar,
+  Trophy,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
@@ -19,6 +20,11 @@ const items = [
   { label: "Drives", icon: Briefcase, path: "/drives" },
   { label: "All Applicants", icon: FileText, path: "/resumes" },
   { label: "Shortlisted", icon: Star, path: "/shortlisted" },
+  {
+    label: "Selected Candidates",
+    icon: Trophy,
+    path: "/selected-candidates",
+  },
   { label: "Analytics", icon: BarChart3, path: "/analytics" },
   { label: "Calender", icon: Calendar, path: "/calender" },
 ];

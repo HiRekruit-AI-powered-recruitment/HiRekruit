@@ -818,3 +818,69 @@ def get_shortlisted_candidates_by_job():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Server error"}), 500
+
+
+def get_selected_candidates_by_job():
+    """
+    Get selected candidates for a job (those who were marked selected in drive_candidates).
+    Returns full candidate documents for the selected users.
+    Expects: ?job_id=<job_id>
+    """
+    job_id = request.args.get("job_id")
+    if not job_id:
+        return jsonify({"error": "job_id is required"}), 400
+
+    try:
+        drive = db.drives.find_one({"job_id": job_id})
+        if not drive:
+            return jsonify({"error": "No drive found for this job_id"}), 404
+
+        drive_id = str(drive["_id"]) if drive and "_id" in drive else None
+        print(f"Fetching selected candidates for drive: {drive_id} (job_id: {job_id})")
+
+        # Find drive_candidates where selected flag is truthy/yes
+        drive_candidates = list(db.drive_candidates.find({
+            "drive_id": drive_id,
+            "selected": {"$in": ["yes", "Yes", True, "true"]}
+        }))
+
+        if not drive_candidates:
+            return jsonify({"job_id": job_id, "drive_id": drive_id, "candidates": [], "count": 0}), 200
+
+        # Extract unique candidate ids
+        candidate_ids = []
+        for dc in drive_candidates:
+            cid = dc.get("candidate_id") or dc.get("candidateId") or dc.get("candidate")
+            if cid and cid not in candidate_ids:
+                candidate_ids.append(cid)
+
+        result_candidates = []
+        for cid in candidate_ids:
+            try:
+                obj_id = ObjectId(cid)
+                cand = db.candidates.find_one({"_id": obj_id})
+            except Exception:
+                cand = db.candidates.find_one({"_id": cid}) or db.candidates.find_one({"candidate_id": cid})
+
+            if not cand:
+                print(f"Selected candidate document not found for id: {cid}")
+                continue
+
+            cand_doc = {
+                "_id": str(cand.get("_id")),
+                "name": cand.get("name"),
+                "email": cand.get("email"),
+                "resume_content": cand.get("resume_content"),
+                "resume_url": cand.get("resume_url"),
+                "created_at": cand.get("created_at"),
+                "updated_at": cand.get("updated_at")
+            }
+            result_candidates.append(cand_doc)
+
+        return jsonify({"job_id": job_id, "drive_id": drive_id, "candidates": result_candidates, "count": len(result_candidates)}), 200
+
+    except Exception as e:
+        print(f"Error in get_selected_candidates_by_job: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Server error"}), 500
