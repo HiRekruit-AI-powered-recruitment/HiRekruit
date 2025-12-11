@@ -281,94 +281,112 @@ def get_next_round_type(drive_id, current_round_number):
 def update_drive_status(drive_id):
     """
     Update drive status with dynamic round handling.
+    This version ALSO updates all drive_candidate round statuses
+    to match drive.round_statuses.
     """
     try:
         print(f"Updating status for drive ID: {drive_id}")
-        
-        # Convert string ID to ObjectId
+
         try:
             object_id = ObjectId(drive_id)
         except Exception:
             return jsonify({"error": "Invalid drive ID format"}), 400
-        
+
         data = request.get_json()
         new_status = data.get("status")
-        round_number = data.get("round_number")  # Which round to update
+        round_number = data.get("round_number")
+        round_type = data.get("round_type")
 
-        # Check if drive exists
+        print("Drive updation controller called with:")
+        print("New Status:", new_status)
+        print("Round Number:", round_number)
+        print("Round Type:", round_type)
+        print("-------------------------")
+
+
+        # Fetch drive document
         drive = db.drives.find_one({"_id": object_id})
         if not drive:
             return jsonify({"error": "Drive not found"}), 404
-        
-        # Fetch drive details
+
         job_role = drive.get("role", "")
         keywords = drive.get("skills", [])
         rounds = drive.get("rounds", [])
         current_round = drive.get("current_round", 0)
 
-        # Fetch candidates
+        # Fetch all drive candidates
         candidates = list(db.drive_candidates.find({"drive_id": drive_id}))
 
-        # Handle different statuses
+
+        # ---------------------------------------------------------
+        # 📌 1. RESUME SHORTLISTING STEP
+        # ---------------------------------------------------------
         if new_status == DriveStatus.RESUME_SHORTLISTED:
             print("Calling shortlisting agent...")
             shortlist_result = shortlist_candidates(candidates, keywords, job_role)
-            
-            # Update all shortlisted candidates' rounds_status
+
             shortlisted_candidates = db.drive_candidates.find(
                 {"drive_id": drive_id, "resume_shortlisted": "yes"}
             )
-            
+
             for candidate in shortlisted_candidates:
-                # Initialize rounds for shortlisted candidates
                 rounds_status = initialize_candidate_rounds(rounds)
+
                 db.drive_candidates.update_one(
                     {"_id": candidate["_id"]},
-                    {"$set": {"rounds_status": rounds_status}}
+                    {
+                        "$set": {"rounds_status": rounds_status}
+                    }
                 )
-            
-            print(f"Initialized round statuses for shortlisted candidates")
 
+            print("Initialized round statuses for shortlisted candidates")
+
+
+
+        # ---------------------------------------------------------
+        # 📌 2. EMAIL SENT (resume processed)
+        # ---------------------------------------------------------
         elif new_status == DriveStatus.EMAIL_SENT:
             print("Queueing email sending task...")
             task_result = email_candidates_task.delay(drive_id)
             print(f"Task queued with ID: {task_result.id}")
-            
-            # Increment currentStage to the next stage index
+
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
-            if current_stage < len(stages) - 1:
-                next_stage_index = current_stage + 1
-            else:
-                next_stage_index = current_stage
+            next_stage_index = min(current_stage + 1, len(stages) - 1)
+
             db.drives.update_one(
                 {"_id": object_id},
                 {"$set": {"currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
             )
 
+
+
+        # ---------------------------------------------------------
+        # 📌 3. ROUND SCHEDULING
+        # ---------------------------------------------------------
         elif new_status == "ROUND_SCHEDULING":
-            # Handle round-specific scheduling
+
             if round_number is None:
                 round_number = current_round + 1
             
             if round_number > len(rounds):
                 return jsonify({"error": "Invalid round number"}), 400
             
-            round_type = rounds[round_number - 1].get("type")
-            
-            print(f"Scheduling round {round_number}: {round_type}")
-            
-            if round_type == "Coding":
-                print(f"Scheduling coding assessment for round {round_number}...")
+            if not round_type:
+                round_type = rounds[round_number - 1].get("type")
+
+            print(f"📅 Scheduling round {round_number}: {round_type}")
+
+            # --- Task Selection ---
+            if round_type.lower().strip() == "coding":
                 task_result = schedule_coding_assessments_task.delay(drive_id)
-                print(f"Coding assessment task queued with ID: {task_result.id}")
+                print(f"Coding assessment task queued: {task_result.id}")
             else:
-                print(f"Scheduling interviews for round {round_number} ({round_type})...")
-                # Pass round_type to the celery task so the agent can include it in the interview URL
                 task_result = schedule_interviews_task.delay(drive_id, round_type)
-                print(f"Interview task queued with ID: {task_result.id}")
-            
-            # Update round status
+                print(f"Interview task queued: {task_result.id}")
+
+            # --- Drive-level update ---
             db.drives.update_one(
                 {"_id": object_id, "round_statuses.round_number": round_number},
                 {
@@ -381,19 +399,33 @@ def update_drive_status(drive_id):
                     }
                 }
             )
-            
-            # Increment currentStage to match the scheduled round
+
+            # --- 🔥 Candidate-level round update ---
+            candidate_round_field = f"rounds_status.{round_number - 1}"
+
+            db.drive_candidates.update_many(
+                {"drive_id": drive_id},
+                {
+                    "$set": {
+                        f"{candidate_round_field}.status": RoundStatus.IN_PROGRESS,
+                        f"{candidate_round_field}.scheduled": "yes",
+                        f"{candidate_round_field}.updated_at": datetime.utcnow()
+                    }
+                }
+            )
+
+            print(f"✓ Updated round {round_number} status for all drive candidates")
+
+            # Stage Increment
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
-            if current_stage < len(stages) - 1:
-                next_stage_index = current_stage + 1
-            else:
-                next_stage_index = current_stage
+            next_stage_index = min(current_stage + 1, len(stages) - 1)
+
             db.drives.update_one(
                 {"_id": object_id},
-                {"$set": {"currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
+                {"$set": {"currentStage": next_stage_index}}
             )
-            
+
             return jsonify({
                 "message": f"Round {round_number} scheduling initiated",
                 "round_number": round_number,
@@ -401,11 +433,17 @@ def update_drive_status(drive_id):
                 "drive_id": drive_id
             }), 200
 
+
+
+        # ---------------------------------------------------------
+        # 📌 4. ROUND COMPLETED
+        # ---------------------------------------------------------
         elif new_status == "ROUND_COMPLETED":
-            # Mark a round as completed
+
             if round_number is None:
-                return jsonify({"error": "round_number is required for ROUND_COMPLETED status"}), 400
-            
+                return jsonify({"error": "round_number is required"}), 400
+
+            # --- Drive update ---
             db.drives.update_one(
                 {"_id": object_id, "round_statuses.round_number": round_number},
                 {
@@ -417,82 +455,96 @@ def update_drive_status(drive_id):
                     }
                 }
             )
-            
-            print(f"Round {round_number} marked as completed")
-            
-            # Check if all rounds are completed
+
+            # --- 🔥 Candidate Update ---
+            candidate_round_field = f"rounds_status.{round_number - 1}"
+
+            db.drive_candidates.update_many(
+                {"drive_id": drive_id},
+                {
+                    "$set": {
+                        f"{candidate_round_field}.status": RoundStatus.COMPLETED,
+                        f"{candidate_round_field}.completed": "yes",
+                        f"{candidate_round_field}.updated_at": datetime.utcnow()
+                    }
+                }
+            )
+
+            print(f"✓ Marked round {round_number} as completed for all candidates")
+
             updated_drive = db.drives.find_one({"_id": object_id})
             all_rounds_completed = all(
-                rs.get("status") == RoundStatus.COMPLETED 
+                rs.get("status") == RoundStatus.COMPLETED
                 for rs in updated_drive.get("round_statuses", [])
             )
-            
+
             if all_rounds_completed:
-                print("All rounds completed, moving to final selection...")
-                new_status = DriveStatus.SELECTION_EMAIL_SENT
-                
-                # Queue final selection emails
+                print("🎉 All rounds complete! Triggering selection emails.")
                 task_result = send_final_selection_emails_task.delay(drive_id)
-                print(f"Final selection task queued with ID: {task_result.id}")
-                
-                # Update drive status to completed
+
                 db.drives.update_one(
                     {"_id": object_id},
-                    {"$set": {"status": new_status, "updated_at": datetime.utcnow()}}
+                    {"$set": {"status": DriveStatus.SELECTION_EMAIL_SENT}}
                 )
-                
+
                 return jsonify({
-                    "message": "All rounds completed. Final selection emails initiated.",
-                    "status": new_status,
+                    "message": "All rounds completed. Final selection emails sent.",
                     "drive_id": drive_id
                 }), 200
-            else:
-                next_round = round_number + 1 if round_number < len(rounds) else None
-                return jsonify({
-                    "message": f"Round {round_number} marked as completed",
-                    "next_round": next_round,
-                    "next_round_type": rounds[next_round - 1].get("type") if next_round else None
-                }), 200
 
+            next_round = round_number + 1 if round_number < len(rounds) else None
+
+            return jsonify({
+                "message": f"Round {round_number} completed",
+                "next_round": next_round,
+                "next_round_type": rounds[next_round - 1].get("type") if next_round else None
+            }), 200
+
+
+
+        # ---------------------------------------------------------
+        # 📌 5. FINAL SELECTION EMAILS
+        # ---------------------------------------------------------
         elif new_status == DriveStatus.SELECTION_EMAIL_SENT:
-            print("Queueing final selection emails task...")
+            print("Queueing final selection emails...")
             task_result = send_final_selection_emails_task.delay(drive_id)
-            print(f"Task queued with ID: {task_result.id}")
 
-        # Validate and update status if it's a standard status
+
+
+        # ---------------------------------------------------------
+        # 📌 6. GENERIC STATUS UPDATE
+        # ---------------------------------------------------------
         if new_status in DriveStatus._value2member_map_:
-            # Increment currentStage when transitioning to a new status
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
-            if current_stage < len(stages) - 1:
-                next_stage_index = current_stage + 1
-            else:
-                next_stage_index = current_stage
-            
-            # Update the drive status and currentStage
+
+            next_stage_index = min(current_stage + 1, len(stages) - 1)
+
             result = db.drives.update_one(
                 {"_id": object_id},
-                {"$set": {"status": new_status, "currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
+                {
+                    "$set": {
+                        "status": new_status,
+                        "currentStage": next_stage_index,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
             )
 
             if result.modified_count == 0:
                 return jsonify({"error": "Failed to update drive status"}), 500
 
-            print(f"Drive status updated successfully to: {new_status}. Stage incremented to {next_stage_index}")
-
             return jsonify({
-                "message": "Drive status updated successfully", 
+                "message": "Drive status updated successfully",
                 "status": new_status,
-                "drive_id": drive_id,
-                "current_round": current_round,
-                "updated_at": datetime.utcnow().isoformat()
+                "drive_id": drive_id
             }), 200
-        
+
+
     except Exception as e:
-        print(f"Error in update_drive_status: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"❌ Error in update_drive_status: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
+
 
 
 def get_drive_progress(drive_id):

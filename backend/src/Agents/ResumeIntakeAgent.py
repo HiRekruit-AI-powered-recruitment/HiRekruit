@@ -2,11 +2,12 @@ import fitz
 import json
 import requests
 from datetime import datetime
+from bson import ObjectId
 from src.LLM.Groq import GroqLLM
 from src.Prompts.PromptBuilder import PromptBuilder
 from src.Utils.Database import db
 from src.Model.Candidate import create_candidate
-from src.Model.DriveCandidate import create_drive_candidate
+from src.Model.DriveCandidate import create_drive_candidate, initialize_candidate_rounds
 
 groq = GroqLLM()
 
@@ -152,7 +153,41 @@ class ResumeIntakeAgent:
             candidate_data["candidate_id"] = str(stored["_id"])
 
             # Create drive-candidate entry
-            drive_entry = create_drive_candidate(candidate_id=candidate_data["candidate_id"], drive_id=drive_id)
+            # Fetch drive to initialize rounds_status from drive definition
+            drive_rounds = []
+            try:
+                drive_doc = db.drives.find_one({"_id": ObjectId(drive_id)})
+                if drive_doc:
+                    # prefer explicit 'rounds' field, fallback to 'stages'
+                    drive_rounds = drive_doc.get("rounds") or drive_doc.get("stages") or []
+            except Exception:
+                drive_rounds = []
+
+            # Normalize drive_rounds into list of dicts with 'type'
+            normalized_drive_rounds = []
+            if isinstance(drive_rounds, list) and drive_rounds:
+                if all(isinstance(x, str) for x in drive_rounds):
+                    normalized_drive_rounds = [{"type": x} for x in drive_rounds]
+                else:
+                    for r in drive_rounds:
+                        if isinstance(r, dict):
+                            if "type" in r:
+                                normalized_drive_rounds.append({"type": r.get("type")})
+                            elif "name" in r:
+                                normalized_drive_rounds.append({"type": r.get("name")})
+                            else:
+                                normalized_drive_rounds.append({"type": str(r)})
+                        else:
+                            normalized_drive_rounds.append({"type": str(r)})
+
+            rounds_status = None
+            if normalized_drive_rounds:
+                try:
+                    rounds_status = initialize_candidate_rounds(normalized_drive_rounds)
+                except Exception:
+                    rounds_status = None
+
+            drive_entry = create_drive_candidate(candidate_id=candidate_data["candidate_id"], drive_id=drive_id, rounds_status=rounds_status)
             db.drive_candidates.update_one(
                 {"candidate_id": candidate_data["candidate_id"], "drive_id": drive_id},
                 {"$set": drive_entry},

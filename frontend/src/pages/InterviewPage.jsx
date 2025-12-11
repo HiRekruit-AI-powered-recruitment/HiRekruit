@@ -20,10 +20,16 @@ const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const InterviewPage = () => {
   const params = useParams();
-  const routeDriveId = params.driveId;
+  const routeDriveId = params.driveCandidateId;
+  // derive interview type from route params or location state
+  const routeInterviewType = params.interviewType;
   const location = useLocation();
   const navigate = useNavigate();
   const { userData, prompt } = location.state || {};
+  const interviewType =
+    (location && (location.state?.interviewType || location.state?.type)) ||
+    routeInterviewType ||
+    "general";
   // The ID passed from the form may actually be a driveCandidate id (sometimes named `driveId` in state).
   // Prefer an explicit `driveCandidateId` from location.state, fall back to `driveId` or route param.
   const stateDriveId =
@@ -60,6 +66,7 @@ const InterviewPage = () => {
   const [mouthOpen, setMouthOpen] = useState(0);
   const [blinkState, setBlinkState] = useState(false);
 
+  // Check is interview already completed.
   const checkInterviewCompletion = useCallback(async () => {
     if (!driveCandidateId) {
       setConnectionError("Drive Candidate ID is required");
@@ -78,8 +85,20 @@ const InterviewPage = () => {
       }
 
       const data = await response.json();
-      console.log("candidate info :", data);
-      if (data.interview_completed && data.interview_completed !== "no") {
+      // Check if this specific interview type (round) has been completed
+      const roundsStatus = data.rounds_status || [];
+      const normalizedInterviewType = interviewType.toLowerCase().trim();
+
+      // Find the round matching the current interview type
+      const currentRound = roundsStatus.find(
+        (round) =>
+          round.round_type &&
+          round.round_type.toLowerCase().trim() === normalizedInterviewType
+      );
+
+      // Interview is completed if the matching round has completed === "yes"
+      const isCompleted = currentRound && currentRound.completed === "yes";
+      if (isCompleted) {
         setInterviewAlreadyCompleted(true);
       } else {
         setInterviewAlreadyCompleted(false);
@@ -90,7 +109,7 @@ const InterviewPage = () => {
     } finally {
       setIsCheckingCompletion(false);
     }
-  }, [driveCandidateId]);
+  }, [driveCandidateId, interviewType]);
 
   // Initialize webcam
   const initializeCamera = useCallback(async () => {
@@ -268,28 +287,29 @@ const InterviewPage = () => {
             secondsFromStart: m.secondsFromStart,
           }));
 
-        if (conversationOnly.length > 0) {
-          try {
-            const res = await fetch(`${BASE_URL}/api/interview/evaluate`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                resumeText,
-                transcript: conversationOnly,
-                driveId: driveCandidateId,
-              }),
-            });
+        // if (conversationOnly.length > 0) {
+        //   try {
+        //     const res = await fetch(`${BASE_URL}/api/interview/evaluate`, {
+        //       method: "POST",
+        //       headers: { "Content-Type": "application/json" },
+        //       body: JSON.stringify({
+        //         resumeText,
+        //         transcript: conversationOnly,
+        //         driveCandidateId,
+        //         interviewType: interviewType,
+        //       }),
+        //     });
 
-            if (!res.ok) {
-              throw new Error(`Evaluation failed: ${res.status}`);
-            }
+        //     if (!res.ok) {
+        //       throw new Error(`Evaluation failed: ${res.status}`);
+        //     }
 
-            const evaluationData = await res.json();
-            console.log("Interview evaluated:", evaluationData);
-          } catch (err) {
-            console.error("Evaluation error:", err);
-          }
-        }
+        //     const evaluationData = await res.json();
+        //     console.log("Interview evaluated:", evaluationData);
+        //   } catch (err) {
+        //     console.error("Evaluation error:", err);
+        //   }
+        // }
       });
 
       client.on("error", (error) => {
@@ -366,7 +386,8 @@ const InterviewPage = () => {
     navigate("/interview-completion", {
       state: {
         userData,
-        driveId: driveCandidateId,
+        driveCandidateId,
+        interviewType,
         resumeText,
         conversation: conversationData,
       },

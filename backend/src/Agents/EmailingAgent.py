@@ -166,11 +166,10 @@ class EmailingAgent:
             
         job_role = drive.get("role", "the position")
         
-        # Fetch all candidates who finished interviews (evaluated)
+        # Fetch all candidates who have an evaluation result stored
         candidates = list(db.drive_candidates.find({
             "drive_id": drive_id,
-            "interview_completed": "yes",
-            "evaluation_result": {"$exists": True}  # <-- NEW: must have evaluation JSON
+            "evaluation_result": {"$exists": True}
         }))
         
         print(f"Found {len(candidates)} candidates with completed interviews & evaluation")
@@ -239,6 +238,9 @@ class EmailingAgent:
                 print(f"Sending email to: {candidate_info['email']}")
                 self.email_service.send_email(candidate_info["email"], subject, body)
                 
+                # print all the details we extracted
+                print(f"Details - Name: {candidate_info['name']}, Email: {candidate_info['email']}, Score: {final_score}, Decision: {decision}")
+
                 # Update DB
                 db.drive_candidates.update_one(
                     {"_id": person["_id"]},

@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from src.Utils.Database import db
 from bson import ObjectId
-from src.Utils.Database import db
 
 class InterviewSchedulingAgent:
     def __init__(self, email_service):
@@ -12,84 +11,85 @@ class InterviewSchedulingAgent:
 
     def schedule_interviews(self, drive_id, round_type="hr"):
         """
-        Schedule interviews for shortlisted candidates with the specified round type.
-        interview_datetime: datetime object for interview (default: tomorrow 10 AM)
-        meeting_link: base link to the interview 
+        Send interview scheduling emails to shortlisted candidates.
+        ❗ No updates to drive_candidate or rounds_status.
         """
+        print("InterviewSchedulingAgent: schedule_interviews called with drive_id:", drive_id, "and round_type:", round_type)
 
-        # For simplicity, scheduling all interviews for tomorrow at 10 AM
+        # Interview time → Tomorrow 10 AM
         interview_datetime = datetime.now() + timedelta(days=1)
         interview_datetime = interview_datetime.replace(hour=10, minute=0, second=0, microsecond=0)
 
-        # Base meeting link
-        # meeting_link = "https://hirekruit.com/start-interview"
         meeting_link = "http://localhost:5173/start-interview"
 
-        # Fetch shortlisted candidates from the database based on drive_id
+        # Fetch shortlisted candidates
         shortlisted_candidates = list(db.drive_candidates.find({
             "drive_id": drive_id,
             "resume_shortlisted": "yes"
         }))
 
+        if not shortlisted_candidates:
+            print(f"⚠️ No shortlisted candidates found for drive {drive_id}")
+            return 0
+
+        print(f"📊 Found {len(shortlisted_candidates)} shortlisted candidates")
+
+        normalized_round_type = str(round_type).lower().strip()
+
+        email_count = 0
+
         for candidate in shortlisted_candidates:
-            # Get candidate id from the drive candidate and candidate info from candidate collection
             candidate_id = candidate["candidate_id"]
             candidate_info = db.candidates.find_one({"_id": ObjectId(candidate_id)})
 
-            # Check if candidate_info is valid
             if not candidate_info:
-                print(f"⚠️ Candidate info with candidate {candidate_id} not found in database.")
+                print(f"⚠️ Candidate info with ID {candidate_id} not found.")
                 continue
 
-            # Construct the interview link with the drive_candidate id and round type
-            interview_url = f"{meeting_link}/{candidate['_id']}/{round_type.lower()}"
+            # Create interview link
+            interview_url = f"{meeting_link}/{candidate['_id']}/{normalized_round_type}"
 
             subject = f"Interview Invitation - {round_type.capitalize()} Round - HiRekruit"
+            body = f"""
+            Dear {candidate_info['name']},
 
-            body = f"Dear {candidate_info['name']},\n\n" \
-                "Congratulations! You have been shortlisted for the next stage of our recruitment process.\n\n" \
-                f"Round: {round_type.capitalize()}\n" \
-                "We would like to invite you to an interview scheduled as follows:\n\n" \
-                f"📅 Date: {interview_datetime.strftime('%A, %d %B %Y')}\n" \
-                f"⏰ Time: {interview_datetime.strftime('%I:%M %p')}\n" \
-                f"🔗 Interview Link: {interview_url}\n\n" \
-                "Please be available at the scheduled time.\n" \
-                "Wishing you the best of luck!\n\n" \
-                "Best regards,\n" \
-                "HR Team"
+            Congratulations! You have been shortlisted for the next stage of our recruitment process.
 
-            # Send the email using the email service
-            print(f"Sending {round_type} interview email to {candidate_info['email']}...")
+            Round: {round_type.capitalize()}
+
+            We would like to invite you to an interview scheduled as follows:
+
+            📅 Date: {interview_datetime.strftime('%A, %d %B %Y')}
+            ⏰ Time: {interview_datetime.strftime('%I:%M %p')}
+            🔗 Interview Link: {interview_url}
+
+            Please be available at the scheduled time.
+
+            Best regards,
+            HR Team
+            """
+
+            # Send email
+            print(f"📧 Sending {round_type} interview email to {candidate_info['email']}...")
+
             try:
                 self.email_service.send_email(candidate_info['email'], subject, body)
+                print("   ✅ Email sent successfully")
+                email_count += 1
             except Exception as e:
-                print(f"Failed to send interview email to {candidate_info['email']}: {e}")
+                print(f"   ❌ Failed to send email: {e}")
+                continue
 
-            # Update the interview_scheduled status and record which round was scheduled
-            db.drive_candidates.update_one(
-                {"_id": candidate["_id"]},
-                {"$set": {
-                    "interview_scheduled": "yes",
-                    "interview_round": round_type.lower(),
-                    "interview_datetime": interview_datetime,
-                    "interview_link": interview_url,
-                    "updated_at": datetime.utcnow()
-                }}
-            )
-
-        print(f"Interview emails sent to {len(shortlisted_candidates)} candidates.")
+        print(f"\n✅ Emails sent: {email_count}/{len(shortlisted_candidates)}")
+        return email_count
 
     def schedule_coding_assessments(self, drive_id):
         """
-        Schedule coding assessments for shortlisted candidates and send email invitations.
+        Schedule coding assessments for shortlisted candidates.
+        Updates rounds_status array for 'coding' round type.
         """
-        # Default: assessment to be completed within next 48 hours
         deadline = datetime.now() + timedelta(days=2)
-
-        # Base assessment link
         assessment_link = "http://localhost:5173/assessment"
-        # meeting_link = "https://hirekruit.com/assessment"
-
 
         shortlisted_candidates = list(db.drive_candidates.find({
             "drive_id": drive_id,
@@ -100,15 +100,17 @@ class InterviewSchedulingAgent:
             print(f"⚠️ No shortlisted candidates found for drive {drive_id}")
             return
 
+        successful_updates = 0
+
         for candidate in shortlisted_candidates:
             candidate_id = candidate["candidate_id"]
             candidate_info = db.candidates.find_one({"_id": ObjectId(candidate_id)})
 
             if not candidate_info:
-                print(f"⚠️ Candidate info with candidate {candidate_id} not found in database.")
+                print(f"⚠️ Candidate info with ID {candidate_id} not found in database.")
                 continue
 
-            # Unique link for each candidate with BOTH drive_id and candidate_id
+            # Unique assessment URL
             candidate_assessment_url = f"{assessment_link}/{drive_id}/{candidate_id}"
 
             subject = "Coding Assessment Invitation - HiRekruit"
@@ -131,29 +133,54 @@ class InterviewSchedulingAgent:
             Good luck and happy coding!
 
             Best regards,
-            HR Team
-            """
+            HR Team"""
 
             print(f"📧 Sending coding assessment email to {candidate_info['email']}...")
-            print(f"   Assessment URL: {candidate_assessment_url}")
             
             try:
                 self.email_service.send_email(candidate_info['email'], subject, body)
                 
-                # Update candidate record with assessment details
-                db.drive_candidates.update_one(
+                # Update rounds_status for coding round
+                rounds_status = candidate.get("rounds_status", [])
+                round_updated = False
+
+                for round_info in rounds_status:
+                    round_type = round_info.get("round_type", "").lower().strip()
+                    if round_type in ["coding", "assessment", "coding assessment"]:
+                        round_info["scheduled"] = "yes"
+                        round_info["scheduled_date"] = deadline
+                        round_info["interview_link"] = candidate_assessment_url
+                        round_updated = True
+                        print(f"   ✓ Updated coding round in rounds_status array")
+                        break
+
+                if not round_updated:
+                    print(f"   ⚠️ Warning: No coding round found in rounds_status")
+
+                # Update ONLY rounds_status - NO OTHER FIELDS
+                update_result = db.drive_candidates.update_one(
                     {"_id": candidate["_id"]},
-                    {"$set": {
-                        "coding_assessment_sent": "yes", 
-                        "assessment_deadline": deadline,
-                        "assessment_link": candidate_assessment_url,
-                        "updated_at": datetime.utcnow()
-                    }}
+                    {
+                        "$set": {
+                            "rounds_status": rounds_status,
+                            "updated_at": datetime.utcnow()
+                        },
+                        # Remove any legacy assessment fields
+                        "$unset": {
+                            "coding_assessment_sent": "",
+                            "assessment_deadline": "",
+                            "assessment_link": ""
+                        }
+                    }
                 )
-                print(f"   ✅ Email sent successfully to {candidate_info['email']}")
+
+                if update_result.modified_count > 0:
+                    successful_updates += 1
+                    print(f"   ✅ Email sent and database updated for {candidate_info['email']}")
                 
             except Exception as e:
                 print(f"   ❌ Failed to send email to {candidate_info['email']}: {str(e)}")
                 continue
 
-        print(f"✅ Coding assessment emails sent to {len(shortlisted_candidates)} candidates for drive {drive_id}.")
+        print(f"\n✅ Coding assessment process completed: {successful_updates}/{len(shortlisted_candidates)} candidates updated.")
+        return successful_updates

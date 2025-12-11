@@ -12,8 +12,11 @@ const InterviewStartPage = () => {
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { driveId } = useParams();
-  const drive_candidate_id = driveId;
+
+  // Extract params robustly: route may provide different param names
+  const params = useParams();
+  const drive_candidate_id = params.driveCandidateId;
+  const interviewType = params.typeOfInterview;
 
   // Fetch candidate data
   useEffect(() => {
@@ -47,11 +50,17 @@ const InterviewStartPage = () => {
   // Handle start interview and navigate
   const handleStartInterview = () => {
     if (userData && userData.resume_content) {
-      const prompt = getMockInterviewPrompt(userData.resume_content);
+      // Choose prompt according to interview type (e.g., hr, technical, systemdesign, coding)
+      const prompt = getMockInterviewPrompt(
+        userData.resume_content,
+        interviewType
+      );
 
-      // Navigate to /mockinterview/:id and pass state
+      console.log("Prompt for the interview :", prompt);
+
+      // Navigate to /mockinterview/:id and pass state, include interviewType
       navigate(`/mockinterview/${drive_candidate_id}`, {
-        state: { userData: userData, prompt },
+        state: { userData: userData, prompt, interviewType },
       });
     }
   };

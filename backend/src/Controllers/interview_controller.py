@@ -62,8 +62,11 @@ def upload_resume_controller(file):
         return jsonify({"error": str(e)}), 500
 
 
-def evaluate_interview_controller(resume_text, transcript, driveId):
-    print("Evaluating interview Controller ...")
+def evaluate_interview_controller(resume_text, transcript, driveCandidateId, interviewType="general"):
+    print(f"Evaluating interview Controller with type: {interviewType}...")
+    print("with driveCandidateId:", driveCandidateId)
+    print("Transcript length:", len(transcript))
+    print("Interview type:", interviewType)
 
     try:
         # Clean and structure conversation data
@@ -78,31 +81,37 @@ def evaluate_interview_controller(resume_text, transcript, driveId):
                 print(f"Warning: Skipping malformed message: {msg}")
 
         # Call the Mock Interview Agent
-        result = mock_interview_agent.evaluate_interview(resume_text, conversation_only)
+        result = mock_interview_agent.evaluate_interview(resume_text, conversation_only, interviewType)
 
         decision = result.get("decision", "FAIL")
         feedback = result.get("feedback", "No feedback provided")
         final_round_score = result.get("final_round_score", 0)
 
-        # here we will update drive candidate and update the interview_completed and selected field status in db
-        if driveId:
-            drive_candidate = db.drive_candidates.find_one({"_id": ObjectId(driveId)})
+        # Update drive candidate and update the round status based on interviewType
+        if driveCandidateId:
+            drive_candidate = db.drive_candidates.find_one({"_id": ObjectId(driveCandidateId)})
             if drive_candidate:
-                current_round = drive_candidate.get("current_round", 0)
                 rounds_status = drive_candidate.get("rounds_status", [])
 
-                # Find and update the current round status
-                updated_rounds = False
+                # Find and update the round that matches the interviewType
+                # Normalize interviewType for comparison (e.g., "hr" matches "hr", "technical" matches "technical")
+                normalized_type = interviewType.lower().strip()
+                updated_round = False
+
                 for round_info in rounds_status:
-                    if round_info.get("round_number") == current_round:
+                    round_type = round_info.get("round_type", "").lower().strip()
+                    if round_type == normalized_type:
                         round_info["completed"] = "yes"
                         round_info["completed_date"] = datetime.utcnow()
                         round_info["result"] = "passed" if decision == "PASS" else "failed"
                         round_info["feedback"] = feedback
                         round_info["score"] = final_round_score
-                        updated_rounds = True
-                        print(f"Updated round {current_round} for candidate {driveId}")
+                        updated_round = True
+                        print(f"Updated round with type '{interviewType}' for candidate {driveCandidateId}")
                         break
+
+                if not updated_round:
+                    print(f"Warning: No round found with type '{interviewType}' for candidate {driveCandidateId}")
 
                 db.drive_candidates.update_one(
                     {"_id": drive_candidate["_id"]},
@@ -111,15 +120,16 @@ def evaluate_interview_controller(resume_text, transcript, driveId):
                             "rounds_status": rounds_status,
                             "selected": "yes" if decision == "PASS" else "no",
                             "feedback": feedback,
+                            "evaluation_result": result,
                             "updated_at": datetime.utcnow()
                         }
                     }
                 )
-                print(f"Drive candidate {driveId} updated with round completion status")
+                print(f"Drive candidate {driveCandidateId} updated with round completion status")
             else:
-                print(f"No drive candidate found for driveId: {driveId}")
+                print(f"No drive candidate found for driveCandidateId: {driveCandidateId}")
         else:
-            print("No driveId provided; skipping database update and email notification.")
+            print("No driveCandidateId provided; skipping database update and email notification.")
 
        
         return jsonify(result)

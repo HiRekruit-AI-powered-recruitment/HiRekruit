@@ -63,6 +63,7 @@ def send_final_selection_emails_task(self, drive_id):
 @celery.task(name="schedule_interviews_task", bind=True)
 def schedule_interviews_task(self, drive_id, round_type="hr"):
     """Schedule interviews for candidates"""
+    print("Celery task schedule_interviews_task called with drive_id:", drive_id, "and round_type:", round_type)
     try:
         print(f"Starting interview scheduling process for drive {drive_id} with round_type {round_type}")
         email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)

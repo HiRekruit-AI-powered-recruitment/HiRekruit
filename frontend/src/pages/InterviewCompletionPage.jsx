@@ -19,7 +19,24 @@ const BASE_URL = import.meta.env.VITE_BASE_URL;
 const InterviewCompletionPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { userData, driveId, resumeText, conversation } = location.state || {};
+  const {
+    userData,
+    driveCandidateId,
+    resumeText,
+    conversation,
+    interviewType,
+  } = location.state || {};
+
+  // Log initial props once (do not log on every re-render)
+  useEffect(() => {
+    // Use console.debug so it's less noisy and only appears when devtools show verbose logs
+    console.debug("InterviewCompletionPage initial data:", {
+      userData,
+      driveCandidateId,
+      interviewType,
+    });
+    // Intentionally run only once on mount to avoid repeated logs from the clock interval
+  }, []);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -49,8 +66,9 @@ const InterviewCompletionPage = () => {
           body: JSON.stringify({
             resumeText,
             transcript: conversation,
-            driveId,
+            driveCandidateId,
             userData,
+            interviewType: interviewType || "general",
           }),
         });
 
@@ -78,7 +96,7 @@ const InterviewCompletionPage = () => {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [conversation, resumeText, driveId, userData]);
+  }, [conversation, resumeText, driveCandidateId, userData, interviewType]);
 
   // Update time every second
   useEffect(() => {
@@ -260,13 +278,13 @@ const InterviewCompletionPage = () => {
                   </div>
                 </div>
 
-                {driveId && (
+                {driveCandidateId && (
                   <div className="flex items-center gap-3 text-gray-700 p-3 border border-gray-300 rounded-lg">
                     <FileText className="w-4 h-4" />
                     <div>
                       <p className="text-sm font-medium">Application ID</p>
                       <p className="text-xs text-gray-600 font-mono">
-                        {driveId}
+                        {driveCandidateId}
                       </p>
                     </div>
                   </div>

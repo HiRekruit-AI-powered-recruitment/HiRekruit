@@ -17,7 +17,6 @@ import Analytics from "./pages/Analytics";
 import Home from "./pages/Home";
 import JobCreation from "./components/JobCreation";
 import Drives from "./components/Drives";
-import VapiInterviewPage from "./pages/VapiInterviewPage";
 import InterviewStartPage from "./pages/InterviewStartPage";
 import InterviewCompletionPage from "./pages/InterviewCompletionPage";
 import About from "./pages/About";
@@ -193,10 +192,12 @@ function AppContent() {
         />
 
         {/* Interview Routes */}
-        <Route path="/mockinterview/:driveId" element={<InterviewPage />} />
-        <Route path="/mockinterview/test" element={<VapiInterviewPage />} />
         <Route
-          path="/start-interview/:driveId"
+          path="/mockinterview/:driveCandidateId"
+          element={<InterviewPage />}
+        />
+        <Route
+          path="/start-interview/:driveCandidateId/:typeOfInterview"
           element={<InterviewStartPage />}
         />
         <Route

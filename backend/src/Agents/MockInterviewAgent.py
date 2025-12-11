@@ -11,10 +11,13 @@ llm = groq.get_model()
 
 class MockInterviewAgent:
 
-    def evaluate_interview(self, resume_text, transcript):
+    def evaluate_interview(self, resume_text, transcript, interviewType):
         print("Evaluating interview MockInterview agent ...")
         
-        system_message = HR_EVALUATION_PROMPT
+        system_message = ""
+
+        if interviewType == "hr"  : 
+            system_message = HR_EVALUATION_PROMPT
 
         human_message = f"""
         **CANDIDATE RESUME (Reference Only):**

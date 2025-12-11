@@ -58,6 +58,7 @@ def get_drive(drive_id):
 # Update drive status
 @drive_bp.route("/<drive_id>/status", methods=["PUT"])
 def update_status(drive_id):
+    print("update drive status route called.........")
     return update_drive_status(drive_id)
 
 # Get drive status only
