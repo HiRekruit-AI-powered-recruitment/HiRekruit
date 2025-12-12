@@ -511,22 +511,26 @@ const JobCreation = () => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <strong>Coding Questions:</strong>
-                  <div className="mt-1 text-sm text-gray-700 space-y-1">
-                    {jobData.coding_questions &&
-                    jobData.coding_questions.length > 0 ? (
-                      jobData.coding_questions.map((q, idx) => (
-                        <div key={q.id || idx} className="pl-2">
-                          {idx + 1}.{" "}
-                          <span className="font-medium">
-                            {q.title || "Untitled"}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div>N/A</div>
-                    )}
-                  </div>
+                  {jobData.coding_questions?.length > 0 ? (
+                    <>
+                      <strong>Coding Questions:</strong>
+                      <div className="mt-1 text-sm text-gray-700 space-y-1">
+                        {jobData.coding_questions.map((q, idx) => (
+                          <div key={q.id || idx} className="pl-2">
+                            {idx + 1}.{" "}
+                            <span className="font-medium">
+                              {q.title || "Untitled"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* <strong>Coding Questions:</strong>
+                      <div className="mt-1 text-sm text-gray-700">N/A</div> */}
+                    </>
+                  )}
                 </div>
               </div>
 

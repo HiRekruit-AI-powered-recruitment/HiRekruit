@@ -63,10 +63,10 @@ def upload_resume_controller(file):
 
 
 def evaluate_interview_controller(resume_text, transcript, driveCandidateId, interviewType="general"):
-    print(f"Evaluating interview Controller with type: {interviewType}...")
-    print("with driveCandidateId:", driveCandidateId)
-    print("Transcript length:", len(transcript))
-    print("Interview type:", interviewType)
+    # print(f"Evaluating interview Controller with type: {interviewType}...")
+    # print("with driveCandidateId:", driveCandidateId)
+    # print("Transcript length:", len(transcript))
+    # print("Interview type:", interviewType)
 
     try:
         # Clean and structure conversation data

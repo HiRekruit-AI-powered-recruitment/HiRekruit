@@ -105,7 +105,7 @@ class ResumeIntakeAgent:
             human_prompt = f"Extract candidate information:\n\n{raw_text}"
             messages = self.prompt_builder.build(system_prompt, human_prompt)
             response = self.llm.invoke(messages)
-            print("LLM Response :", response.content)
+            # print("LLM Response :", response.content)
 
             # Try parsing JSON safely
             llm_output = self.safe_json_parse(response.content)

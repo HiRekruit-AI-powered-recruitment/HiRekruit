@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta
 from src.Utils.Database import db
 from bson import ObjectId
+import os
+from dotenv import load_dotenv
+load_dotenv()
+forntend_base_url = os.getenv("FRONTEND_BASE_URL")
 
 class InterviewSchedulingAgent:
     def __init__(self, email_service):
@@ -11,7 +15,7 @@ class InterviewSchedulingAgent:
 
     def schedule_interviews(self, drive_id, round_type="hr"):
         """
-        Send interview scheduling emails to shortlisted candidates.
+        Send interview scheduling emails to shortlisted candidates with company & HR details.
         ❗ No updates to drive_candidate or rounds_status.
         """
         print("InterviewSchedulingAgent: schedule_interviews called with drive_id:", drive_id, "and round_type:", round_type)
@@ -20,7 +24,49 @@ class InterviewSchedulingAgent:
         interview_datetime = datetime.now() + timedelta(days=1)
         interview_datetime = interview_datetime.replace(hour=10, minute=0, second=0, microsecond=0)
 
-        meeting_link = "http://localhost:5173/start-interview"
+        meeting_link = f'{forntend_base_url}/start-interview'
+
+        # -------------------------
+        # Resolve company & HR name
+        # -------------------------
+        company_name = "HiRekruit"
+        hr_name = "HR Team"
+        hr_email = "hirekruit@gmail.com"
+        
+        try:
+            drive = db.drives.find_one({"_id": ObjectId(drive_id)}, {"company_id": 1})
+            company_id = drive.get("company_id") if drive else None
+
+            if company_id:
+                # Resolve company name
+                try:
+                    company_doc = db.companies.find_one({"_id": ObjectId(company_id)})
+                except Exception:
+                    company_doc = db.companies.find_one({"_id": company_id}) or \
+                                db.companies.find_one({"company_id": company_id})
+
+                if company_doc and company_doc.get("name"):
+                    company_name = company_doc["name"]
+
+                # Resolve HR name
+                hr_user = db.users.find_one(
+                    {"company_id": str(company_id)},
+                    {"name": 1, "email": 1}
+                )
+
+                if hr_user and hr_user.get("name"):
+                    hr_name = hr_user["name"]
+                    hr_email = hr_user["email"]
+                elif company_doc:
+                    hr_name = (
+                        company_doc.get("hr_name")
+                        or company_doc.get("contact_name")
+                        or hr_name
+                    )
+                    hr_email  = (company_doc.get("email"))
+
+        except Exception as e:
+            print(f"Warning: Could not resolve company/HR details: {e}")
 
         # Fetch shortlisted candidates
         shortlisted_candidates = list(db.drive_candidates.find({
@@ -49,24 +95,35 @@ class InterviewSchedulingAgent:
             # Create interview link
             interview_url = f"{meeting_link}/{candidate['_id']}/{normalized_round_type}"
 
-            subject = f"Interview Invitation - {round_type.capitalize()} Round - HiRekruit"
+            subject = f"Interview Invitation - {round_type.capitalize()} Round - {company_name}"
             body = f"""
             Dear {candidate_info['name']},
 
-            Congratulations! You have been shortlisted for the next stage of our recruitment process.
+            Congratulations! You have been shortlisted for the {round_type.capitalize()} Round interview at {company_name}.
 
-            Round: {round_type.capitalize()}
+            Please find the interview details below:
 
-            We would like to invite you to an interview scheduled as follows:
+            Interview Details:
+            • Round: {round_type.capitalize()} Round
+            • Date: {interview_datetime.strftime('%A, %d %B %Y')}
+            • Time: {interview_datetime.strftime('%I:%M %p')}
+            • Interview Link: {interview_url}
 
-            📅 Date: {interview_datetime.strftime('%A, %d %B %Y')}
-            ⏰ Time: {interview_datetime.strftime('%I:%M %p')}
-            🔗 Interview Link: {interview_url}
+            Kindly ensure the following:
+            • Join the meeting 5-10 minutes before the scheduled time  
+            • Check your internet connection, camera, and microphone in advance  
+            • Sit in a quiet place with proper lighting  
+            • Keep your updated resume accessible for reference  
 
-            Please be available at the scheduled time.
+            If you have any questions or need to reschedule, please contact our HR team at the earliest.
 
-            Best regards,
-            HR Team
+            We look forward to speaking with you.
+
+            Warm regards,  
+            {hr_name}  
+            {hr_email}
+            Human Resources  
+            {company_name}
             """
 
             # Send email
@@ -85,11 +142,51 @@ class InterviewSchedulingAgent:
 
     def schedule_coding_assessments(self, drive_id):
         """
-        Schedule coding assessments for shortlisted candidates.
+        Schedule coding assessments for shortlisted candidates with company & HR details.
         Updates rounds_status array for 'coding' round type.
         """
         deadline = datetime.now() + timedelta(days=2)
-        assessment_link = "http://localhost:5173/assessment"
+        assessment_link = f'{forntend_base_url}/assessment'
+
+        # -------------------------
+        # Resolve company & HR name
+        # -------------------------
+        company_name = "HiRekruit"
+        hr_name = "HR Team"
+        hr_email = "hirekruit@gmail.com"
+        
+        try:
+            drive = db.drives.find_one({"_id": ObjectId(drive_id)}, {"company_id": 1})
+            company_id = drive.get("company_id") if drive else None
+
+            if company_id:
+                # Resolve company name
+                try:
+                    company_doc = db.companies.find_one({"_id": ObjectId(company_id)})
+                except Exception:
+                    company_doc = db.companies.find_one({"_id": company_id}) or \
+                                db.companies.find_one({"company_id": company_id})
+
+                if company_doc and company_doc.get("name"):
+                    company_name = company_doc["name"]
+
+                # Resolve HR name
+                hr_user = db.users.find_one(
+                    {"company_id": str(company_id)},
+                    {"name": 1, "email": 1}
+                )
+
+                if hr_user and hr_user.get("name"):
+                    hr_name = hr_user["name"]
+                    hr_email = hr_user["email"]
+                elif company_doc:
+                    hr_name = (
+                        company_doc.get("hr_name")
+                        or company_doc.get("contact_name")
+                        or hr_name
+                    )
+        except Exception as e:
+            print(f"Warning: Could not resolve company/HR details: {e}")
 
         shortlisted_candidates = list(db.drive_candidates.find({
             "drive_id": drive_id,
@@ -113,27 +210,49 @@ class InterviewSchedulingAgent:
             # Unique assessment URL
             candidate_assessment_url = f"{assessment_link}/{drive_id}/{candidate_id}"
 
-            subject = "Coding Assessment Invitation - HiRekruit"
-            body = f"""Dear {candidate_info['name']},
+            subject = f"Coding Assessment Invitation - {company_name}"
+            body = f"""
+            Dear {candidate_info['name']},
 
-            Congratulations on being shortlisted for the coding assessment round!
+            Congratulations on being shortlisted for the Coding Assessment round at {company_name}!
 
-            Please complete your coding assessment using the link below:
+            We are excited to evaluate your problem-solving and coding abilities. Please complete the assessment using the link provided below.
 
-            🔗 Assessment Link: {candidate_assessment_url}
-            🕒 Deadline: {deadline.strftime('%A, %d %B %Y, %I:%M %p')}
+            Assessment Details:
+        
+            Assessment Link: {candidate_assessment_url}
+            Deadline: {deadline.strftime('%A, %d %B %Y, %I:%M %p')}
+            Duration: Approximately {(deadline - datetime.now()).days * 24} hours
+
 
             Instructions:
-            • Click the link above to start your assessment
-            • You will have {(deadline - datetime.now()).days * 24} hours to complete the test
-            • Make sure you have a stable internet connection
-            • Your progress will be auto-saved
+            • Click the assessment link above to begin  
+            • Complete all coding problems before the deadline  
+            • Ensure you have a stable internet connection  
+            • Your progress will be saved automatically  
+            • You may exit and return to the assessment anytime before the deadline  
 
-            Make sure to complete your test before the deadline. 
-            Good luck and happy coding!
+            Tips for Success:
+            • Read all problem statements carefully  
+            • Test your code with sample and edge case inputs  
+            • Write clean, readable, and well-structured code  
+            • Prioritize correctness and clarity  
 
-            Best regards,
-            HR Team"""
+            If you experience any technical issues, please contact our support team immediately.
+            
+            Contact for Support Team :
+                Mail : hirekruit@gmail.com
+                Mobile : +91 6202908328
+
+            We wish you the very best and look forward to reviewing your submission.
+
+            Warm regards,  
+            {hr_name}  
+            {hr_email}
+            Human Resources  
+            {company_name}
+            """
+
 
             print(f"📧 Sending coding assessment email to {candidate_info['email']}...")
             

@@ -19,7 +19,7 @@ EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 # 1. Create a candidate instances for each resume using ResumeIntakeAgent
 # 2. Create a drivecadnidate instances for each resume using ResumeShortlistingAgent
 def create_driveCandidate(file_paths, keywords, job_role, drive_id):
-    print("Starting drive candidate process")
+    # print("Starting drive candidate process")
     # ResumeIntakeAgent processes resumes and extracts candidate information
     resume_agent = ResumeIntakeAgent()
     candidates = resume_agent.process_resumes(file_paths,drive_id)
@@ -27,7 +27,7 @@ def create_driveCandidate(file_paths, keywords, job_role, drive_id):
 
 # Shortlisting agent shortlists candidates based on keywords and job role
 def shortlist_candidates(candidates, keywords, job_role):
-    print("Starting shortlisting process")
+    # print("Starting shortlisting process")
     shortlisting_agent = ResumeShortlistingAgent()
     shortlist_result  = shortlisting_agent.shortlist_candidates(candidates, keywords, job_role)
     # return shortlist_result

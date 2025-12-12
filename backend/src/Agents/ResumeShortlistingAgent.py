@@ -19,7 +19,11 @@ class ResumeShortlistingAgent:
         Returns shortlisted and not_shortlisted lists.
         Also updates the shortlist status and resume score in the database.
         """
-        print("ShortlistingAgent called with candidates")
+        # print("ShortlistingAgent called with candidates")
+        # print("Number of candidates to process:", len(candidates))
+        # print("Keywords:", keywords)
+        # print("Job Role:", job_role)
+
         shortlisted = []
         not_shortlisted = []
 
@@ -58,7 +62,7 @@ class ResumeShortlistingAgent:
         Do NOT wrap the response in code blocks or markdown. Return ONLY the raw JSON object.
         """
         
-        print("here..........")
+        # print("here..........")
         for candidate in candidates:
 
             # here first we need to fetch the resume content from candidate
@@ -78,7 +82,7 @@ class ResumeShortlistingAgent:
 
             try:
                 llm_output = json.loads(response.content.strip())
-                print("Shortlisting Agent:", llm_output)
+                # print("Shortlisting Agent:", llm_output)
             except json.JSONDecodeError:
                 print(f"Invalid JSON for {candidate.get('resume', 'unknown')}:\n", response.content)
                 continue
@@ -108,8 +112,8 @@ class ResumeShortlistingAgent:
             else:
                 not_shortlisted.append(result)
 
-        print("shortlisted", len(shortlisted))
-        print("not_shortlisted", len(not_shortlisted))
+        # print("shortlisted", len(shortlisted))
+        # print("not_shortlisted", len(not_shortlisted))
 
         return {
             "shortlisted": shortlisted,

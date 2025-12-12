@@ -322,7 +322,7 @@ def update_drive_status(drive_id):
         # 📌 1. RESUME SHORTLISTING STEP
         # ---------------------------------------------------------
         if new_status == DriveStatus.RESUME_SHORTLISTED:
-            print("Calling shortlisting agent...")
+            print("Starting resume shortlisting process...")
             shortlist_result = shortlist_candidates(candidates, keywords, job_role)
 
             shortlisted_candidates = db.drive_candidates.find(
@@ -339,7 +339,7 @@ def update_drive_status(drive_id):
                     }
                 )
 
-            print("Initialized round statuses for shortlisted candidates")
+            print("✓ Resume shortlisting completed.")
 
 
 
@@ -349,7 +349,7 @@ def update_drive_status(drive_id):
         elif new_status == DriveStatus.EMAIL_SENT:
             print("Queueing email sending task...")
             task_result = email_candidates_task.delay(drive_id)
-            print(f"Task queued with ID: {task_result.id}")
+            # print(f"Task queued with ID: {task_result.id}")
 
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
@@ -478,19 +478,20 @@ def update_drive_status(drive_id):
                 for rs in updated_drive.get("round_statuses", [])
             )
 
-            if all_rounds_completed:
-                print("🎉 All rounds complete! Triggering selection emails.")
-                task_result = send_final_selection_emails_task.delay(drive_id)
+            # we will updte this code when we handle multiple rounds.
+            # if all_rounds_completed:
+            #     print("🎉 All rounds complete! Triggering selection emails.")
+            #     task_result = send_final_selection_emails_task.delay(drive_id)
 
-                db.drives.update_one(
-                    {"_id": object_id},
-                    {"$set": {"status": DriveStatus.SELECTION_EMAIL_SENT}}
-                )
+            #     db.drives.update_one(
+            #         {"_id": object_id},
+            #         {"$set": {"status": DriveStatus.SELECTION_EMAIL_SENT}}
+            #     )
 
-                return jsonify({
-                    "message": "All rounds completed. Final selection emails sent.",
-                    "drive_id": drive_id
-                }), 200
+            #     return jsonify({
+            #         "message": "All rounds completed.",
+            #         "drive_id": drive_id
+            #     }), 200
 
             next_round = round_number + 1 if round_number < len(rounds) else None
 
