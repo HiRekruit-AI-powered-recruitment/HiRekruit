@@ -348,8 +348,13 @@ def update_drive_status(drive_id):
         # ---------------------------------------------------------
         elif new_status == DriveStatus.EMAIL_SENT:
             print("Queueing email sending task...")
-            task_result = email_candidates_task.delay(drive_id)
+
+            # Using worker
+            # task_result = email_candidates_task.delay(drive_id)
             # print(f"Task queued with ID: {task_result.id}")
+
+            # Using without worker
+            task_result = email_candidates(drive_id)
 
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
@@ -383,8 +388,12 @@ def update_drive_status(drive_id):
                 task_result = schedule_coding_assessments_task.delay(drive_id)
                 print(f"Coding assessment task queued: {task_result.id}")
             else:
-                task_result = schedule_interviews_task.delay(drive_id, round_type)
-                print(f"Interview task queued: {task_result.id}")
+                # Using worker 
+                # task_result = schedule_interviews_task.delay(drive_id, round_type)
+                # print(f"Interview task queued: {task_result.id}")
+
+                # Using without worker
+                task_result = schedule_interviews(drive_id,round_type)
 
             # --- Drive-level update ---
             db.drives.update_one(
@@ -507,8 +516,13 @@ def update_drive_status(drive_id):
         # 📌 5. FINAL SELECTION EMAILS
         # ---------------------------------------------------------
         elif new_status == DriveStatus.SELECTION_EMAIL_SENT:
-            print("Queueing final selection emails...")
-            task_result = send_final_selection_emails_task.delay(drive_id)
+            # Using worker
+            # print("Queueing final selection emails...")
+            # task_result = send_final_selection_emails_task.delay(drive_id)
+            
+            # Without worker
+            task_result = send_final_selection_emails(drive_id)
+
 
 
 

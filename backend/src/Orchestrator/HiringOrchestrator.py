@@ -42,12 +42,12 @@ def email_candidates(drive_id):
     # return "Emails sent successfully"
 
 # Scheduling interviews for shortlisted candidates
-def schedule_interviews(drive_id):
+def schedule_interviews(drive_id, round_type):
     print("Starting interview scheduling process")
     #creating the email service instance
     email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
     interview_scheduling_agent = InterviewSchedulingAgent(email_service)
-    interview_scheduling_agent.schedule_interviews(drive_id)
+    interview_scheduling_agent.schedule_interviews(drive_id,round_type)
     # return "Interviews scheduled successfully"
 
 # Final selection mail to the selected candidates
@@ -59,4 +59,4 @@ def send_final_selection_emails(drive_id):
     emailing_agent.send_final_selection_emails(drive_id)
     # return "Final selection emails sent successfully"
 
-
+# here write a function for scheduling the coding assessment 
