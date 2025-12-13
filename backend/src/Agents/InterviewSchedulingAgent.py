@@ -152,7 +152,15 @@ class InterviewSchedulingAgent:
             try:
                 print(f"📧 Sending interview email to {candidate_info['email']}")
 
-                self.email_service.send_email(
+                # for EmailSerive
+                # self.email_service.send_email(
+                #     candidate_info["email"],
+                #     subject,
+                #     body
+                # )
+
+                # for AsyncEmailSerive
+                self.email_service.send_email_background(
                     candidate_info["email"],
                     subject,
                     body
@@ -286,7 +294,15 @@ class InterviewSchedulingAgent:
             try:
                 print(f"📧 Sending coding assessment email to {candidate_info['email']}")
 
-                self.email_service.send_email(
+                # for EmailSerive
+                # self.email_service.send_email(
+                #     candidate_info["email"],
+                #     subject,
+                #     body
+                # )
+
+                # for AsyncEmailSerive
+                self.email_service.send_email_background(
                     candidate_info["email"],
                     subject,
                     body

@@ -3,10 +3,15 @@ from bson import ObjectId
 from src.Utils.EmailService import EmailService
 from src.Utils.Database import db
 from src.MailTemplate.EmailTemplate import EmailTemplate
+from src.Utils.AsyncEmailService import AsyncEmailService
 
 
-class EmailingAgent:    
-    def __init__(self, email_service: EmailService):
+class EmailingAgent:  
+    #  for EmailService
+    # def __init__(self, email_service: EmailService):
+    #     self.email_service = email_service
+    # for AsyncEmailService
+    def __init__(self, email_service: AsyncEmailService):
         self.email_service = email_service
 
     def send_mail_to_all_candidates(self, drive_id):
@@ -144,11 +149,20 @@ class EmailingAgent:
             try:
                 print(f"Sending email to: {candidate_info['email']}")
 
-                self.email_service.send_email(
+                # for EmailService
+                # self.email_service.send_email(
+                #     candidate_info["email"],
+                #     subject,
+                #     body
+                # )
+
+                # for AsyncEmailSerive
+                self.email_service.send_email_background(
                     candidate_info["email"],
                     subject,
                     body
                 )
+
 
                 db.drive_candidates.update_one(
                     {"_id": person["_id"]},
@@ -298,7 +312,15 @@ class EmailingAgent:
                 # Send Email
                 # -----------------------------
                 print(f"Sending email to: {candidate_info['email']}")
-                self.email_service.send_email(
+                # for EmailService
+                # self.email_service.send_email(
+                #     candidate_info["email"],
+                #     subject,
+                #     body
+                # )
+
+                # for AsyncEmailSerive
+                self.email_service.send_email_background(
                     candidate_info["email"],
                     subject,
                     body

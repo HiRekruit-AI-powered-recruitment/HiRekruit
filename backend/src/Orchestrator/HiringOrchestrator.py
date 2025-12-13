@@ -5,6 +5,7 @@ from src.Agents.ResumeShortlistingAgent import ResumeShortlistingAgent
 from src.Agents.EmailingAgent import EmailingAgent
 from src.Agents.InterviewSchedulingAgent import InterviewSchedulingAgent
 from src.Utils.EmailService import EmailService
+from src.Utils.AsyncEmailService import AsyncEmailService
 
 from dotenv import load_dotenv
 
@@ -36,8 +37,14 @@ def shortlist_candidates(candidates, keywords, job_role):
 def email_candidates(drive_id):
     print("Starting emailing process")
     #creating the email service instance
-    email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # for EmailService
+    # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
+    # for AsyncEmailService
+    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
     emailing_agent = EmailingAgent(email_service)
+    
     emailing_agent.send_mail_to_all_candidates(drive_id)
     # return "Emails sent successfully"
 
@@ -45,8 +52,14 @@ def email_candidates(drive_id):
 def schedule_interviews(drive_id, round_type):
     print("Starting interview scheduling process")
     #creating the email service instance
-    email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # for EmailService
+    # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    
+    # for AsyncEmailService
+    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
     interview_scheduling_agent = InterviewSchedulingAgent(email_service)
+
     interview_scheduling_agent.schedule_interviews(drive_id,round_type)
     # return "Interviews scheduled successfully"
 
@@ -54,8 +67,14 @@ def schedule_interviews(drive_id, round_type):
 def send_final_selection_emails(drive_id):
     print("Starting final selection emailing process")
     #creating the email service instance
-    email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # for EmailService
+    # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+   
+    # for AsyncEmailService
+    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
     emailing_agent = EmailingAgent(email_service)
+    
     emailing_agent.send_final_selection_emails(drive_id)
     # return "Final selection emails sent successfully"
 
