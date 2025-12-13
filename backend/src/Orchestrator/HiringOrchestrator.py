@@ -6,6 +6,7 @@ from src.Agents.EmailingAgent import EmailingAgent
 from src.Agents.InterviewSchedulingAgent import InterviewSchedulingAgent
 from src.Utils.EmailService import EmailService
 from src.Utils.AsyncEmailService import AsyncEmailService
+from src.Utils.BrevoEmailService import BrevoEmailService
 
 from dotenv import load_dotenv
 
@@ -41,7 +42,10 @@ def email_candidates(drive_id):
     # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
 
     # for AsyncEmailService
-    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    
+    # for BrevoEmailService
+    email_service = BrevoEmailService()
 
     emailing_agent = EmailingAgent(email_service)
     
@@ -56,7 +60,10 @@ def schedule_interviews(drive_id, round_type):
     # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
     
     # for AsyncEmailService
-    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
+    # for BrevoEmailService
+    email_service = BrevoEmailService()
 
     interview_scheduling_agent = InterviewSchedulingAgent(email_service)
 
@@ -71,10 +78,13 @@ def send_final_selection_emails(drive_id):
     # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
    
     # for AsyncEmailService
-    email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    # email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
 
-    emailing_agent = EmailingAgent(email_service)
+    # for BrevoEmailService
+    email_service = BrevoEmailService()
     
+    emailing_agent = EmailingAgent(email_service)
+
     emailing_agent.send_final_selection_emails(drive_id)
     # return "Final selection emails sent successfully"
 

@@ -4,6 +4,7 @@ from src.Utils.EmailService import EmailService
 from src.Utils.Database import db
 from src.MailTemplate.EmailTemplate import EmailTemplate
 from src.Utils.AsyncEmailService import AsyncEmailService
+from src.Utils.BrevoEmailService import BrevoEmailService
 
 
 class EmailingAgent:  
@@ -11,7 +12,10 @@ class EmailingAgent:
     # def __init__(self, email_service: EmailService):
     #     self.email_service = email_service
     # for AsyncEmailService
-    def __init__(self, email_service: AsyncEmailService):
+    # def __init__(self, email_service: AsyncEmailService):
+        # self.email_service = email_service
+    # for AsyncEmailService
+    def __init__(self, email_service: BrevoEmailService):
         self.email_service = email_service
 
     def send_mail_to_all_candidates(self, drive_id):
