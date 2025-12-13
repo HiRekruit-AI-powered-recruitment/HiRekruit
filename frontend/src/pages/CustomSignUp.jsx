@@ -1,6 +1,15 @@
 import { useSignUp } from "@clerk/clerk-react";
 import { useState } from "react";
-import { Mail, Lock, User, Building, UserCheck, Eye, EyeOff, AlertCircle } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  User,
+  Building,
+  UserCheck,
+  Eye,
+  EyeOff,
+  AlertCircle,
+} from "lucide-react";
 
 export default function CustomSignUp() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -38,7 +47,9 @@ export default function CustomSignUp() {
       if (err.errors) {
         setErrors(err.errors);
       } else {
-        setErrors([{ message: "An unexpected error occurred. Please try again." }]);
+        setErrors([
+          { message: "An unexpected error occurred. Please try again." },
+        ]);
       }
     } finally {
       setIsLoading(false);
@@ -52,14 +63,17 @@ export default function CustomSignUp() {
     setVerificationErrors([]);
 
     try {
-      const completeSignUp = await signUp.attemptEmailAddressVerification({ code });
+      const completeSignUp = await signUp.attemptEmailAddressVerification({
+        code,
+      });
 
       if (completeSignUp.status === "complete") {
         await setActive({ session: completeSignUp.createdSessionId });
 
         // Call backend to save instance in MongoDB
+        const BaseUrl = import.meta.env.VITE_BASE_URL;
         try {
-          const res = await fetch("http://localhost:5000/api/user/register", {
+          const res = await fetch(`${BaseUrl}/api/user/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -79,7 +93,12 @@ export default function CustomSignUp() {
           window.location.href = "/";
         } catch (backendError) {
           console.error("Backend error:", backendError);
-          setVerificationErrors([{ message: "Account created successfully, but failed to save in database." }]);
+          setVerificationErrors([
+            {
+              message:
+                "Account created successfully, but failed to save in database.",
+            },
+          ]);
         }
       }
     } catch (err) {
@@ -87,7 +106,9 @@ export default function CustomSignUp() {
       if (err.errors) {
         setVerificationErrors(err.errors);
       } else {
-        setVerificationErrors([{ message: "Invalid verification code. Please try again." }]);
+        setVerificationErrors([
+          { message: "Invalid verification code. Please try again." },
+        ]);
       }
     } finally {
       setIsLoading(false);
@@ -95,7 +116,7 @@ export default function CustomSignUp() {
   };
 
   const handleKeyPress = (e, callback) => {
-    if (e.key === 'Enter') callback();
+    if (e.key === "Enter") callback();
   };
 
   const resendVerificationCode = async () => {
@@ -104,7 +125,9 @@ export default function CustomSignUp() {
       setVerificationErrors([]);
     } catch (err) {
       console.error("Resend error:", err);
-      setVerificationErrors([{ message: "Failed to resend code. Please try again." }]);
+      setVerificationErrors([
+        { message: "Failed to resend code. Please try again." },
+      ]);
     }
   };
 
@@ -141,8 +164,12 @@ export default function CustomSignUp() {
                 <div className="mx-auto w-16 h-16 bg-gradient-to-r from-black to-gray-700 rounded-full flex items-center justify-center mb-4">
                   <UserCheck className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold text-black">Create Account</h2>
-                <p className="text-gray-600 mt-2">Join us and get started today</p>
+                <h2 className="text-3xl font-bold text-black">
+                  Create Account
+                </h2>
+                <p className="text-gray-600 mt-2">
+                  Join us and get started today
+                </p>
               </div>
 
               {renderErrors(errors)}
@@ -223,7 +250,9 @@ export default function CustomSignUp() {
 
                 <button
                   onClick={handleSignUp}
-                  disabled={isLoading || !name || !companyName || !email || !password}
+                  disabled={
+                    isLoading || !name || !companyName || !email || !password
+                  }
                   className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 disabled:opacity-50 shadow-lg"
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
@@ -231,7 +260,10 @@ export default function CustomSignUp() {
 
                 <p className="text-center text-sm text-gray-600 mt-3">
                   Already have an account?{" "}
-                  <a href="/signin" className="text-black font-medium hover:underline">
+                  <a
+                    href="/signin"
+                    className="text-black font-medium hover:underline"
+                  >
                     Sign in
                   </a>
                 </p>
@@ -291,4 +323,3 @@ export default function CustomSignUp() {
     </div>
   );
 }
-

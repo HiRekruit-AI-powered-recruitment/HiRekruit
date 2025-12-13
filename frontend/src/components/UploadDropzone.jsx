@@ -49,6 +49,7 @@ const UploadDropzone = ({ onAddFiles }) => {
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   const handleFiles = useCallback(
     (list) => {
@@ -106,9 +107,6 @@ const UploadDropzone = ({ onAddFiles }) => {
       } p-8 transition-colors`}
     >
       <div className="flex flex-col items-center gap-3 text-center">
-        {/* <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center">
-					<span className="text-gray-500">☁️</span>
-				</div> */}
         <p className="text-gray-600 text-sm">
           Drag and drop resume files or a folder here, or use the buttons below
         </p>
@@ -120,12 +118,33 @@ const UploadDropzone = ({ onAddFiles }) => {
           >
             Browse Files
           </button>
-          <button
-            onClick={() => folderInputRef.current?.click()}
-            className="px-4 py-2 rounded-md bg-white border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Choose Folder
-          </button>
+          <div onClick={() => setShowPopup(true)} className="inline-block">
+            <button className="px-4 py-2 rounded-md bg-gray-100 border border-gray-200 text-sm text-gray-400 cursor-not-allowed">
+              Choose Folder
+            </button>
+          </div>
+          {showPopup && (
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+              onClick={() => setShowPopup(false)} // click outside closes
+            >
+              <div
+                className="bg-white rounded-xl p-6 w-80 text-center shadow-lg"
+                onClick={(e) => e.stopPropagation()} // 🚨 KEY FIX
+              >
+                <h2 className="text-lg font-semibold mb-2">Coming Soon 🚧</h2>
+                <p className="text-gray-600 text-sm mb-4">
+                  Folder upload feature will be available soon.
+                </p>
+                <button
+                  onClick={() => setShowPopup(false)}
+                  className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <input
           ref={fileInputRef}

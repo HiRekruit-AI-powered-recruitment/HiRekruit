@@ -33,6 +33,7 @@ const Home = () => {
   const [typewriterText, setTypewriterText] = useState("");
   const [typewriterIndex, setTypewriterIndex] = useState(0);
   const [showCursor, setShowCursor] = useState(true);
+  const [showDemoPopup, setShowDemoPopup] = useState(false);
 
   const typewriterWords = [
     "AI-Powered Recruiting",
@@ -321,10 +322,32 @@ const Home = () => {
                 >
                   <span>Get Started</span>
                 </button>
-                <button className="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-gray-600 hover:text-black transition-colors flex items-center justify-center space-x-2 text-sm transform hover:scale-105 duration-200">
+                <button
+                  onClick={() => setShowDemoPopup(true)}
+                  className="border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-gray-600 hover:text-black transition-colors flex items-center justify-center space-x-2 text-sm transform hover:scale-105 duration-200"
+                >
                   <Play size={16} />
                   <span>Watch Demo</span>
                 </button>
+
+                {showDemoPopup && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl p-6 w-80 text-center shadow-lg">
+                      <h2 className="text-lg font-semibold mb-2">
+                        Coming Soon 🎬
+                      </h2>
+                      <p className="text-gray-600 text-sm mb-4">
+                        Demo video will be available shortly.
+                      </p>
+                      <button
+                        onClick={() => setShowDemoPopup(false)}
+                        className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6 ">
@@ -498,23 +521,6 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Testimonials Section */}
-      <div className="bg-white py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
-              What Our Users Say
-            </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Join hundreds of companies transforming their hiring process
-            </p>
-          </div>
-          <div>
-            <Testimonials />
-          </div>
-        </div>
-      </div>
-
       {/* Problem & Solution */}
       <section className="py-24 px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
@@ -668,8 +674,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-      {/* Our Clients*/}
-      <ClientLogos />
 
       {/* How It Works */}
       <section className="py-20 px-6 bg-white">
@@ -823,6 +827,26 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Our Clients*/}
+      <ClientLogos />
+
+      {/* Testimonials Section */}
+      <div className="bg-white py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
+              What Our Users Say
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Join hundreds of companies transforming their hiring process
+            </p>
+          </div>
+          <div>
+            <Testimonials />
+          </div>
+        </div>
+      </div>
 
       {/* FAQ Section */}
       <section className="py-20 px-6 bg-white">

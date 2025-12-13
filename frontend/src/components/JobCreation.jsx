@@ -402,12 +402,12 @@ const JobCreation = () => {
 
   const roundTypes = [
     "HR",
-    "Technical",
-    "Behavioral",
-    "System Design",
-    "Coding",
-    "Panel",
-    "Final",
+    // "Technical",
+    // "Behavioral",
+    // "System Design",
+    // "Coding",
+    // "Panel",
+    // "Final",
   ];
 
   if (fetchingHRInfo) {

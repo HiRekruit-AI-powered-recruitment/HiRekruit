@@ -15,6 +15,11 @@ def register_user():
     email = data.get("email")
     company_name = data.get("company_name")
     role = data.get("role", "hr")
+    # print("with :")
+    # details = f'Name : {name}, email : {email}, Company : {company_name}, role : {role}'
+    # print(details)
+
+    
 
     if not name or not email or not company_name:
         return jsonify({"error": "Missing required fields"}), 400
@@ -55,31 +60,25 @@ def register_user():
 
 # Login controller
 def login_user():
-    """
-    Called when user tries to log in.
-    Expects: email (required), name, company_name, role (default 'hr').
-    """
     print("Login route called")
     data = request.get_json()
     email = data.get("email")
-    name = data.get("name")  # not strictly needed, but frontend sends it
-    company_name = data.get("company_name")
-    role = data.get("role", "hr")
+
+    print("logging email:", email)
 
     if not email:
         return jsonify({"error": "Email is required"}), 400
 
-    # 1. Find user by email
     user = db.users.find_one({"email": email})
     if not user:
         return jsonify({"error": "User not found. Please register first."}), 404
 
-    # Convert ObjectId to string for JSON response
+    # Fetch company using ObjectId directly
+    company = db.companies.find_one({"_id": user["company_id"]})
+
+    # Convert IDs for response only
     user["_id"] = str(user["_id"])
     user["company_id"] = str(user["company_id"])
-
-    # 2. Get company details
-    company = db.companies.find_one({"_id": db.to_object_id(user["company_id"])})
 
     if company:
         company["_id"] = str(company["_id"])
@@ -89,6 +88,7 @@ def login_user():
         "user": user,
         "company": company
     }), 200
+
     
 # Get Candidate by ID
 def get_candidate_by_id():

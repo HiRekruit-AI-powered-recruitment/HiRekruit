@@ -39,17 +39,14 @@ export default function CustomSignIn() {
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
-
+        const BaseUrl = import.meta.env.VITE_BASE_URL;
         // Optional: Send additional profile data to backend if needed
         try {
-          const res = await fetch("http://localhost:5000/api/user/login", {
+          const res = await fetch(`${BaseUrl}/api/user/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              name,
               email,
-              company_name: companyName,
-              role,
             }),
           });
 

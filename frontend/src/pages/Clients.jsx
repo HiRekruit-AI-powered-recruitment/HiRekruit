@@ -18,17 +18,17 @@ const TestimonialsSlider = () => {
       text: "HiRekruit has completely transformed our recruitment process. We've reduced our time-to-hire by 60% and the quality of candidates has significantly improved.",
       rating: 5,
       image:
-        "https://media.licdn.com/dms/image/v2/D5603AQGXfMpfklh_jg/profile-displayphoto-shrink_800_800/B56ZZPzFlfHoAc-/0/1745095515416?e=1762387200&v=beta&t=lkJ9BemC9rMZnFsJltEqBnGBR-l346uy0r-t6sqvSsY",
+        "https://media.licdn.com/dms/image/v2/D5603AQGXfMpfklh_jg/profile-displayphoto-shrink_800_800/B56ZZPzFlfHoAc-/0/1745095515416?e=1767225600&v=beta&t=fazu2E0IVxamTE_-dxlsgugXBleoJSD4z05KCJomYck",
     },
     {
       id: 2,
-      name: "Heena H.",
+      name: "Kavita Verma",
       role: "Human Resources",
-      company: "Hirekruit",
+      company: "HiRekruit",
       text: "The bulk upload feature alone has saved us countless hours. What used to take our team days now happens in minutes. The analytics dashboard gives us insights we never had before.",
       rating: 5,
       image:
-        "https://media.licdn.com/dms/image/v2/D4E03AQFrIssKyQD6Qg/profile-displayphoto-crop_800_800/B4EZmeDmI1HEAI-/0/1759293367596?e=1762387200&v=beta&t=NqQd0hkQ4RwTu137PTjKlrqKrrygaKu8YPtvXbjYHQo",
+        "https://media.licdn.com/dms/image/v2/D5603AQHRD3f6o5EysQ/profile-displayphoto-crop_800_800/B56ZsXcnSRJwAI-/0/1765624940935?e=1767225600&v=beta&t=pJFj6mk4LHxBSN9ok4b-z3EvXVH4IWavL8P3K98EAvA",
     },
   ];
 
