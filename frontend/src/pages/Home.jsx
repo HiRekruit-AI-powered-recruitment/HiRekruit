@@ -130,7 +130,7 @@ const Home = () => {
     });
 
     // Navigate to the Job Creation page
-    navigate("/drive-creation");
+    navigate("/dashboard/drive-creation");
   };
   // Typewriter effect
   useEffect(() => {

@@ -426,7 +426,7 @@ const Services = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate("/drive-creation")}
+              onClick={() => navigate("/dashboard/drive-creation")}
               className="bg-white text-black px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
             >
               Start Your Drive Now

@@ -100,7 +100,7 @@ def register_user():
         print(f"Registration error: {str(e)}")
         return jsonify({"message": "Registration failed. Please try again."}), 500
 
-
+#working
 def verify_email():
     """
     Verify email with OTP
@@ -235,7 +235,7 @@ def resend_verification():
         print(f"Resend verification error: {str(e)}")
         return jsonify({"message": "Failed to resend code. Please try again."}), 500
 
-
+#working
 def login_user():
     """
     Login user
@@ -306,7 +306,7 @@ def login_user():
         print(f"Login error: {str(e)}")
         return jsonify({"message": "Login failed. Please try again."}), 500
 
-
+#working
 def logout_user():
     """Logout user by destroying session"""
     try:
@@ -316,7 +316,7 @@ def logout_user():
         print(f"Logout error: {str(e)}")
         return jsonify({"message": "Logout failed"}), 500
 
-
+#working
 def forgot_password():
     """
     Request password reset
@@ -362,7 +362,7 @@ def forgot_password():
         print(f"Forgot password error: {str(e)}")
         return jsonify({"message": "Failed to send reset code. Please try again."}), 500
 
-
+#working
 def reset_password():
     """
     Reset password with OTP
@@ -449,6 +449,7 @@ def get_current_user_info():
             company_data = {
                 "_id": str(company["_id"]),
                 "name": company["name"],
+                "about": company["about"],
                 "industry": company.get("industry"),
                 "location": company.get("location")
             }

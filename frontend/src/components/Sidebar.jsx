@@ -9,24 +9,30 @@ import {
   Star,
   BarChart3,
   Briefcase,
-  Calendar,
+  CalendarDays,
   Trophy,
+  PlusCircle,
+  Users,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
 
 const items = [
-  { label: "Create New Drive", icon: LayoutDashboard, path: "/drive-creation" },
-  { label: "Drives", icon: Briefcase, path: "/drives" },
-  { label: "All Applicants", icon: FileText, path: "/resumes" },
-  { label: "Shortlisted", icon: Star, path: "/shortlisted" },
+  {
+    label: "Create New Drive",
+    icon: PlusCircle,
+    path: "/dashboard/drive-creation",
+  },
+  { label: "Drives", icon: Briefcase, path: "/dashboard/drives" },
+  { label: "All Applicants", icon: FileText, path: "/dashboard/resumes" },
+  { label: "Shortlisted", icon: Users, path: "/dashboard/shortlisted" },
   {
     label: "Selected Candidates",
     icon: Trophy,
-    path: "/selected-candidates",
+    path: "/dashboard/selected-candidates",
   },
-  { label: "Analytics", icon: BarChart3, path: "/analytics" },
-  { label: "Calender", icon: Calendar, path: "/calender" },
+  { label: "Analytics", icon: BarChart3, path: "/dashboard/analytics" },
+  { label: "Calendar", icon: CalendarDays, path: "/dashboard/calendar" },
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {

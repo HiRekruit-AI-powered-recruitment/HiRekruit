@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, FileText, Download } from "lucide-react";
+import { Search, FileText, Download, Trophy } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Loader from "../components/Loader";
 
@@ -239,7 +239,7 @@ const SelectedCandidates = () => {
 
             {filteredCandidates.length === 0 && (
               <div className="text-center py-16">
-                <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   No candidates found
                 </h3>

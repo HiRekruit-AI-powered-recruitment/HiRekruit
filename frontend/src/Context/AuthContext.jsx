@@ -6,6 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [companyData, setCompanyData] = useState(null);
 
   // Check authentication status
   const checkAuth = async () => {
@@ -19,6 +20,7 @@ export const AuthProvider = ({ children }) => {
         const data = await response.json();
         setIsAuthenticated(true);
         setUser(data.user);
+        setCompanyData(data.company);
       } else {
         setIsAuthenticated(false);
         setUser(null);
@@ -68,6 +70,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         isAuthenticated,
         user,
+        companyData,
         isLoading,
         login,
         logout,

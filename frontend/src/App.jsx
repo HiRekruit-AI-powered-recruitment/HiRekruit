@@ -35,7 +35,7 @@ import SignUp from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
-
+import DashboardHome from "./components/DashboardHome";
 import Assessment from "./pages/Assessment";
 import Instructions from "./pages/Instructions";
 import AssessmentSubmission from "./components/CodingAssessment/AssessmentSubmission";
@@ -88,18 +88,7 @@ function AppContent() {
         <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected Routes */}
-        <Route
-          path="/drive-creation"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <JobCreation />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
 
-        {/* Profile */}
         <Route
           path="/profile"
           element={
@@ -131,70 +120,30 @@ function AppContent() {
           }
         />
 
+        {/* Dashboard Routes */}
         <Route
-          path="/drives"
+          path="/dashboard"
           element={
             <ProtectedRoute>
-              <Layout>
-                <Drives />
-              </Layout>
+              <Layout />
             </ProtectedRoute>
           }
-        />
+        >
+          {/* Dashboard landing page */}
+          <Route index element={<DashboardHome />} />
 
-        <Route
-          path="/resumes"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <ResumeLibrary />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Dashboard pages */}
+          <Route path="drive-creation" element={<JobCreation />} />
+          <Route path="drives" element={<Drives />} />
+          <Route path="resumes" element={<ResumeLibrary />} />
+          <Route path="shortlisted" element={<Shortlisted />} />
+          <Route path="selected-candidates" element={<SelectedCandidates />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="calendar" element={<Calendar />} />
 
-        <Route
-          path="/shortlisted"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Shortlisted />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/selected-candidates"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <SelectedCandidates />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/analytics"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Analytics />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/calender"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Calendar />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+          {/* Single drive dashboard */}
+          <Route path=":drive_id" element={<Dashboard />} />
+        </Route>
 
         {/* Interview Routes */}
         <Route

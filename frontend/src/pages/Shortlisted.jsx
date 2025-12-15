@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, FileText, Award } from "lucide-react";
+import { Search, FileText, Award, Users } from "lucide-react";
 
 import Loader from "../components/Loader";
 
@@ -257,7 +257,7 @@ const ShortlistedResumes = () => {
         {/* Empty State */}
         {filteredCandidates.length === 0 && !loading && (
           <div className="text-center py-16">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               {jobId
                 ? "No shortlisted candidates found"
