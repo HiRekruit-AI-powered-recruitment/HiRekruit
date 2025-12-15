@@ -17,7 +17,7 @@
 
 /* loader */
 /* From Uiverse.io by satyamchaudharydev */ 
-.loading {
+/* .loading {
  --speed-of-animation: 0.9s;
  --gap: 6px;
  --first-color: #4c86f9;
@@ -58,7 +58,7 @@
 .loading span:nth-child(5) {
  background: var(--fifth-color);
  animation-delay: -0.5s;
-}
+} */
 
 @keyframes scale {
  0%, 40%, 100% {

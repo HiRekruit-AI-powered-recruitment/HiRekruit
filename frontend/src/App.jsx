@@ -6,7 +6,6 @@ import {
   useLocation,
   Outlet,
 } from "react-router-dom";
-import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 
 import Dashboard from "./components/Dashboard";
 import InterviewPage from "./pages/InterviewPage";
@@ -26,14 +25,16 @@ import Contact from "./pages/Contact";
 import LayoutWithNavbar from "./pages/LayoutWithNavbar";
 import Chatbot from "./components/Chatbot";
 import Process from "./pages/Process";
-import CustomSignUp from "./pages/CustomSignUp";
-import CustomSignIn from "./pages/CustomSignIn";
-import { UserProfile } from "@clerk/clerk-react";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Calendar from "./components/Calender";
 import ProtectedRoute from "./components/ProtectedRoute";
 import useGTMPageView from "./pages/useGTMPageView";
 import Loader from "./components/Loader";
+import SignIn from "./pages/Signin";
+import SignUp from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import Profile from "./pages/Profile";
 
 import Assessment from "./pages/Assessment";
 import Instructions from "./pages/Instructions";
@@ -79,8 +80,12 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Route>
 
-        <Route path="/signup" element={<CustomSignUp />} />
-        <Route path="/signin" element={<CustomSignIn />} />
+        {/* <Route path="/signup" element={<CustomSignUp />} /> */}
+        {/* <Route path="/signin" element={<CustomSignIn />} /> */}
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signin" element={<SignIn />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
 
         {/* Protected Routes */}
         <Route
@@ -99,7 +104,7 @@ function AppContent() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <UserProfile />
+              <Profile />
             </ProtectedRoute>
           }
         />

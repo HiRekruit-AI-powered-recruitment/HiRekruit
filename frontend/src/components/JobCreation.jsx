@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../Context/AuthContext.jsx";
 import Loader from "./Loader";
 import SkillFilter from "./SkillFilter";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const JobCreation = () => {
-  const { user } = useUser();
+  // Use auth context
+  const { user } = useAuth();
+  console.log("User :", user);
   const navigate = useNavigate();
   console.log(BASE_URL);
 
@@ -41,7 +43,7 @@ const JobCreation = () => {
   useEffect(() => {
     const fetchHRInfo = async () => {
       try {
-        const email = user?.emailAddresses[0]?.emailAddress;
+        const email = user?.email;
         console.log("Current HR Email :", email);
         if (!email) {
           console.log("No email found for user");
@@ -575,7 +577,7 @@ const JobCreation = () => {
             type="text"
             value={jobData.job_id}
             onChange={(e) => handleInputChange("job_id", e.target.value)}
-            placeholder="Enter unique job ID, e.g., JOB-2024-001"
+            placeholder="Enter unique job ID, e.g., JOB-2025-001"
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
           />
         </div>

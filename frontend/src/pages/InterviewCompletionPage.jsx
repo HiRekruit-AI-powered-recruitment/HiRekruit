@@ -10,9 +10,10 @@ import {
   FileText,
   Calendar,
   Star,
-  Loader2,
   AlertCircle,
 } from "lucide-react";
+
+import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -144,7 +145,7 @@ const InterviewCompletionPage = () => {
       return (
         <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-3">
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+            <Loader className="w-5 h-5 text-blue-600 animate-spin" />
             <div>
               <h3 className="font-medium text-blue-900">
                 We will Evaluate Your Interview and get back to you soon!
@@ -202,7 +203,7 @@ const InterviewCompletionPage = () => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white border-4 border-black rounded-full mb-6">
             {isEvaluating ? (
-              <Loader2 className="w-10 h-10 text-black animate-spin" />
+              <Loader className="w-10 h-10 text-black animate-spin" />
             ) : evaluationComplete ? (
               <CheckCircle className="w-10 h-10 text-green-600" />
             ) : (

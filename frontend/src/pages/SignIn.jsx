@@ -1,67 +1,56 @@
-// Note: we are not using Clerk's built-in UI components for sign-in.
-// This is a custom implementation using Clerk's hooks for better control over the UI/UX.
-import { useSignIn } from "@clerk/clerk-react";
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function CustomSignIn() {
+export default function SignIn() {
   const navigate = useNavigate();
-  const { isLoaded, signIn, setActive } = useSignIn();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
+  const handleSignIn = async (e) => {
+    e?.preventDefault();
 
-  const syncWithBackend = async (userEmail) => {
-    const baseUrl = import.meta.env.VITE_BASE_URL;
-    if (!baseUrl) return;
-
-    try {
-      await fetch(`${baseUrl}/api/user/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail }),
-      });
-    } catch (error) {
-      console.warn("Backend sync failed:", error);
+    if (!email || !password) {
+      setErrors([{ message: "Please fill in all fields" }]);
+      return;
     }
-  };
-
-  const handleSignIn = async () => {
-    if (!email || !password) return;
 
     setIsLoading(true);
     setErrors([]);
 
     try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Important for cookies
+        body: JSON.stringify({
+          email,
+          password,
+          remember_me: rememberMe,
+        }),
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        await syncWithBackend(email);
-        window.location.href = "/";
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors([{ message: data.message || "Invalid email or password" }]);
+        return;
       }
+
+      // Successful login - redirect to dashboard
+      window.location.href = "/";
     } catch (err) {
       console.error("SignIn error:", err);
-      setErrors(
-        err.errors || [
-          { message: "Invalid email or password. Please try again." },
-        ]
-      );
+      setErrors([
+        { message: "Unable to connect to server. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -83,9 +72,6 @@ export default function CustomSignIn() {
       </div>
 
       <div className="relative w-full max-w-md">
-        {/* Clerk CAPTCHA container */}
-        <div id="clerk-captcha" className="mb-4" />
-
         <div className="bg-white/80 backdrop-blur-lg shadow-2xl rounded-3xl p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-6">
@@ -95,7 +81,7 @@ export default function CustomSignIn() {
             <h2 className="text-3xl font-bold bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">
               Welcome Back
             </h2>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+            <p className="text-gray-600 mt-2">Sign in to HiRekruit</p>
           </div>
 
           {/* Error Messages */}
@@ -106,9 +92,7 @@ export default function CustomSignIn() {
                 <div className="text-sm text-gray-700">
                   {errors.map((error, index) => (
                     <div key={index} className="mb-1 last:mb-0">
-                      {error.message ||
-                        error.longMessage ||
-                        "An error occurred"}
+                      {error.message}
                     </div>
                   ))}
                 </div>
@@ -117,7 +101,7 @@ export default function CustomSignIn() {
           )}
 
           {/* Form */}
-          <div className="space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-4">
             {/* Email Input */}
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -175,6 +159,8 @@ export default function CustomSignIn() {
                   name="remember-me"
                   type="checkbox"
                   className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded cursor-pointer"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                 />
                 <span className="ml-2 block text-sm text-gray-600">
                   Remember me
@@ -192,7 +178,7 @@ export default function CustomSignIn() {
 
             {/* Sign In Button */}
             <button
-              onClick={handleSignIn}
+              type="submit"
               disabled={isLoading || !email || !password}
               className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
@@ -205,7 +191,7 @@ export default function CustomSignIn() {
                 "Sign In"
               )}
             </button>
-          </div>
+          </form>
 
           {/* Sign Up Link */}
           <div className="text-center mt-6">

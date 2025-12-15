@@ -8,12 +8,11 @@ import {
   Phone,
   Settings,
   Monitor,
-  Loader2,
   AlertCircle,
   Camera,
   CameraOff,
 } from "lucide-react";
-
+import Loader from "../components/Loader";
 import Vapi from "@vapi-ai/web";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -471,7 +470,7 @@ const InterviewPage = () => {
     if (isCheckingCompletion) {
       return (
         <div className="flex items-center gap-2 text-sm text-gray-700 px-3 py-1 border border-gray-300 rounded-full">
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader className="w-4 h-4 animate-spin" />
           Checking status...
         </div>
       );
@@ -489,7 +488,7 @@ const InterviewPage = () => {
     if (isConnecting) {
       return (
         <div className="flex items-center gap-2 text-sm text-blue-700 px-3 py-1 border border-blue-500 bg-blue-50 rounded-full">
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader className="w-4 h-4 animate-spin" />
           Connecting...
         </div>
       );
@@ -632,7 +631,7 @@ const InterviewPage = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="max-w-md mx-auto bg-white border-2 border-black rounded-lg p-8 text-center">
-          <Loader2 className="w-16 h-16 text-black mx-auto mb-4 animate-spin" />
+          <Loader className="w-16 h-16 text-black mx-auto mb-4 animate-spin" />
           <h2 className="text-xl font-semibold text-black mb-2">
             Preparing Interview
           </h2>
@@ -751,7 +750,7 @@ const InterviewPage = () => {
               {isConnecting && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                   <div className="text-white text-center">
-                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+                    <Loader className="w-8 h-8 animate-spin mx-auto mb-2" />
                     <p className="text-sm">Connecting...</p>
                   </div>
                 </div>
@@ -844,7 +843,7 @@ const InterviewPage = () => {
               }`}
             >
               {isConnecting ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader className="w-5 h-5 animate-spin" />
               ) : (
                 <Phone className="w-5 h-5" />
               )}

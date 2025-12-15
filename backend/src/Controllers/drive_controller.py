@@ -627,10 +627,24 @@ def get_drive_progress(drive_id):
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
+from bson import ObjectId
+from datetime import datetime
+
+def serialize_mongo_doc(doc):
+    """
+    Convert MongoDB document to JSON-serializable dict
+    """
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            doc[key] = str(value)
+        elif isinstance(value, datetime):
+            doc[key] = value.isoformat()
+    return doc
+
+
 def get_hr_info(hr_mail):
-    """
-    Fetch HR info from the User collection by email.
-    """
+    print("call for get hr info with email :", hr_mail)
+
     try:
         print(f"Fetching HR info for email: {hr_mail}")
         user = db.users.find_one({"email": hr_mail})
@@ -638,16 +652,20 @@ def get_hr_info(hr_mail):
         if not user:
             print(f"No user found with email: {hr_mail}")
             return None
-        
-        # Convert ObjectId to string for JSON serialization
-        user["_id"] = str(user["_id"])
-        
-        print(f"Found user: {user.get('name', 'Unknown')} with company_id: {user.get('company_id', 'None')}")
+
+        user = serialize_mongo_doc(user)
+
+        print(
+            f"Found user: {user.get('name', 'Unknown')} "
+            f"with company_id: {user.get('company_id', 'None')}"
+        )
+
         return user
 
     except Exception as e:
         print(f"Error fetching HR info: {str(e)}")
         return None
+
 
 
 def get_drive_candidates(drive_id):

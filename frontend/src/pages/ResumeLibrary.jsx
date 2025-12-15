@@ -1,13 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, FileText, ChevronDown, Download } from "lucide-react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../Context/AuthContext.jsx";
 import { toast } from "react-hot-toast";
 import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const ResumeLibrary = () => {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [totalCandidates, SetTotalCandidates] = useState(0);
   const [candidates, setCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");

@@ -49,7 +49,7 @@ const AdminCompanies = () => {
             activeDrives: 5,
             totalHRUsers: 8,
             totalCandidates: 234,
-            createdAt: "2024-01-15",
+            createdAt: "2025-01-15",
             status: "active",
           },
           {
@@ -62,7 +62,7 @@ const AdminCompanies = () => {
             activeDrives: 3,
             totalHRUsers: 4,
             totalCandidates: 87,
-            createdAt: "2024-02-20",
+            createdAt: "2025-02-20",
             status: "active",
           },
           {

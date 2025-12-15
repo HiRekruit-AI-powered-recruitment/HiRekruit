@@ -1,6 +1,3 @@
-// Note: we are not using Clerk's built-in UI components for sign-up.
-// This is a custom implementation using Clerk's hooks for better control over the UI/UX.
-import { useSignUp } from "@clerk/clerk-react";
 import { useState } from "react";
 import {
   Mail,
@@ -14,9 +11,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-export default function CustomSignUp() {
+export default function SignUp() {
   const navigate = useNavigate();
-  const { isLoaded, signUp, setActive } = useSignUp();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -27,45 +23,13 @@ export default function CustomSignUp() {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [code, setCode] = useState("");
 
   // UI state
-  const [pendingVerification, setPendingVerification] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900" />
-      </div>
-    );
-  }
-
   const handleInputChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const registerWithBackend = async () => {
-    const baseUrl = import.meta.env.VITE_BASE_URL;
-    if (!baseUrl) throw new Error("Backend URL not configured");
-
-    const response = await fetch(`${baseUrl}/api/user/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formData.name,
-        email: formData.email,
-        company_name: formData.companyName,
-        role: formData.role,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Backend registration failed: ${response.status}`);
-    }
-
-    return response.json();
   };
 
   const handleSignUp = async (e) => {
@@ -74,20 +38,35 @@ export default function CustomSignUp() {
     setErrors([]);
 
     try {
-      await signUp.create({
-        emailAddress: formData.email,
-        password: formData.password,
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await fetch(`${baseUrl}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          company_name: formData.companyName,
+          role: formData.role,
+        }),
       });
 
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      setPendingVerification(true);
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors([{ message: data.message || "Registration failed" }]);
+        return;
+      }
+
+      // Redirect to verification page with email
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err) {
       console.error("SignUp error:", err);
-      setErrors(
-        err.errors || [
-          { message: "An unexpected error occurred. Please try again." },
-        ]
-      );
+      setErrors([
+        { message: "Unable to connect to server. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -99,33 +78,32 @@ export default function CustomSignUp() {
     setErrors([]);
 
     try {
-      const completeSignUp = await signUp.attemptEmailAddressVerification({
-        code,
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await fetch(`${baseUrl}/api/auth/verify-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: formData.email,
+          code: code,
+        }),
       });
 
-      if (completeSignUp.status === "complete") {
-        await setActive({ session: completeSignUp.createdSessionId });
+      const data = await response.json();
 
-        try {
-          await registerWithBackend();
-          window.location.href = "/";
-        } catch (backendError) {
-          console.error("Backend registration error:", backendError);
-          setErrors([
-            {
-              message:
-                "Account created successfully, but failed to save additional details. Please contact support.",
-            },
-          ]);
-        }
+      if (!response.ok) {
+        setErrors([{ message: data.message || "Invalid verification code" }]);
+        return;
       }
+
+      // Successful verification - redirect to dashboard
+      window.location.href = "/";
     } catch (err) {
       console.error("Verification error:", err);
-      setErrors(
-        err.errors || [
-          { message: "Invalid verification code. Please try again." },
-        ]
-      );
+      setErrors([
+        { message: "Unable to connect to server. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -136,10 +114,31 @@ export default function CustomSignUp() {
     setErrors([]);
 
     try {
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await fetch(`${baseUrl}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors([{ message: data.message || "Failed to resend code" }]);
+        return;
+      }
+
+      // Show success message (optional: you can add a success state)
+      setErrors([{ message: "Verification code sent successfully!" }]);
     } catch (err) {
       console.error("Resend error:", err);
-      setErrors([{ message: "Failed to resend code. Please try again." }]);
+      setErrors([
+        { message: "Unable to connect to server. Please try again." },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -153,41 +152,25 @@ export default function CustomSignUp() {
 
   const isFormValid = () => {
     const { name, companyName, email, password } = formData;
-    return name && companyName && email && password;
+    return name && companyName && email && password && password.length >= 8;
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-white to-gray-100 p-4">
       <div className="relative w-full max-w-md">
-        {/* Clerk CAPTCHA container */}
-        <div id="clerk-captcha" className="mb-4" />
-
         <div className="bg-white/90 backdrop-blur-lg shadow-2xl rounded-3xl p-8 border border-gray-200">
-          {!pendingVerification ? (
-            <SignUpForm
-              formData={formData}
-              showPassword={showPassword}
-              isLoading={isLoading}
-              errors={errors}
-              onInputChange={handleInputChange}
-              onTogglePassword={() => setShowPassword(!showPassword)}
-              onSubmit={handleSignUp}
-              onKeyPress={handleKeyPress}
-              isFormValid={isFormValid()}
-              onNavigateSignIn={() => navigate("/signin")}
-            />
-          ) : (
-            <VerificationForm
-              email={formData.email}
-              code={code}
-              isLoading={isLoading}
-              errors={errors}
-              onCodeChange={(e) => setCode(e.target.value)}
-              onVerify={handleVerify}
-              onResend={resendVerificationCode}
-              onKeyPress={handleKeyPress}
-            />
-          )}
+          <SignUpForm
+            formData={formData}
+            showPassword={showPassword}
+            isLoading={isLoading}
+            errors={errors}
+            onInputChange={handleInputChange}
+            onTogglePassword={() => setShowPassword(!showPassword)}
+            onSubmit={handleSignUp}
+            onKeyPress={handleKeyPress}
+            isFormValid={isFormValid()}
+            onNavigateSignIn={() => navigate("/signin")}
+          />
         </div>
       </div>
     </div>
@@ -208,14 +191,16 @@ function SignUpForm({
   onNavigateSignIn,
 }) {
   return (
-    <div className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-6">
       {/* Header */}
       <div className="text-center">
         <div className="mx-auto w-16 h-16 bg-gradient-to-r from-black to-gray-700 rounded-full flex items-center justify-center mb-4">
           <UserCheck className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-3xl font-bold text-black">Create Account</h2>
-        <p className="text-gray-600 mt-2">Join us and get started today</p>
+        <p className="text-gray-600 mt-2">
+          Join HiRekruit and get started today
+        </p>
       </div>
 
       {/* Error Messages */}
@@ -297,8 +282,12 @@ function SignUpForm({
           disabled={isLoading}
         />
 
+        <p className="text-xs text-gray-500">
+          Password must be at least 8 characters long
+        </p>
+
         <button
-          onClick={onSubmit}
+          type="submit"
           disabled={isLoading || !isFormValid}
           className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
         >
@@ -323,86 +312,7 @@ function SignUpForm({
           </button>
         </p>
       </div>
-    </div>
-  );
-}
-
-// Verification Form Component
-function VerificationForm({
-  email,
-  code,
-  isLoading,
-  errors,
-  onCodeChange,
-  onVerify,
-  onResend,
-  onKeyPress,
-}) {
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-r from-black to-gray-700 rounded-full flex items-center justify-center mb-4">
-          <Mail className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-3xl font-bold text-black">Verify Email</h2>
-        <p className="text-gray-600 mt-2">
-          We've sent a verification code to
-          <br />
-          <span className="font-medium text-gray-800">{email}</span>
-        </p>
-      </div>
-
-      {/* Error Messages */}
-      <ErrorDisplay errors={errors} />
-
-      {/* Code Input */}
-      <input
-        type="text"
-        placeholder="Enter 6-digit code"
-        className="block w-full px-4 py-3 text-center text-2xl font-mono tracking-wider border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        value={code}
-        onChange={onCodeChange}
-        onKeyPress={(e) => onKeyPress(e, onVerify)}
-        disabled={isLoading}
-        maxLength={6}
-        autoComplete="one-time-code"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        aria-label="Verification code"
-        required
-      />
-
-      <button
-        onClick={onVerify}
-        disabled={isLoading || !code || code.length !== 6}
-        className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-      >
-        {isLoading ? (
-          <span className="flex items-center justify-center">
-            <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-            Verifying...
-          </span>
-        ) : (
-          "Verify & Continue"
-        )}
-      </button>
-
-      {/* Resend Code */}
-      <div className="text-center">
-        <p className="text-sm text-gray-600">
-          Didn't receive the code?{" "}
-          <button
-            type="button"
-            onClick={onResend}
-            disabled={isLoading}
-            className="font-medium text-black hover:text-gray-700 transition-colors hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Resend
-          </button>
-        </p>
-      </div>
-    </div>
+    </form>
   );
 }
 
@@ -450,13 +360,14 @@ function PasswordField({
       <Lock className="absolute inset-y-0 left-3 h-5 w-5 text-gray-400 my-auto" />
       <input
         type={showPassword ? "text" : "password"}
-        placeholder="Password"
+        placeholder="Password (min. 8 characters)"
         className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
         value={value}
         onChange={onChange}
         onKeyPress={onKeyPress}
         disabled={disabled}
         autoComplete="new-password"
+        minLength={8}
         required
       />
       <button
@@ -487,7 +398,7 @@ function ErrorDisplay({ errors }) {
         <div className="text-sm text-gray-700">
           {errors.map((error, index) => (
             <div key={index} className="mb-1 last:mb-0">
-              {error.message || error.longMessage || "An error occurred"}
+              {error.message}
             </div>
           ))}
         </div>

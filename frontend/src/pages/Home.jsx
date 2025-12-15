@@ -182,7 +182,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Custom CSS for animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes scroll-left {
           0% {
             transform: translateX(0);

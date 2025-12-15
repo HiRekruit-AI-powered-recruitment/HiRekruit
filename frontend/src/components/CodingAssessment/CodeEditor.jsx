@@ -1,5 +1,5 @@
 import Editor from "@monaco-editor/react";
-import { Loader2, Play } from "lucide-react";
+import { Play } from "lucide-react";
 
 const LANGUAGES = [
   { name: "python", label: "Python", monacoName: "python" },
@@ -98,7 +98,7 @@ export default function CodeEditor({
         >
           {isRunning ? (
             <>
-              <Loader2
+              <Loader
                 size={16}
                 style={{ animation: "spin 1s linear infinite" }}
               />

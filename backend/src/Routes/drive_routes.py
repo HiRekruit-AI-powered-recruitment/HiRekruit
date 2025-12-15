@@ -81,17 +81,17 @@ def get_drive_status(driveId):
 @drive_bp.route("/hr-info", methods=["GET"])
 def hr_info_route():
     email = request.args.get("email")
+
     if not email:
         return jsonify({"error": "Email is required"}), 400
-    
+
     hr_info = get_hr_info(email)
+
     if not hr_info:
         return jsonify({"error": "HR not found"}), 404
-    
-    print("Email received:", email)
-    print("HR Info from DB:", hr_info)
-    
+
     return jsonify(hr_info), 200
+
 
 drive_bp.route("/job", methods=["GET"])(get_drive_id_by_job)
 

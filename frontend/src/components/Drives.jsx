@@ -5,12 +5,12 @@ import DriveCard from "./DriveCard";
 import Loader from "./Loader";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../Context/AuthContext.jsx";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const Drives = () => {
-  const { user } = useUser();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [drives, setDrives] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +22,7 @@ const Drives = () => {
   useEffect(() => {
     const fetchHRInfo = async () => {
       try {
-        const email = user?.emailAddresses[0]?.emailAddress;
+        const email = user?.email;
         if (!email) {
           console.log("No email found for user");
           return;

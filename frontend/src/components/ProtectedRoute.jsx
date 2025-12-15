@@ -1,15 +1,45 @@
-import React from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
+import Loader from "./Loader";
 
 export default function ProtectedRoute({ children }) {
-  const { isSignedIn, isLoaded } = useUser();
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Wait until Clerk is loaded
-  if (!isLoaded) return null;
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
-  // If not signed in, redirect to custom sign-in page
-  if (!isSignedIn) return <Navigate to="/signin" replace />;
+  const checkAuth = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/auth/me`, {
+        credentials: "include",
+      });
 
-  return <>{children}</>;
+      if (response.ok) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return <Loader />;
+  }
+
+  // Not authenticated - redirect to signin
+  if (!isAuthenticated) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  // Authenticated - render protected content
+  return children;
 }

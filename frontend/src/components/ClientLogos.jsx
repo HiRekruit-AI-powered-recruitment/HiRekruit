@@ -69,7 +69,7 @@ const ClientLogos = () => {
 
         {/* Logos Slider */}
         <div className="relative overflow-hidden py-8">
-          <style jsx>{`
+          <style>{`
             @keyframes scroll-left {
               0% {
                 transform: translateX(0);

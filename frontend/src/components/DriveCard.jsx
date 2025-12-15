@@ -8,7 +8,6 @@ import {
   MoreVertical,
   BrainCircuit,
   PlayCircle,
-  Loader2,
 } from "lucide-react";
 
 const DriveCard = ({ drive, onView }) => {
@@ -286,7 +285,7 @@ const DriveCard = ({ drive, onView }) => {
                   className={`px-2 py-1 ${roundBgColor} ${roundTextColor} rounded text-xs font-medium flex items-center gap-1`}
                 >
                   {roundStatus?.status === "in_progress" && (
-                    <Loader2 size={10} className="animate-spin" />
+                    <Loader size={10} className="animate-spin" />
                   )}
                   {roundStatus?.status === "completed" && (
                     <CheckCircle size={10} />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../Context/AuthContext.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -16,7 +16,7 @@ import Loader from "./Loader";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const Calendar = () => {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [companyId, setCompanyId] = useState(null);
   const [drives, setDrives] = useState([]);
@@ -31,7 +31,7 @@ const Calendar = () => {
   useEffect(() => {
     const fetchHRInfo = async () => {
       try {
-        const email = user?.emailAddresses[0]?.emailAddress;
+        const email = user?.email;
         if (!email) return;
 
         const response = await fetch(
