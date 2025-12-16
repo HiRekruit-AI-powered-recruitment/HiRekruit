@@ -20,6 +20,13 @@ from src.Utils.Database import db
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
+app.config.update(
+    SESSION_COOKIE_SAMESITE="None",  # REQUIRED for cross-domain
+    SESSION_COOKIE_SECURE=True,      # REQUIRED for HTTPS
+    SESSION_COOKIE_HTTPONLY=True
+)
+
+
 
 # Enable CORS
 CORS(
