@@ -386,7 +386,7 @@ const JobCreation = () => {
       });
 
       setTimeout(() => {
-        navigate(`/dashboard/${data.drive._id}`);
+        navigate(`/dashboard/creating-drive/${data.drive._id}`);
       }, 1000);
     } catch (err) {
       console.error("Error creating drive:", err.message);
