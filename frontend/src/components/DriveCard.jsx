@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Calendar,
   MapPin,
@@ -8,6 +8,8 @@ import {
   MoreVertical,
   BrainCircuit,
   PlayCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 
 const DriveCard = ({ drive, onView }) => {
@@ -28,6 +30,19 @@ const DriveCard = ({ drive, onView }) => {
     job_type,
     progress,
   } = drive;
+
+  const [copied, setCopied] = useState(false);
+
+  // Copy job_id to clipboard
+  const handleCopyJobId = async () => {
+    try {
+      await navigator.clipboard.writeText(job_id);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   // Get drive progress based on rounds
   const getDriveProgress = () => {
@@ -159,9 +174,21 @@ const DriveCard = ({ drive, onView }) => {
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-gray-500">
-                {job_id}
-              </span>
+              <button
+                onClick={handleCopyJobId}
+                className="group flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                title="Click to copy Job ID"
+              >
+                <span>{job_id}</span>
+                {copied ? (
+                  <Check size={12} className="text-green-600" />
+                ) : (
+                  <Copy
+                    size={12}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                )}
+              </button>
               <div
                 className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}
               >
@@ -285,7 +312,7 @@ const DriveCard = ({ drive, onView }) => {
                   className={`px-2 py-1 ${roundBgColor} ${roundTextColor} rounded text-xs font-medium flex items-center gap-1`}
                 >
                   {roundStatus?.status === "in_progress" && (
-                    <Loader size={10} className="animate-spin" />
+                    <PlayCircle size={10} className="animate-spin" />
                   )}
                   {roundStatus?.status === "completed" && (
                     <CheckCircle size={10} />

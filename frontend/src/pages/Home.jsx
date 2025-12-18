@@ -130,7 +130,7 @@ const Home = () => {
     });
 
     // Navigate to the Job Creation page
-    navigate("/dashboard/drive-creation");
+    navigate("/dashboard");
   };
   // Typewriter effect
   useEffect(() => {
@@ -320,7 +320,7 @@ const Home = () => {
                   onClick={handleGetStartedClick}
                   className="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 text-sm transform hover:scale-105 duration-200"
                 >
-                  <span>Get Started</span>
+                  <span>Start Your Drive Now</span>
                 </button>
                 <button
                   onClick={() => setShowDemoPopup(true)}
@@ -931,7 +931,7 @@ const Home = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="py-16 px-6 bg-gradient-to-r from-black to-gray-800">
+      {/* <section className="py-16 px-6 bg-gradient-to-r from-black to-gray-800">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
             Ready to Transform Your Hiring?
@@ -947,15 +947,9 @@ const Home = () => {
             >
               Start Your Drive Now
             </button>
-            {/* <button className="border-2 border-white text-white px-8 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-gray-900 transition-colors transform hover:scale-105 duration-200">
-              Schedule a Demo
-            </button> */}
           </div>
-          {/* <p className="text-gray-400 mt-8">
-            No credit card required • Free 14-day trial • Cancel anytime
-          </p> */}
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };
