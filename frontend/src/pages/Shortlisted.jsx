@@ -61,8 +61,9 @@ const ShortlistedResumes = () => {
       const candidateDetailsPromises = candidateInfo.map(async (info) => {
         try {
           const res = await fetch(
-            `${BASE_URL}/api/user/candidate?candidate_id=${info.candidate_id}`
+            `${BASE_URL}/api/auth/candidate?candidate_id=${info.candidate_id}`
           );
+          console.log("All shortlisted candidate response:", res);
           if (!res.ok)
             throw new Error(`Failed to fetch candidate ${info.candidate_id}`);
           const candidateData = await res.json();

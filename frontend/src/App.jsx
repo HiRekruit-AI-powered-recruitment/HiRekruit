@@ -104,8 +104,8 @@ function AppContent() {
           }
         />
 
-        <Route
-          path="/dashboard/:drive_id"
+        {/* <Route
+          path="/creating-drive/:drive_id"
           element={
             <ProtectedRoute>
               <Layout>
@@ -113,7 +113,7 @@ function AppContent() {
               </Layout>
             </ProtectedRoute>
           }
-        />
+        /> */}
 
         {/* Dashboard Routes */}
         <Route
@@ -136,9 +136,9 @@ function AppContent() {
           <Route path="selected-candidates" element={<SelectedCandidates />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="calendar" element={<Calendar />} />
-
+          <Route path="creating-drive/:drive_id" element={<Dashboard />} />
           {/* Single drive dashboard */}
-          <Route path=":drive_id" element={<Dashboard />} />
+          {/* <Route path=":drive_id" element={<Dashboard />} /> */}
         </Route>
 
         {/* Interview Routes */}
