@@ -144,12 +144,12 @@ const Drives = () => {
   });
 
   const handleCreateNewDrive = () => {
-    navigate("/drive-creation");
+    navigate("/dashboard/drive-creation");
   };
 
   const handleViewDrive = (driveId) => {
     console.log("Viewing drive:", driveId);
-    navigate(`/process/${driveId}`);
+    navigate(`/dashboard/process/${driveId}`);
   };
 
   // Calculate stats

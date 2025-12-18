@@ -36,6 +36,10 @@ import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
 import DashboardHome from "./components/DashboardHome";
+import AccessibilityPage from "./components/Footer/Accessibility";
+import CookiePolicy from "./components/Footer/CookiePolicy";
+
+// assessment pages
 import Assessment from "./pages/Assessment";
 import Instructions from "./pages/Instructions";
 import AssessmentSubmission from "./components/CodingAssessment/AssessmentSubmission";
@@ -78,6 +82,8 @@ function AppContent() {
           <Route path="/clients" element={<Clients />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/accessibility" element={<AccessibilityPage />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
         </Route>
 
         {/* <Route path="/signup" element={<CustomSignUp />} /> */}
@@ -94,17 +100,6 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Profile />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/process/:driveId"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Process />
-              </Layout>
             </ProtectedRoute>
           }
         />
@@ -135,6 +130,7 @@ function AppContent() {
           {/* Dashboard pages */}
           <Route path="drive-creation" element={<JobCreation />} />
           <Route path="drives" element={<Drives />} />
+          <Route path="process/:driveId" element={<Process />} />
           <Route path="resumes" element={<ResumeLibrary />} />
           <Route path="shortlisted" element={<Shortlisted />} />
           <Route path="selected-candidates" element={<SelectedCandidates />} />
