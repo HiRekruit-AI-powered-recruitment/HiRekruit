@@ -8,6 +8,7 @@ from src.Utils.BrevoEmailService import BrevoEmailService
 
 
 class EmailingAgent:  
+    #.......................................................
     #  for EmailService
     # def __init__(self, email_service: EmailService):
     #     self.email_service = email_service
@@ -17,6 +18,7 @@ class EmailingAgent:
     # for AsyncEmailService
     def __init__(self, email_service: BrevoEmailService):
         self.email_service = email_service
+    #........................................................
 
     def send_mail_to_all_candidates(self, drive_id):
         """Send resume shortlist / rejection emails using EmailTemplate"""
@@ -316,6 +318,7 @@ class EmailingAgent:
                 # Send Email
                 # -----------------------------
                 print(f"Sending email to: {candidate_info['email']}")
+                #....................................
                 # for EmailService
                 # self.email_service.send_email(
                 #     candidate_info["email"],
@@ -329,7 +332,7 @@ class EmailingAgent:
                     subject,
                     body
                 )
-
+                #.......................................
                 # -----------------------------
                 # Update DB
                 # -----------------------------
@@ -357,3 +360,78 @@ class EmailingAgent:
         # -----------------------------
         print("\n=== Final Selection Email Process Complete ===")
         print(f"Success: {success_count}, Errors: {error_count}")
+
+    def send_otp_email(self, recipient_email: str, otp: str, purpose: str = "verification"):
+        """Send OTP via email with beautiful HTML template"""
+        try:
+            
+            if purpose == "verification" :
+                template = EmailTemplate.get("verification")
+            elif purpose == "password_reset" :
+                template = EmailTemplate.get("password_reset")
+
+            subject = template["subject"]
+            body = template["body"].format(otp=otp)
+         
+            #........................................................
+            # Send HTML smtp email 
+            # return self.send_email(recipient_email, subject, body, html=True)
+        
+            # for AsyncEmailSerive
+            return self.email_service.send_email_background(
+                recipient_email,
+                subject,
+                body,
+                html=True
+            )
+            #.............................................................
+        except Exception as e:
+            print(f"Error sending OTP email: {str(e)}")
+            return False
+
+    def send_welcome_email(self, recipient_email: str, name: str):
+        """Send welcome email after successful registration"""
+        try:
+            template = EmailTemplate.get("welcome")
+            subject = template["subject"]
+            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+            
+            body = template["body"].format(name = name, frontend_url= frontend_url)
+            
+            #.........................................
+
+            # return self.send_email(recipient_email, subject, body, html=True)
+        
+            # for AsyncEmailSerive
+            return self.email_service.send_email_background(
+                recipient_email,
+                subject,
+                body,
+                html=True
+            )
+            #................................................
+            
+        except Exception as e:
+            print(f"Error sending welcome email: {str(e)}")
+            return False
+
+    def send_password_changed_notification(self, recipient_email: str):
+        """Send notification when password is successfully changed"""
+        try:
+            template = EmailTemplate.get("password_changed")
+            subject = template["subject"]
+            
+            body = template["body"]
+            
+            # return self.send_email(recipient_email, subject, body, html=True)
+            
+            return self.email_service.send_email_background(
+                recipient_email,
+                subject,
+                body,
+                html=True
+            )
+        except Exception as e:
+            print(f"Error sending password change notification: {str(e)}")
+            return False
+

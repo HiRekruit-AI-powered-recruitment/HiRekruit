@@ -349,13 +349,14 @@ def update_drive_status(drive_id):
         elif new_status == DriveStatus.EMAIL_SENT:
             print("Queueing email sending task...")
 
+            #................................
             # Using worker
             # task_result = email_candidates_task.delay(drive_id)
             # print(f"Task queued with ID: {task_result.id}")
 
             # Using without worker
             task_result = email_candidates(drive_id)
-
+            #..........................................
             stages = drive.get("stages", [])
             current_stage = drive.get("currentStage", 0)
             next_stage_index = min(current_stage + 1, len(stages) - 1)

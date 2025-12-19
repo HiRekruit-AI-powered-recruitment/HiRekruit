@@ -13,19 +13,26 @@ class BrevoEmailService:
         self.sender_email = os.getenv("BREVO_SENDER_EMAIL")
         self.sender_name = os.getenv("BREVO_SENDER_NAME", "HireKruit")
 
-    def _send_email(self, to_email, subject, body):
+    def _send_email(self, to_email, subject, body, html=False):
         try:
             api_instance = sib_api_v3_sdk.TransactionalEmailsApi(self.api_client)
 
-            email = sib_api_v3_sdk.SendSmtpEmail(
-                to=[{"email": to_email}],
-                sender={
+            email_data = {
+                "to": [{"email": to_email}],
+                "sender": {
                     "email": self.sender_email,
                     "name": self.sender_name,
                 },
-                subject=subject,
-                text_content=body,
-            )
+                "subject": subject,
+            }
+
+            # ✅ HTML vs Text
+            if html:
+                email_data["html_content"] = body
+            else:
+                email_data["text_content"] = body
+
+            email = sib_api_v3_sdk.SendSmtpEmail(**email_data)
 
             api_instance.send_transac_email(email)
             print(f"✓ Email delivered to {to_email} by Brevo")
@@ -36,9 +43,9 @@ class BrevoEmailService:
         except Exception as e:
             print(f"✗ Unexpected email error for {to_email}: {e}")
 
-    def send_email_background(self, to_email, subject, body):
+    def send_email_background(self, to_email, subject, body, html=False):
         threading.Thread(
             target=self._send_email,
-            args=(to_email, subject, body),
+            args=(to_email, subject, body, html),
             daemon=True
         ).start()

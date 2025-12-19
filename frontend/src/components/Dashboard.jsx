@@ -79,7 +79,7 @@ const Dashboard = () => {
       if (response.ok) {
         toast.success("Resumes processed successfully!");
         console.log("Result:", result);
-        navigate("dashboard/drives");
+        navigate("/dashboard/drives");
       } else {
         toast.error("Failed to process resumes");
         console.error("Error:", result);
