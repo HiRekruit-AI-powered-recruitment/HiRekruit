@@ -38,6 +38,8 @@ def shortlist_candidates(candidates, keywords, job_role):
 def email_candidates(drive_id):
     print("Starting emailing process")
     #creating the email service instance
+
+    #............................
     # for EmailService
     # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
 
@@ -46,6 +48,7 @@ def email_candidates(drive_id):
     
     # for BrevoEmailService
     email_service = BrevoEmailService()
+    #............................
 
     emailing_agent = EmailingAgent(email_service)
     

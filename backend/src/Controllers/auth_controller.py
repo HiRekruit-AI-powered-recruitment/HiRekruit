@@ -4,6 +4,8 @@ from bson import ObjectId
 from src.Utils.Database import db
 from src.Utils.auth_utils import AuthUtils
 from src.Utils.EmailService import EmailService
+from src.Utils.BrevoEmailService import BrevoEmailService
+from src.Agents.EmailingAgent import EmailingAgent
 from src.Model.Company import create_company
 from src.Model.User import create_user
 from src.Config.auth_config import AuthConfig
@@ -82,18 +84,27 @@ def register_user():
         user_id = result.inserted_id
 
         # Send OTP email
-        email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
-        success = email_service.send_otp_email(email, otp, purpose="verification")
-        if not success:
-            # Rollback user creation if email fails
-            db.users.delete_one({"_id": user_id})
-            return jsonify({
-                "message": "Failed to send verification email. Please try again."
-            }), 500
+        # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
+        # for BrevoEmailService
+        email_service = BrevoEmailService()
+        #............................
+
+        emailing_agent = EmailingAgent(email_service)
+
+        success = emailing_agent.send_otp_email(email, otp, purpose="verification")
+
+        # if not success:
+        #     # Rollback user creation if email fails
+        #     db.users.delete_one({"_id": user_id})
+        #     return jsonify({
+        #         "message": "Failed to send verification email. Please try again."
+        #     }), 500
 
         return jsonify({
             "message": "Registration successful. Please check your email for verification code.",
-            "email": email
+            "email": email,
+            "success" : success
         }), 201
 
     except Exception as e:
@@ -162,9 +173,18 @@ def verify_email():
         AuthUtils.create_session(user["_id"], remember_me=False)
         print("after session creation")
 
+        #......................................................
         # Send welcome email
-        email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
-        email_service.send_welcome_email(email, user["name"])
+        # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+        # email_service.send_welcome_email(email, user["name"])
+
+         # for BrevoEmailService
+        email_service = BrevoEmailService()
+        #............................
+
+        emailing_agent = EmailingAgent(email_service)
+
+        success = emailing_agent.send_welcome_email(email, user["name"])
 
         # Return user data
         user_data = {
@@ -224,10 +244,19 @@ def resend_verification():
         )
 
         # Send OTP email
-        email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
-        success = email_service.send_otp_email(email, otp, purpose="verification")
-        if not success:
-            return jsonify({"message": "Failed to send email. Please try again."}), 500
+        # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+        # success = email_service.send_otp_email(email, otp, purpose="verification")
+
+        # for BrevoEmailService
+        email_service = BrevoEmailService()
+        #............................
+
+        emailing_agent = EmailingAgent(email_service)
+
+        success = emailing_agent.send_otp_email(email, otp, purpose="verification")
+        
+        # if not success:
+        #     return jsonify({"message": "Failed to send email. Please try again."}), 500
 
         return jsonify({"message": "Verification code sent successfully"}), 200
 
@@ -352,9 +381,18 @@ def forgot_password():
             }
         )
 
+        #...........................................................
         # Send OTP email
-        email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
-        email_service.send_otp_email(email, otp, purpose="password_reset")
+        # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+        # email_service.send_otp_email(email, otp, purpose="password_reset")
+
+        # for BrevoEmailService
+        email_service = BrevoEmailService()
+        #..........................................................
+
+        emailing_agent = EmailingAgent(email_service)
+
+        success = emailing_agent.send_otp_email(email, otp, purpose="password_reset")
 
         return jsonify({"message": "Password reset code sent to your email"}), 200
 
@@ -426,13 +464,22 @@ def reset_password():
             }
         )
 
+        # mail for password changed
+        # for BrevoEmailService
+        email_service = BrevoEmailService()
+        #..........................................................
+
+        emailing_agent = EmailingAgent(email_service)
+
+        success = emailing_agent.send_password_changed_notification(email)
+
         return jsonify({"message": "Password reset successfully"}), 200
 
     except Exception as e:
         print(f"Reset password error: {str(e)}")
         return jsonify({"message": "Password reset failed. Please try again."}), 500
 
-
+#working
 def get_current_user_info():
     """Get current logged-in user information"""
     try:
@@ -463,7 +510,7 @@ def get_current_user_info():
         print(f"Get user info error: {str(e)}")
         return jsonify({"message": "Failed to fetch user info"}), 500
     
-# Get Candidate by ID
+# working  (this function should have been in the drive controller) Get Candidate by ID
 def get_candidate_by_id():
     """
     Fetch candidate info by candidate ID.

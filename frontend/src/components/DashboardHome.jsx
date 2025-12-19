@@ -14,7 +14,7 @@ const dashboardItems = [
     description:
       "Create a new hiring drive and configure job roles, rounds, and assessments.",
     icon: <PlusCircle size={28} />,
-    link: "/dashboard/create-drive",
+    link: "/dashboard/drive-creation",
   },
   {
     title: "Drives",
