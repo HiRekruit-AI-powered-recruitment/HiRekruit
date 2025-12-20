@@ -12,7 +12,7 @@ import {
   Camera,
   CameraOff,
 } from "lucide-react";
-import Loader from "../components/Loader";
+import Loader from "../../components/Loader";
 import Vapi from "@vapi-ai/web";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;

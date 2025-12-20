@@ -13,6 +13,7 @@ import {
   Target,
   Settings,
   CheckCircle2,
+  Computer,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import Loader from "../components/Loader";
@@ -33,7 +34,7 @@ const Process = () => {
   // Default icons for different round types
   const roundTypeIcons = {
     Technical: Settings,
-    HR: MessageSquare,
+    HR: Computer,
     Behavioral: Users,
     "System Design": Target,
     Coding: Code,
@@ -269,21 +270,6 @@ const Process = () => {
     }
   };
 
-  const goToStep = async (stepIndex) => {
-    if (
-      stepIndex >= 0 &&
-      stepIndex < steps.length &&
-      stepIndex !== currentStep
-    ) {
-      const stepData = steps[stepIndex];
-
-      const success = await updateDriveStatus(stepData);
-      if (success) {
-        setCurrentStep(stepIndex);
-      }
-    }
-  };
-
   const markRoundComplete = async () => {
     const currentStepData = steps[currentStep];
 
@@ -379,7 +365,7 @@ const Process = () => {
                   {/* Circle Step */}
                   <div className="relative mb-3">
                     <motion.div
-                      className={`w-16 h-16 rounded-full border-4 flex items-center justify-center relative z-10 cursor-pointer ${
+                      className={`w-16 h-16 rounded-full border-4 flex items-center justify-center relative z-10 ${
                         index <= currentStep
                           ? "border-black bg-black"
                           : "border-gray-300 bg-white"
@@ -393,8 +379,6 @@ const Process = () => {
                           index <= currentStep ? "#000000" : "#ffffff",
                       }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
-                      onClick={() => !loading && goToStep(index)}
-                      whileHover={{ scale: loading ? 1 : 1.05 }}
                     >
                       <AnimatePresence mode="wait">
                         {index < currentStep ? (
@@ -465,10 +449,9 @@ const Process = () => {
                     transition={{ duration: 0.3 }}
                   >
                     <p
-                      className={`text-xs font-medium cursor-pointer leading-tight ${
+                      className={`text-xs font-medium leading-tight ${
                         index <= currentStep ? "text-black" : "text-gray-400"
                       }`}
-                      onClick={() => !loading && goToStep(index)}
                     >
                       {step.shortLabel}
                     </p>

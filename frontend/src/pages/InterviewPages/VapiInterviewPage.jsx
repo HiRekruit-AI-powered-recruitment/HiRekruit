@@ -1,6 +1,10 @@
+//..............................................................................................
+// We are not using this page anywhere currently, it is just for reference for vapi integration.
+//..............................................................................................
+
 import React, { useState, useEffect, useRef } from "react";
 import Vapi from "@vapi-ai/web";
-import { getMockInterviewPrompt } from "../Prompts/MockInterviewPrompt";
+import { getMockInterviewPrompt } from "../../Prompts/MockInterviewPrompt";
 
 export default function VapiInterviewPage() {
   const [vapiClient, setVapiClient] = useState(null);

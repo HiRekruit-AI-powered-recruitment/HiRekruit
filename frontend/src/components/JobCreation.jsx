@@ -468,6 +468,12 @@ const JobCreation = () => {
                 <div>
                   <strong>Job Type:</strong> {jobData.job_type || "N/A"}
                 </div>
+                {jobData.job_type === "internship" && (
+                  <div>
+                    <strong>Internship Duration:</strong>{" "}
+                    {jobData.internship_duration || "N/A"}
+                  </div>
+                )}
                 <div>
                   <strong>Candidates to Hire:</strong>{" "}
                   {jobData.candidates_to_hire || "N/A"}

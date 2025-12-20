@@ -8,7 +8,6 @@ import {
 } from "react-router-dom";
 
 import Dashboard from "./components/Dashboard";
-import InterviewPage from "./pages/InterviewPage";
 import Layout from "./components/Layout";
 import ResumeLibrary from "./pages/ResumeLibrary";
 import Shortlisted from "./pages/Shortlisted";
@@ -16,8 +15,12 @@ import Analytics from "./pages/Analytics";
 import Home from "./pages/Home";
 import JobCreation from "./components/JobCreation";
 import Drives from "./components/Drives";
-import InterviewStartPage from "./pages/InterviewStartPage";
-import InterviewCompletionPage from "./pages/InterviewCompletionPage";
+// Interview pages
+import InterviewLayout from "./pages/InterviewPages/InterviewLayout";
+import InterviewPage from "./pages/InterviewPages/InterviewPage";
+import InterviewStartPage from "./pages/InterviewPages/InterviewStartPage";
+import InterviewCompletionPage from "./pages/InterviewPages/InterviewCompletionPage";
+
 import About from "./pages/About";
 import Services from "./pages/Services";
 import Clients from "./pages/Clients";
@@ -104,17 +107,6 @@ function AppContent() {
           }
         />
 
-        {/* <Route
-          path="/creating-drive/:drive_id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        /> */}
-
         {/* Dashboard Routes */}
         <Route
           path="/dashboard"
@@ -142,18 +134,20 @@ function AppContent() {
         </Route>
 
         {/* Interview Routes */}
-        <Route
-          path="/mockinterview/:driveCandidateId"
-          element={<InterviewPage />}
-        />
-        <Route
-          path="/start-interview/:driveCandidateId/:typeOfInterview"
-          element={<InterviewStartPage />}
-        />
-        <Route
-          path="/interview-completion"
-          element={<InterviewCompletionPage />}
-        />
+        <Route element={<InterviewLayout />}>
+          <Route
+            path="/mockinterview/:driveCandidateId"
+            element={<InterviewPage />}
+          />
+          <Route
+            path="/start-interview/:driveCandidateId/:typeOfInterview"
+            element={<InterviewStartPage />}
+          />
+          <Route
+            path="/interview-completion"
+            element={<InterviewCompletionPage />}
+          />
+        </Route>
 
         {/* Assessment Routes */}
         <Route
