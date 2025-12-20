@@ -152,4 +152,6 @@ def get_candidate_info(drive_candidate_id):
         return jsonify(drive_candidate), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+    
 

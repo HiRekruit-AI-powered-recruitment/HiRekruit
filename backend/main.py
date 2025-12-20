@@ -6,8 +6,7 @@ from src.Routes.resume_routes import resume_bp
 from src.Routes.user_routes import auth_bp
 from src.Routes.drive_routes import drive_bp
 from src.Routes.chatbot_routes import chatbot_bp
-from src.Controllers.allresumes_controller import get_allresumes_controller
-from src.Controllers import interview_controller
+from src.Routes.InterviewFeedback_routes import feedback_bp
 from src.Config.auth_config import AuthConfig
 
 # for coding-assessment
@@ -31,16 +30,20 @@ app.config.update(
 # Enable CORS
 CORS(
     app,
-    resources={r"/api/*": {
-        "origins": [
-            "http://localhost:5173",
-            "https://www.hirekruit.com"
-        ],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "supports_credentials": True
-    }}
+    resources={
+        r"/api/*": {
+            "origins": [
+                "http://localhost:5173",
+                "https://hirekruit.com",
+                "https://www.hirekruit.com"
+            ],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "supports_credentials": True
+        }
+    }
 )
+
 
 app.secret_key = AuthConfig.SECRET_KEY
 
@@ -55,7 +58,8 @@ app.register_blueprint(chatbot_bp, url_prefix="/api/chatbot")
 app.register_blueprint(problem_bp, url_prefix="/api/coding-assessment/problem")
 app.register_blueprint(submission_bp, url_prefix="/api/coding-assessment/submission")
 
-
+# for feedback
+app.register_blueprint(feedback_bp, url_prefix="/api/interview-feedback")
 
 
 if __name__ == "__main__":
