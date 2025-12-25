@@ -394,6 +394,106 @@ class EmailTemplate:
                 </html>
                 """
             },
+            
+            # ---------------------------------
+            # Panel Interview Invitation
+            # ---------------------------------
+            "panel": {
+                "subject": "Panel Access — {round_type} Interview | {company_name}",
+                "body": """
+                <!DOCTYPE html>
+                <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    </head>
+                    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f5f5f5;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
+                            <tr>
+                                <td align="center">
+                                    <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+                                        <!-- Header -->
+                                        <tr>
+                                            <td style="background: linear-gradient(135deg, #000000, #434343); padding: 35px; text-align: center;">
+                                                <h1 style="margin: 0; color: #ffffff;">HiRekruit</h1>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Content -->
+                                        <tr>
+                                            <td style="padding: 35px;">
+                                                <h2 style="margin-bottom: 20px; color: #1a1a1a;">
+                                                    Panel Interview Access
+                                                </h2>
+
+                                                <p style="color: #555;">
+                                                    Dear <strong>{hr_name}</strong>,
+                                                </p>
+
+                                                <p style="color: #555; line-height: 1.6;">
+                                                    You are assigned as the <strong>Panel Member</strong> for the
+                                                    <strong>{round_type} Round</strong> interview at
+                                                    <strong>{company_name}</strong>.
+                                                </p>
+
+                                                <div style="background-color: #eff6ff; border: 2px solid #3b82f6; padding: 22px; margin: 30px 0; border-radius: 12px;">
+                                                    <p style="margin: 0 0 12px; font-weight: 600; color: #1e40af;">
+                                                        📋 Interview Details
+                                                    </p>
+                                                    <table width="100%" cellpadding="6">
+                                                        <tr>
+                                                            <td style="font-weight: 600; color: #1e40af;">Candidate</td>
+                                                            <td style="color: #1e40af;">{candidate_name}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: 600; color: #1e40af;">Round</td>
+                                                            <td style="color: #1e40af;">{round_type} Round</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: 600; color: #1e40af;">Date</td>
+                                                            <td style="color: #1e40af;">{interview_date}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: 600; color: #1e40af;">Time</td>
+                                                            <td style="color: #1e40af;">{interview_time}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td style="font-weight: 600; color: #1e40af;">Panel Link</td>
+                                                            <td>
+                                                                <a href="{panel_url}" style="color: #2563eb;">
+                                                                    Join Interview
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </div>
+
+                                                <p style="color: #555; font-size: 14px;">
+                                                    This link provides panel-level access to observe and evaluate the interview.
+                                                </p>
+
+                                                <p style="margin-top: 30px; color: #555;">
+                                                    Regards,<br>
+                                                    <strong>HiRekruit Team</strong>
+                                                </p>
+                                            </td>
+                                        </tr>
+
+                                        <tr>
+                                            <td style="background-color: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #999;">
+                                                © 2025 HiRekruit
+                                            </td>
+                                        </tr>
+
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </body>
+                </html>
+                """
+            },
 
             # ---------------------------------
             # Coding Assessment Invitation

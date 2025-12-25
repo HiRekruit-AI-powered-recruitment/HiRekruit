@@ -40,7 +40,11 @@ class InterviewSchedulingAgent:
         interview_date = interview_datetime.strftime('%A, %d %B %Y')
         interview_time = interview_datetime.strftime('%I:%M %p')
 
-        meeting_base_url = f"{forntend_base_url}/start-interview"
+        # for candidate
+        candidate_meeting_base_url = f"{forntend_base_url}/start-interview"
+        # for panel (HR)
+        panel_meeting_base_url = f"{forntend_base_url}/panel"
+
         normalized_round_type = str(round_type).strip().capitalize()
 
         # -----------------------------
@@ -116,6 +120,7 @@ class InterviewSchedulingAgent:
         print(f"📊 Found {len(shortlisted_candidates)} shortlisted candidates")
 
         email_template = EmailTemplate.get("interview")
+        panel_email_template = EmailTemplate.get("panel")
         email_count = 0
 
         # -----------------------------
@@ -131,8 +136,12 @@ class InterviewSchedulingAgent:
                 print(f"⚠️ Candidate info not found for ID {candidate_id}")
                 continue
 
-            interview_url = f"{meeting_base_url}/{candidate['_id']}/{round_type.lower()}"
+            interview_url = f"{candidate_meeting_base_url}/{candidate['_id']}/{round_type.lower()}"
+            panel_interview_url = f"{panel_meeting_base_url}/{candidate['_id']}/{round_type.lower()}"
 
+            # -----------------------------
+            # Candidate Email
+            # -----------------------------
             subject = email_template["subject"].format(
                 round_type=normalized_round_type,
                 company_name=company_name
@@ -149,6 +158,24 @@ class InterviewSchedulingAgent:
                 company_name=company_name
             )
 
+            # -----------------------------
+            # Panel (HR) Email
+            # -----------------------------
+            panel_subject = panel_email_template["subject"].format(
+                round_type=normalized_round_type,
+                company_name=company_name
+            )
+
+            panel_body = panel_email_template["body"].format(
+                hr_name=hr_name,
+                candidate_name=candidate_info["name"],
+                round_type=normalized_round_type,
+                interview_date=interview_date,
+                interview_time=interview_time,
+                panel_url=panel_interview_url,
+                company_name=company_name
+            )
+
             try:
                 print(f"📧 Sending interview email to {candidate_info['email']}")
 
@@ -160,13 +187,22 @@ class InterviewSchedulingAgent:
                 # )
 
                 # for AsyncEmailSerive
+                print("Sending mail to Candidate.")
                 self.email_service.send_email_background(
                     candidate_info["email"],
                     subject,
                     body
                 )
 
-                print("   ✅ Email sent successfully")
+                # Send panel access mail to HR
+                print("Sending mail to Panel.")
+                self.email_service.send_email_background(
+                    hr_email,
+                    panel_subject,
+                    panel_body
+                )
+
+                print("   ✅ Emails sent successfully")
                 email_count += 1
 
             except Exception as e:
@@ -174,6 +210,7 @@ class InterviewSchedulingAgent:
 
         print(f"\n✅ Emails sent: {email_count}/{len(shortlisted_candidates)}")
         return email_count
+
 
     def schedule_coding_assessments(self, drive_id):
         """
