@@ -1,18 +1,19 @@
-import React, { useEffect, useState, useRef, useCallback, memo } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   CheckCircle,
-  Clock,
   Mail,
   Phone,
-  ArrowLeft,
-  Home,
   FileText,
   Calendar,
   Star,
   AlertCircle,
   MessageSquare,
   Send,
+  Home,
+  Sparkles,
+  Award,
+  Clock,
 } from "lucide-react";
 
 import Loader from "../../components/Loader";
@@ -30,15 +31,6 @@ const InterviewCompletionPage = () => {
     conversation,
     interviewType,
   } = location.state || {};
-
-  // Log initial props once
-  useEffect(() => {
-    console.debug("InterviewCompletionPage initial data:", {
-      userData,
-      driveCandidateId,
-      interviewType,
-    });
-  }, []);
 
   // Use ref for completion time to avoid re-renders
   const completionTimeRef = useRef(new Date());
@@ -62,6 +54,11 @@ const InterviewCompletionPage = () => {
     improvements: "",
     additional_comments: "",
   });
+
+  // Ref to track if we should scroll to feedback form
+  const shouldScrollToFeedback = useRef(false);
+  const feedbackFormRef = useRef(null);
+  const hasScrolledToFeedback = useRef(false);
 
   // Check if interview is already evaluated
   useEffect(() => {
@@ -89,8 +86,9 @@ const InterviewCompletionPage = () => {
           if (currentRound && currentRound.completed === "yes") {
             setAlreadyEvaluated(true);
             setEvaluationComplete(true);
-            // Show feedback form after a short delay, but don't scroll on page refresh
+            // Show feedback form after a short delay
             setTimeout(() => {
+              shouldScrollToFeedback.current = true;
               setShowFeedbackForm(true);
             }, 2000);
           }
@@ -104,6 +102,25 @@ const InterviewCompletionPage = () => {
 
     checkEvaluationStatus();
   }, [driveCandidateId, interviewType]);
+
+  // Scroll to feedback form only when it first appears
+  useEffect(() => {
+    if (
+      showFeedbackForm &&
+      shouldScrollToFeedback.current &&
+      !hasScrolledToFeedback.current &&
+      feedbackFormRef.current
+    ) {
+      setTimeout(() => {
+        feedbackFormRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+        hasScrolledToFeedback.current = true;
+        shouldScrollToFeedback.current = false;
+      }, 300);
+    }
+  }, [showFeedbackForm]);
 
   // Call evaluation API when component mounts (only if not already evaluated)
   useEffect(() => {
@@ -141,6 +158,7 @@ const InterviewCompletionPage = () => {
           setEvaluationComplete(true);
           // Show feedback form after evaluation completes
           setTimeout(() => {
+            shouldScrollToFeedback.current = true;
             setShowFeedbackForm(true);
           }, 2000);
         } else {
@@ -172,8 +190,8 @@ const InterviewCompletionPage = () => {
     alreadyEvaluated,
   ]);
 
-  // Format date and time - use ref to prevent re-renders
-  const formatDateTime = (date) => {
+  // Format date and time
+  const formatDateTime = useCallback((date) => {
     return date.toLocaleString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -182,7 +200,7 @@ const InterviewCompletionPage = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
+  }, []);
 
   // If no user data, redirect to home
   useEffect(() => {
@@ -192,7 +210,7 @@ const InterviewCompletionPage = () => {
     }
   }, [userData, navigate]);
 
-  // Handle feedback form input changes - memoize to prevent re-renders
+  // Handle feedback form input changes - properly memoized
   const handleFeedbackChange = useCallback((field, value) => {
     setFeedbackData((prev) => ({
       ...prev,
@@ -200,12 +218,13 @@ const InterviewCompletionPage = () => {
     }));
   }, []);
 
-  // Submit feedback - memoize to prevent re-renders
+  // Submit feedback - properly memoized
   const handleFeedbackSubmit = useCallback(
     async (e) => {
       e.preventDefault();
       setFeedbackSubmitting(true);
-      console.log("handle submit feedback form called");
+      console.log("Submitting feedback form");
+
       try {
         const response = await fetch(
           `${BASE_URL}/api/interview-feedback/submit`,
@@ -243,10 +262,10 @@ const InterviewCompletionPage = () => {
 
   if (!userData) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black mx-auto"></div>
-          <p className="mt-4 text-black">Loading...</p>
+          <Loader className="w-16 h-16 text-indigo-600 mx-auto mb-4 animate-spin" />
+          <p className="text-lg text-gray-700 font-medium">Loading...</p>
         </div>
       </div>
     );
@@ -256,14 +275,16 @@ const InterviewCompletionPage = () => {
   const EvaluationStatus = () => {
     if (alreadyEvaluated) {
       return (
-        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <div>
-              <h3 className="font-medium text-green-900">
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-3 border-green-500 rounded-2xl p-6 mb-6 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-lg">
+              <CheckCircle className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-green-900 mb-1">
                 Interview Already Evaluated
               </h3>
-              <p className="text-sm text-green-700">
+              <p className="text-green-700 font-medium">
                 Your interview has already been evaluated. We'll contact you
                 soon with the results.
               </p>
@@ -275,13 +296,19 @@ const InterviewCompletionPage = () => {
 
     if (isEvaluating) {
       return (
-        <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <Loader className="w-5 h-5 text-blue-600 animate-spin" />
-            <div>
-              <h3 className="font-medium text-blue-900">
-                We will Evaluate Your Interview and get back to you soon!
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-3 border-blue-500 rounded-2xl p-6 mb-6 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+              <Loader className="w-7 h-7 text-white animate-spin" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-blue-900 mb-1">
+                Evaluating Your Interview
               </h3>
+              <p className="text-blue-700 font-medium">
+                Our AI is analyzing your responses. This will take just a
+                moment...
+              </p>
             </div>
           </div>
         </div>
@@ -290,13 +317,17 @@ const InterviewCompletionPage = () => {
 
     if (evaluationError) {
       return (
-        <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <div>
-              <h3 className="font-medium text-red-900">Evaluation Error</h3>
-              <p className="text-sm text-red-700">{evaluationError}</p>
-              <p className="text-xs text-red-600 mt-1">
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border-3 border-red-500 rounded-2xl p-6 mb-6 shadow-lg">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <AlertCircle className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-red-900 mb-1">
+                Evaluation Error
+              </h3>
+              <p className="text-red-700 font-medium mb-2">{evaluationError}</p>
+              <p className="text-sm text-red-600">
                 Don't worry - your interview has been saved and our team will
                 review it manually.
               </p>
@@ -308,16 +339,18 @@ const InterviewCompletionPage = () => {
 
     if (evaluationComplete) {
       return (
-        <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <div>
-              <h3 className="font-medium text-green-900">
-                Evaluation Complete!
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-3 border-green-500 rounded-2xl p-6 mb-6 shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-lg">
+              <Award className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-green-900 mb-1">
+                Evaluation Complete! 🎉
               </h3>
-              <p className="text-sm text-green-700">
+              <p className="text-green-700 font-medium">
                 Your interview has been successfully evaluated. We'll contact
-                you soon.
+                you soon with results.
               </p>
             </div>
           </div>
@@ -334,13 +367,18 @@ const InterviewCompletionPage = () => {
 
     if (feedbackSubmitted) {
       return (
-        <div className="bg-white border-2 border-green-500 rounded-xl p-8 mb-6">
+        <div
+          ref={feedbackFormRef}
+          className="bg-gradient-to-br from-green-50 to-emerald-50 border-3 border-green-500 rounded-2xl p-10 mb-6 shadow-xl"
+        >
           <div className="text-center">
-            <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-green-900 mb-2">
-              Thank You for Your Feedback!
+            <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <CheckCircle className="w-12 h-12 text-white" />
+            </div>
+            <h3 className="text-3xl font-bold text-green-900 mb-3">
+              Thank You for Your Feedback! 🙏
             </h3>
-            <p className="text-green-700">
+            <p className="text-lg text-green-700 font-medium">
               Your feedback helps us improve our interview process.
             </p>
           </div>
@@ -349,24 +387,39 @@ const InterviewCompletionPage = () => {
     }
 
     return (
-      <div className="bg-white border-2 border-black rounded-xl p-8 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <MessageSquare className="w-6 h-6 text-black" />
-          <h2 className="text-2xl font-bold text-black">Interview Feedback</h2>
+      <div
+        ref={feedbackFormRef}
+        className="bg-white border-3 border-gray-900 rounded-2xl p-8 mb-6 shadow-xl"
+      >
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <MessageSquare className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Interview Feedback
+            </h2>
+            <p className="text-gray-600 font-medium">
+              Help us improve your experience
+            </p>
+          </div>
         </div>
 
-        <p className="text-gray-700 mb-6">
-          We'd love to hear about your interview experience. Your feedback helps
-          us improve!
-        </p>
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-4 mb-6">
+          <p className="text-gray-700 font-medium flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-600" />
+            We'd love to hear about your interview experience. Your feedback
+            helps us improve!
+          </p>
+        </div>
 
-        <form onSubmit={handleFeedbackSubmit} className="space-y-6">
+        <form onSubmit={handleFeedbackSubmit} className="space-y-8">
           {/* Overall Experience */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               Overall Experience *
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
               {[1, 2, 3, 4, 5].map((rating) => (
                 <button
                   key={rating}
@@ -374,34 +427,34 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("overall_experience", rating)
                   }
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg border-2 transition-all ${
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
                     feedbackData.overall_experience === rating
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   <Star
-                    className={`w-4 h-4 ${
+                    className={`w-5 h-5 ${
                       feedbackData.overall_experience >= rating
                         ? "fill-current"
                         : ""
                     }`}
                   />
-                  <span>{rating}</span>
+                  <span className="font-semibold">{rating}</span>
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 mt-2 font-medium">
               1 = Poor, 5 = Excellent
             </p>
           </div>
 
           {/* Interview Difficulty */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               Interview Difficulty *
-            </div>
-            <div className="flex gap-3 flex-wrap">
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
                 { value: 1, label: "Very Easy" },
                 { value: 2, label: "Easy" },
@@ -415,10 +468,10 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("interview_difficulty", option.value)
                   }
-                  className={`px-4 py-2 rounded-lg border-2 transition-all flex-1 min-w-[100px] ${
+                  className={`px-4 py-3 rounded-xl border-3 transition-all transform hover:scale-105 font-semibold ${
                     feedbackData.interview_difficulty === option.value
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-purple-600 bg-purple-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   {option.label}
@@ -429,10 +482,10 @@ const InterviewCompletionPage = () => {
 
           {/* Technical Relevance */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               Technical Relevance (Questions matched your skills) *
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
               {[1, 2, 3, 4, 5].map((rating) => (
                 <button
                   key={rating}
@@ -440,20 +493,20 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("technical_relevance", rating)
                   }
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg border-2 transition-all ${
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
                     feedbackData.technical_relevance === rating
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-blue-600 bg-blue-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   <Star
-                    className={`w-4 h-4 ${
+                    className={`w-5 h-5 ${
                       feedbackData.technical_relevance >= rating
                         ? "fill-current"
                         : ""
                     }`}
                   />
-                  <span>{rating}</span>
+                  <span className="font-semibold">{rating}</span>
                 </button>
               ))}
             </div>
@@ -461,10 +514,10 @@ const InterviewCompletionPage = () => {
 
           {/* Interviewer Behavior */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               AI Interviewer Behavior *
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
               {[1, 2, 3, 4, 5].map((rating) => (
                 <button
                   key={rating}
@@ -472,20 +525,20 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("interviewer_behavior", rating)
                   }
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg border-2 transition-all ${
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
                     feedbackData.interviewer_behavior === rating
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-green-600 bg-green-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   <Star
-                    className={`w-4 h-4 ${
+                    className={`w-5 h-5 ${
                       feedbackData.interviewer_behavior >= rating
                         ? "fill-current"
                         : ""
                     }`}
                   />
-                  <span>{rating}</span>
+                  <span className="font-semibold">{rating}</span>
                 </button>
               ))}
             </div>
@@ -493,10 +546,10 @@ const InterviewCompletionPage = () => {
 
           {/* Platform Usability */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               Platform Usability *
-            </div>
-            <div className="flex items-center gap-4 flex-wrap">
+            </label>
+            <div className="flex items-center gap-3 flex-wrap">
               {[1, 2, 3, 4, 5].map((rating) => (
                 <button
                   key={rating}
@@ -504,20 +557,20 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("platform_usability", rating)
                   }
-                  className={`flex items-center gap-1 px-4 py-2 rounded-lg border-2 transition-all ${
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
                     feedbackData.platform_usability === rating
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-orange-600 bg-orange-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   <Star
-                    className={`w-4 h-4 ${
+                    className={`w-5 h-5 ${
                       feedbackData.platform_usability >= rating
                         ? "fill-current"
                         : ""
                     }`}
                   />
-                  <span>{rating}</span>
+                  <span className="font-semibold">{rating}</span>
                 </button>
               ))}
             </div>
@@ -525,14 +578,14 @@ const InterviewCompletionPage = () => {
 
           {/* Would Recommend */}
           <div>
-            <div className="block text-sm font-medium text-black mb-2">
+            <label className="block text-base font-bold text-gray-900 mb-3">
               Would you recommend this interview platform to others? *
-            </div>
-            <div className="flex gap-3 flex-wrap">
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { value: "yes", label: "Yes, definitely" },
-                { value: "maybe", label: "Maybe" },
-                { value: "no", label: "No" },
+                { value: "yes", label: "Yes, definitely ✅" },
+                { value: "maybe", label: "Maybe 🤔" },
+                { value: "no", label: "No ❌" },
               ].map((option) => (
                 <button
                   key={option.value}
@@ -540,10 +593,10 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("would_recommend", option.value)
                   }
-                  className={`px-6 py-2 rounded-lg border-2 transition-all flex-1 min-w-[120px] ${
+                  className={`px-6 py-4 rounded-xl border-3 transition-all transform hover:scale-105 font-bold text-lg ${
                     feedbackData.would_recommend === option.value
-                      ? "border-black bg-black text-white"
-                      : "border-gray-300 hover:border-gray-400"
+                      ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
+                      : "border-gray-300 hover:border-gray-400 bg-white"
                   }`}
                 >
                   {option.label}
@@ -556,7 +609,7 @@ const InterviewCompletionPage = () => {
           <div>
             <label
               htmlFor="improvements"
-              className="block text-sm font-medium text-black mb-2"
+              className="block text-base font-bold text-gray-900 mb-3"
             >
               What could we improve? *
             </label>
@@ -567,8 +620,8 @@ const InterviewCompletionPage = () => {
                 handleFeedbackChange("improvements", e.target.value)
               }
               placeholder="Share your suggestions for improvement..."
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none resize-none"
-              rows="4"
+              className="w-full px-5 py-4 border-3 border-gray-300 rounded-xl focus:border-indigo-600 focus:outline-none resize-none text-base font-medium"
+              rows="5"
               required
             />
           </div>
@@ -577,7 +630,7 @@ const InterviewCompletionPage = () => {
           <div>
             <label
               htmlFor="additional-comments"
-              className="block text-sm font-medium text-black mb-2"
+              className="block text-base font-bold text-gray-900 mb-3"
             >
               Additional Comments (Optional)
             </label>
@@ -588,8 +641,8 @@ const InterviewCompletionPage = () => {
                 handleFeedbackChange("additional_comments", e.target.value)
               }
               placeholder="Any other feedback you'd like to share..."
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none resize-none"
-              rows="3"
+              className="w-full px-5 py-4 border-3 border-gray-300 rounded-xl focus:border-indigo-600 focus:outline-none resize-none text-base font-medium"
+              rows="4"
             />
           </div>
 
@@ -597,16 +650,16 @@ const InterviewCompletionPage = () => {
           <button
             type="submit"
             disabled={feedbackSubmitting || !feedbackData.improvements.trim()}
-            className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-5 rounded-xl font-bold text-lg transition-all transform hover:scale-105 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg border-3 border-indigo-800"
           >
             {feedbackSubmitting ? (
               <>
-                <Loader className="w-5 h-5 animate-spin" />
-                Submitting...
+                <Loader className="w-6 h-6 animate-spin" />
+                Submitting Feedback...
               </>
             ) : (
               <>
-                <Send className="w-5 h-5" />
+                <Send className="w-6 h-6" />
                 Submit Feedback
               </>
             )}
@@ -617,27 +670,27 @@ const InterviewCompletionPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-white border-4 border-black rounded-full mb-6">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 border-4 border-white rounded-full mb-6 shadow-2xl">
             {isEvaluating ? (
-              <Loader className="w-10 h-10 text-black animate-spin" />
+              <Loader className="w-12 h-12 text-white animate-spin" />
             ) : evaluationComplete || alreadyEvaluated ? (
-              <CheckCircle className="w-10 h-10 text-green-600" />
+              <CheckCircle className="w-12 h-12 text-white" />
             ) : (
-              <CheckCircle className="w-10 h-10 text-black" />
+              <Clock className="w-12 h-12 text-white" />
             )}
           </div>
 
-          <h1 className="text-3xl font-bold text-black mb-2">
+          <h1 className="text-4xl font-extrabold text-gray-900 mb-3">
             {isEvaluating
-              ? "Processing Your Interview"
-              : "Interview Completed Successfully!"}
+              ? "Processing Your Interview ⚡"
+              : "Interview Completed Successfully! 🎉"}
           </h1>
 
-          <p className="text-lg text-gray-700 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto font-medium">
             {isEvaluating
               ? "Please wait while we analyze your interview responses and prepare your evaluation."
               : "Thank you for taking the time to complete your interview. Your responses have been recorded and evaluated."}
@@ -648,74 +701,85 @@ const InterviewCompletionPage = () => {
         <EvaluationStatus />
 
         {/* Main Card */}
-        <div className="bg-white border-2 border-black rounded-xl p-8 mb-6">
+        <div className="bg-white border-3 border-gray-900 rounded-2xl p-8 mb-6 shadow-xl">
           {/* Candidate Information */}
-          <div className="border-b-2 border-gray-300 pb-6 mb-6">
-            <h2 className="text-xl font-semibold text-black mb-4">
+          <div className="border-b-3 border-gray-200 pb-6 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <FileText className="w-7 h-7 text-indigo-600" />
               Interview Summary
             </h2>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 border-2 border-black rounded-lg">
-                  <div className="w-10 h-10 bg-white border-2 border-black rounded-full flex items-center justify-center">
-                    <span className="text-black font-semibold text-lg">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 border-3 border-indigo-600 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl shadow-md">
+                  <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-purple-600 border-3 border-white rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-white font-bold text-xl">
                       {userData.name
                         ? userData.name.charAt(0).toUpperCase()
                         : "C"}
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-black">
+                    <p className="font-bold text-gray-900 text-lg">
                       {userData.name || "Candidate"}
                     </p>
-                    <p className="text-sm text-gray-600">Interviewee</p>
+                    <p className="text-sm text-gray-600 font-medium">
+                      Interviewee
+                    </p>
                   </div>
                 </div>
 
                 {userData.email && (
-                  <div className="flex items-center gap-3 text-gray-700 p-3 border border-gray-300 rounded-lg">
-                    <Mail className="w-4 h-4" />
-                    <span className="text-sm">{userData.email}</span>
+                  <div className="flex items-center gap-3 text-gray-700 p-4 border-2 border-gray-300 rounded-xl bg-white hover:border-gray-400 transition-colors">
+                    <Mail className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <span className="text-sm font-medium break-all">
+                      {userData.email}
+                    </span>
                   </div>
                 )}
 
                 {userData.phone && (
-                  <div className="flex items-center gap-3 text-gray-700 p-3 border border-gray-300 rounded-lg">
-                    <Phone className="w-4 h-4" />
-                    <span className="text-sm">{userData.phone}</span>
+                  <div className="flex items-center gap-3 text-gray-700 p-4 border-2 border-gray-300 rounded-xl bg-white hover:border-gray-400 transition-colors">
+                    <Phone className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                    <span className="text-sm font-medium">
+                      {userData.phone}
+                    </span>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-gray-700 p-3 border border-gray-300 rounded-lg">
-                  <Calendar className="w-4 h-4" />
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 text-gray-700 p-4 border-2 border-gray-300 rounded-xl bg-white">
+                  <Calendar className="w-5 h-5 text-purple-600 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Interview Completed</p>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-sm font-bold text-gray-900">
+                      Interview Completed
+                    </p>
+                    <p className="text-xs text-gray-600 font-medium mt-1">
                       {formatDateTime(completionTimeRef.current)}
                     </p>
                   </div>
                 </div>
 
                 {driveCandidateId && (
-                  <div className="flex items-center gap-3 text-gray-700 p-3 border border-gray-300 rounded-lg">
-                    <FileText className="w-4 h-4" />
+                  <div className="flex items-center gap-3 text-gray-700 p-4 border-2 border-gray-300 rounded-xl bg-white">
+                    <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Application ID</p>
-                      <p className="text-xs text-gray-600 font-mono">
+                      <p className="text-sm font-bold text-gray-900">
+                        Application ID
+                      </p>
+                      <p className="text-xs text-gray-600 font-mono font-medium mt-1">
                         {driveCandidateId}
                       </p>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 text-gray-700 p-3 border-2 border-green-500 bg-green-50 rounded-lg">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                <div className="flex items-center gap-3 text-gray-700 p-4 border-3 border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md">
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-green-700">
-                      Status: Submitted
+                    <p className="text-sm font-bold text-green-700">
+                      Status: Submitted ✓
                     </p>
                   </div>
                 </div>
@@ -724,24 +788,31 @@ const InterviewCompletionPage = () => {
           </div>
 
           {/* Contact Information */}
-          <div className="bg-gray-50 border-2 border-gray-300 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-black mb-3">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 border-3 border-gray-300 rounded-xl p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <Mail className="w-6 h-6 text-indigo-600" />
               Questions or Concerns?
             </h3>
-            <p className="text-gray-700 mb-4">
+            <p className="text-gray-700 mb-5 font-medium">
               If you have any questions about your interview or the hiring
               process, please don't hesitate to reach out to our HR team.
             </p>
 
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2 text-gray-700 px-3 py-2 border border-gray-300 rounded-lg">
-                <Mail className="w-4 h-4" />
+            <div className="flex flex-wrap gap-4">
+              <a
+                href="mailto:hirekruit@gmail.com"
+                className="flex items-center gap-3 text-gray-700 px-5 py-3 border-2 border-gray-300 rounded-xl bg-white hover:border-indigo-500 hover:bg-indigo-50 transition-all font-medium"
+              >
+                <Mail className="w-5 h-5 text-indigo-600" />
                 <span>hirekruit@gmail.com</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-700 px-3 py-2 border border-gray-300 rounded-lg">
-                <Phone className="w-4 h-4" />
+              </a>
+              <a
+                href="tel:+916202908328"
+                className="flex items-center gap-3 text-gray-700 px-5 py-3 border-2 border-gray-300 rounded-xl bg-white hover:border-green-500 hover:bg-green-50 transition-all font-medium"
+              >
+                <Phone className="w-5 h-5 text-green-600" />
                 <span>+91 6202908328</span>
-              </div>
+              </a>
             </div>
           </div>
         </div>
@@ -750,15 +821,22 @@ const InterviewCompletionPage = () => {
         <FeedbackForm />
 
         {/* Footer Message */}
-        <div className="text-center mt-8 pt-6 border-t-2 border-gray-300">
-          <p className="text-gray-600 text-sm">
+        <div className="text-center mt-8 pt-6 border-t-3 border-gray-200">
+          <p className="text-gray-600 font-medium mb-2">
             {isEvaluating
-              ? "Please wait while we process your interview. Do not close this page."
-              : "Thank you for your interest in joining our team. We appreciate the time you've invested in this process."}
+              ? "⏳ Please wait while we process your interview. Do not close this page."
+              : "🎯 Thank you for your interest in joining our team. We appreciate the time you've invested in this process."}
           </p>
-          <p className="text-gray-500 text-xs mt-2">
+          <p className="text-gray-500 text-sm font-medium">
             Interview completed at {formatDateTime(completionTimeRef.current)}
           </p>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-6 px-8 py-3 bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-2 mx-auto"
+          >
+            <Home className="w-5 h-5" />
+            Return Home
+          </button>
         </div>
       </div>
     </div>

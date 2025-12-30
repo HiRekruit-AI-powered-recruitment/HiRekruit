@@ -20,6 +20,7 @@ import InterviewLayout from "./pages/InterviewPages/InterviewLayout";
 import InterviewPage from "./pages/InterviewPages/InterviewPage";
 import InterviewStartPage from "./pages/InterviewPages/InterviewStartPage";
 import InterviewCompletionPage from "./pages/InterviewPages/InterviewCompletionPage";
+import HRJoinInterviewPage from "./pages/InterviewPages/HRJoinInterviewPage";
 
 import About from "./pages/About";
 import Services from "./pages/Services";
@@ -62,6 +63,7 @@ function AppContent() {
     "/mockinterview",
     "/start-interview",
     "/interview-completion",
+    "/panel",
     "/assessment",
     "/start-assessment",
     "/assessment-submission",
@@ -146,6 +148,11 @@ function AppContent() {
           <Route
             path="/interview-completion"
             element={<InterviewCompletionPage />}
+          />
+
+          <Route
+            path="/panel/:driveCandidateId/:interviewType"
+            element={<HRJoinInterviewPage />}
           />
         </Route>
 

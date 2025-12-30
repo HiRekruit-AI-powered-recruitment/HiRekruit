@@ -7,6 +7,7 @@ from src.Routes.user_routes import auth_bp
 from src.Routes.drive_routes import drive_bp
 from src.Routes.chatbot_routes import chatbot_bp
 from src.Routes.InterviewFeedback_routes import feedback_bp
+from src.Routes.livekit_routes import livekit_bp
 from src.Config.auth_config import AuthConfig
 
 # for coding-assessment
@@ -53,7 +54,7 @@ app.register_blueprint(resume_bp, url_prefix="/api/resume")
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(drive_bp, url_prefix = "/api/drive")
 app.register_blueprint(chatbot_bp, url_prefix="/api/chatbot")
-
+app.register_blueprint(livekit_bp, url_prefix="/api/livekit")
 # for coding-assessment
 app.register_blueprint(problem_bp, url_prefix="/api/coding-assessment/problem")
 app.register_blueprint(submission_bp, url_prefix="/api/coding-assessment/submission")
