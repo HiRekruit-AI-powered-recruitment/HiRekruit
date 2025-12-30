@@ -17,6 +17,7 @@
     "@vapi-ai/web": "^2.3.8",
     "chart.js": "^4.5.0",
     "framer-motion": "^12.23.12",
+    "livekit-client": "^2.16.1",
     "lucide-react": "^0.539.0",
     "react": "^19.1.1",
     "react-chartjs-2": "^5.3.0",

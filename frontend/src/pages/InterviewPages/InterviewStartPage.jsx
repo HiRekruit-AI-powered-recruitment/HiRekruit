@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Play,
   User,
@@ -15,15 +15,15 @@ import { motion } from "framer-motion";
 import { getMockInterviewPrompt } from "../../Prompts/MockInterviewPrompt";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
-import { useParams } from "react-router-dom";
 
 const InterviewStartPage = () => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isStarting, setIsStarting] = useState(false);
 
-  // Extract params robustly: route may provide different param names
+  // Extract params
   const params = useParams();
   const drive_candidate_id = params.driveCandidateId;
   const interviewType = params.typeOfInterview;
@@ -45,9 +45,9 @@ const InterviewStartPage = () => {
 
         const data = await response.json();
         setUserData(data.candidate_info);
-        console.log("Fetched candidate data:", data);
+        console.log("✅ Fetched candidate data:", data);
       } catch (error) {
-        console.error("Error fetching candidate data:", error);
+        console.error("❌ Error fetching candidate data:", error);
         setError(error.message);
       } finally {
         setIsLoading(false);
@@ -57,21 +57,89 @@ const InterviewStartPage = () => {
     fetchCandidateData();
   }, [drive_candidate_id]);
 
+  // Function to get LiveKit token from backend
+  const getLiveKitToken = async (identity) => {
+    console.log("🔑 Requesting LiveKit token for candidate:", identity);
+
+    const response = await fetch(
+      `${BASE_URL}/api/livekit/token?driveCandidateId=${drive_candidate_id}&type=${interviewType}&role=candidate&identity=${identity}`
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to fetch LiveKit token");
+    }
+
+    const data = await response.json();
+    console.log("✅ Received LiveKit token:", {
+      roomName: data.roomName,
+      identity: data.identity,
+    });
+
+    return {
+      token: data.token,
+      roomName: data.roomName,
+      livekitUrl: data.livekitUrl,
+      identity: data.identity,
+    };
+  };
+
   // Handle start interview and navigate
-  const handleStartInterview = () => {
-    if (userData && userData.resume_content) {
-      // Choose prompt according to interview type (e.g., hr, technical, systemdesign, coding)
+  const handleStartInterview = async () => {
+    if (!userData || !userData.resume_content) {
+      alert("Resume data is required to start the interview");
+      return;
+    }
+
+    try {
+      setIsStarting(true);
+
+      // Create identity from candidate name
+      const identity = `candidate_${
+        userData.name?.replace(/\s+/g, "_").toLowerCase() || "user"
+      }`;
+      console.log("👤 Candidate starting as:", identity);
+
+      // 1️⃣ Generate AI prompt
       const prompt = getMockInterviewPrompt(
         userData.resume_content,
         interviewType
       );
+      console.log("✅ Generated AI prompt");
 
-      // console.log("Prompt for the interview :", prompt);
+      // 2️⃣ Get LiveKit token
+      const livekitData = await getLiveKitToken(identity);
 
-      // Navigate to /mockinterview/:id and pass state, include interviewType
+      // 3️⃣ Navigate to interview room with all necessary state
+      console.log("🚀 Navigating to interview room");
       navigate(`/mockinterview/${drive_candidate_id}`, {
-        state: { userData: userData, prompt, interviewType },
+        state: {
+          // Role identification
+          isHR: false,
+
+          // User data
+          userData,
+
+          // AI prompt
+          prompt,
+
+          // LiveKit connection data
+          livekitToken: livekitData.token,
+          roomName: livekitData.roomName,
+          livekitUrl: livekitData.livekitUrl,
+          identity: livekitData.identity,
+
+          // Interview context
+          interviewType,
+          driveCandidateId: drive_candidate_id,
+        },
       });
+    } catch (error) {
+      console.error("❌ Error starting interview:", error);
+      alert(
+        `Unable to start interview: ${error.message}\n\nPlease try again or contact support.`
+      );
+      setIsStarting(false);
     }
   };
 
@@ -321,21 +389,34 @@ const InterviewStartPage = () => {
               </p>
               <motion.button
                 onClick={handleStartInterview}
-                disabled={!userData.resume_content}
-                whileHover={{ scale: userData.resume_content ? 1.03 : 1 }}
-                whileTap={{ scale: userData.resume_content ? 0.97 : 1 }}
+                disabled={!userData.resume_content || isStarting}
+                whileHover={{
+                  scale: userData.resume_content && !isStarting ? 1.03 : 1,
+                }}
+                whileTap={{
+                  scale: userData.resume_content && !isStarting ? 0.97 : 1,
+                }}
                 className={`px-10 py-4 rounded-lg font-bold text-lg flex items-center gap-3 mx-auto transition-all shadow-lg ${
-                  userData.resume_content
+                  userData.resume_content && !isStarting
                     ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-green-200 hover:shadow-xl"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-gray-200"
                 }`}
               >
-                <Play className="w-6 h-6" fill="currentColor" />
-                Start Interview Now
+                {isStarting ? (
+                  <>
+                    <div className="w-6 h-6 border-3 border-gray-400 border-t-green-600 rounded-full animate-spin"></div>
+                    Starting Interview...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-6 h-6" fill="currentColor" />
+                    Start Interview Now
+                  </>
+                )}
               </motion.button>
               {!userData.resume_content && (
-                <p className="text-red-600 text-sm mt-4">
-                  Resume data is required to start the interview
+                <p className="text-red-600 text-sm mt-4 font-semibold">
+                  ⚠️ Resume data is required to start the interview
                 </p>
               )}
             </motion.div>
