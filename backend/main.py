@@ -9,6 +9,7 @@ from src.Routes.chatbot_routes import chatbot_bp
 from src.Routes.InterviewFeedback_routes import feedback_bp
 from src.Routes.livekit_routes import livekit_bp
 from src.Config.auth_config import AuthConfig
+from src.Routes.companyinfo_routes import companyinfo_bp
 
 # for coding-assessment
 from src.CodingAssessment.Routes.problem_routes import problem_bp
@@ -55,6 +56,7 @@ app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(drive_bp, url_prefix = "/api/drive")
 app.register_blueprint(chatbot_bp, url_prefix="/api/chatbot")
 app.register_blueprint(livekit_bp, url_prefix="/api/livekit")
+app.register_blueprint(companyinfo_bp, url_prefix="/api/companyinfo")
 # for coding-assessment
 app.register_blueprint(problem_bp, url_prefix="/api/coding-assessment/problem")
 app.register_blueprint(submission_bp, url_prefix="/api/coding-assessment/submission")
