@@ -9,7 +9,8 @@ from src.Orchestrator.HiringOrchestrator import (
     shortlist_candidates,
     email_candidates,
     schedule_interviews,
-    send_final_selection_emails
+    send_final_selection_emails,
+    schedule_coding_assessment
 )
 
 from src.Tasks.tasks import (
@@ -386,8 +387,14 @@ def update_drive_status(drive_id):
 
             # --- Task Selection ---
             if round_type.lower().strip() == "coding":
-                task_result = schedule_coding_assessments_task.delay(drive_id)
-                print(f"Coding assessment task queued: {task_result.id}")
+                print("at coding round controller")
+                # using worker
+                # task_result = schedule_coding_assessments_task.delay(drive_id)
+                # print(f"Coding assessment task queued: {task_result.id}")
+
+                # using without worker
+                task_result = schedule_coding_assessment(drive_id, round_type)
+                
             else:
                 # Using worker 
                 # task_result = schedule_interviews_task.delay(drive_id, round_type)

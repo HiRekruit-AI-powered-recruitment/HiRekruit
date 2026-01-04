@@ -212,7 +212,7 @@ class InterviewSchedulingAgent:
         return email_count
 
 
-    def schedule_coding_assessments(self, drive_id):
+    def schedule_coding_assessments(self, drive_id, round_type):
         """
         Schedule coding assessments for shortlisted candidates.
         Uses EmailTemplate and updates ONLY rounds_status.

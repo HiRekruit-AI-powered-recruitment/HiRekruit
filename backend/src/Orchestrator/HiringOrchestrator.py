@@ -92,3 +92,19 @@ def send_final_selection_emails(drive_id):
     # return "Final selection emails sent successfully"
 
 # here write a function for scheduling the coding assessment 
+def schedule_coding_assessment(drive_id, round_type) :
+    print("Starting interview scheduling process")
+    #creating the email service instance
+    # for EmailService
+    # email_service = EmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+    
+    # for AsyncEmailService
+    # email_service = AsyncEmailService(SMTP_SERVER, SMTP_PORT, EMAIL_USER, EMAIL_PASSWORD)
+
+    # for BrevoEmailService
+    email_service = BrevoEmailService()
+
+    interview_scheduling_agent = InterviewSchedulingAgent(email_service)
+
+    interview_scheduling_agent.schedule_coding_assessments(drive_id,round_type)
+    # return "Interviews scheduled successfully"
