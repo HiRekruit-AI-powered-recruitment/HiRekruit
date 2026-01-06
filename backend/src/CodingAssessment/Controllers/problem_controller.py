@@ -9,7 +9,7 @@ from src.Utils.Database import db
 
 def get_all_problems(drive_id=None):
     """
-    Fetch all coding problems or filter by drive_id
+    Fetch all coding problems or filter by drive_id's
     
     Args:
         drive_id (str, optional): Drive ID to filter problems
