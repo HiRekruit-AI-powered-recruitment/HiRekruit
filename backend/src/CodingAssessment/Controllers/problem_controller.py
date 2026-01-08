@@ -188,3 +188,36 @@ def delete_problem(problem_id):
     except Exception as e:
         print(f"Error deleting problem: {str(e)}")
         return {"error": "Failed to delete problem", "details": str(e), "status": 500}
+
+
+def get_problem_count_by_drive(drive_id):
+    """
+    Returns only the total count of questions assigned to a specific drive.
+    
+    Args:
+        drive_id (str): The ID of the drive
+        
+    Returns:
+        dict: Object containing the count or an error
+    """
+    try:
+        # We use projection {"coding_question_ids": 1} to only pull the necessary field
+        drive = db.drives.find_one(
+            {"_id": ObjectId(drive_id)}, 
+            {"coding_question_ids": 1}
+        )
+        
+        if not drive:
+            return {"error": "Drive not found", "status": 404}
+        
+        # Get the list of IDs and return its length
+        question_ids = drive.get('coding_question_ids', [])
+        return {
+            "drive_id": drive_id,
+            "question_count": len(question_ids),
+            "status": 200
+        }
+        
+    except Exception as e:
+        print(f"Error getting problem count: {str(e)}")
+        return {"error": "Failed to get count", "details": str(e), "status": 500}
