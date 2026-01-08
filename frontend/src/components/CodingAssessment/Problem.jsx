@@ -29,7 +29,21 @@ export default function Problem({ problem, darkMode }) {
   }
 
   return (
-    <div>
+    <div
+    
+     style={{
+        // THIS PREVENTS TEXT SELECTION
+        userSelect: "none", 
+        WebkitUserSelect: "none", 
+        msUserSelect: "none", 
+        MozUserSelect: "none",
+      }}
+      // THIS PREVENTS THE COPY EVENT
+      onCopy={(e) => {
+        e.preventDefault();
+        return false;
+      }}
+    >
       <ToastContainer />
       
       <div style={{ marginBottom: "24px" }}>
