@@ -161,6 +161,7 @@ function AppContent() {
           path="/assessment/:driveId/:candidateId"
           element={<Assessment />}
         />
+        
         <Route path="/assessment/:driveId" element={<Assessment />} />
         <Route path="/assessment" element={<Assessment />} />
         <Route path="/start-assessment" element={<Instructions />} />
