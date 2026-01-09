@@ -13,6 +13,8 @@ import {
   Trophy,
   PlusCircle,
   Users,
+  Bell,
+  Settings,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
@@ -33,6 +35,8 @@ const items = [
   },
   { label: "Analytics", icon: BarChart3, path: "/dashboard/analytics" },
   { label: "Calendar", icon: CalendarDays, path: "/dashboard/calendar" },
+  { label: "Notifications", icon: Bell, path: "/dashboard/notifications" },
+  { label: "Settings", icon: Settings, path: "/dashboard/settings" },
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
