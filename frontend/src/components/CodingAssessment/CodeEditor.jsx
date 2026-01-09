@@ -1,6 +1,6 @@
 import Editor from "@monaco-editor/react";
 import { Play } from "lucide-react";
-
+import { Loader } from "lucide-react"; // Here Loader is not imported BUG Found
 const LANGUAGES = [
   { name: "python", label: "Python", monacoName: "python" },
   { name: "javascript", label: "JavaScript", monacoName: "javascript" },

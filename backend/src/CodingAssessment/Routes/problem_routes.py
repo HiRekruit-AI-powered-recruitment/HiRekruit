@@ -104,3 +104,20 @@ def delete(problem_id):
     
     status_code = result.pop('status', 200)
     return jsonify(result), status_code
+
+@problem_bp.route("/count/<drive_id>", methods=["GET"])
+def problem_count(drive_id):
+    """
+    GET /api/coding-assessment/problem/count/<drive_id>
+    
+    Returns:
+        - The number of questions assigned to the specific drive
+    """
+    result = get_problem_count_by_drive(drive_id)
+    
+    # Check if result is an error dictionary
+    if isinstance(result, dict) and 'error' in result:
+        status_code = result.pop('status', 404)
+        return jsonify(result), status_code
+    
+    return jsonify(result), 200
