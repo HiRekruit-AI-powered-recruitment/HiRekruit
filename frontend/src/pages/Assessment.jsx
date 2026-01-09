@@ -95,7 +95,7 @@ export default function Assessment() {
   }, [timerActive, timeRemaining]);
 
   useEffect(() => {
-    if (assessmentStarted && problems.length === 0) {
+    if ( problems.length === 0) {
       fetchProblems();
     }
   }, [assessmentStarted]);
@@ -155,7 +155,8 @@ export default function Assessment() {
       setCandidateId(candidate_id);
 
       const questionsResponse = await fetch(
-        `${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}`
+        `${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}
+        `
       );
 
       if (!questionsResponse.ok) {
@@ -414,6 +415,7 @@ export default function Assessment() {
   }, [isInputOutputDragging]);
 
   if (!assessmentStarted) {
+    console.log(problems.length);
     return (
       <Instructions
         onStartAssessment={handleStartAssessment}
