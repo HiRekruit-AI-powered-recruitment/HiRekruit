@@ -460,7 +460,7 @@ const Home = () => {
                           avatar: "👩‍💻",
                         },
                         {
-                          name: "Rohit Anand",
+                          name: "Karthik Vijay",
                           role: "Backend Dev",
                           avatar: "👨‍🔬",
                         },
