@@ -94,7 +94,7 @@ const Contact = () => {
     {
       icon: Phone,
       title: "Call Us",
-      details: "+91-6202908328",
+      details: "+91-7255892578",
       description: "Mon-Fri from 9am to 6pm IST",
     },
     {

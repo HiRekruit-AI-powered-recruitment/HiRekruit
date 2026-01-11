@@ -13,7 +13,7 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm Saarthi, your HireKruit assistant. How can I help you today?",
+      text: "Hello! I'm Saarthi, your HiRekruit assistant. How can I help you today?",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -157,7 +157,7 @@ const Chatbot = () => {
             </div>
             <div>
               <h3 className="font-semibold text-lg">Saarthi</h3>
-              <p className="text-gray-300 text-sm">HireKruit Assistant</p>
+              <p className="text-gray-300 text-sm">HiRekruit Assistant</p>
             </div>
           </div>
           <button onClick={() => setIsOpen(false)} className="p-2 rounded-full">
@@ -251,7 +251,7 @@ const Chatbot = () => {
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Powered by HireKruit
+            Powered by HiRekruit
           </p>
         </div>
       </div>

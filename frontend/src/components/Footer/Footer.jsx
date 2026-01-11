@@ -25,6 +25,11 @@ const Footer = () => {
       icon: Twitter,
     },
     {
+      name: "Instagram",
+      href: "https://instagram.com/hirekruit",
+      icon: Instagram,
+    },
+    {
       name: "GitHub",
       href: "https://github.com/hirekruit",
       icon: Github,
@@ -34,15 +39,15 @@ const Footer = () => {
   const footerLinks = {
     company: [
       { label: "About Us", href: "/about" },
-      { label: "Careers", href: "/careers" },
-      { label: "Blog", href: "/blog" },
-      { label: "Press", href: "/press" },
+      { label: "HiKareers", href: "https://careers.hirekruit.com" },
+      // { label: "Blog", href: "/blog" },
+      // { label: "Press", href: "/press" },
     ],
     resources: [
       { label: "Documentation", href: "/docs" },
       { label: "Help Center", href: "/help" },
       { label: "API", href: "/api" },
-      { label: "Community", href: "/community" },
+      // { label: "Community", href: "/community" },
     ],
     legal: [
       { label: "Privacy Policy", href: "/privacy-policy" },
@@ -64,7 +69,7 @@ const Footer = () => {
       icon: Phone,
     },
     {
-      label: "Muzaffarpur, Bihar, India",
+      label: "Bihar, India",
       href: "#",
       icon: MapPin,
     },
@@ -91,7 +96,7 @@ const Footer = () => {
             </p>
 
             {/* Newsletter Signup */}
-            <div className="mb-8">
+            {/* <div className="mb-8">
               <h3 className="text-sm font-semibold uppercase tracking-wider mb-4">
                 Stay Updated
               </h3>
@@ -109,7 +114,7 @@ const Footer = () => {
                   />
                 </button>
               </div>
-            </div>
+            </div> */}
 
             {/* Social Links */}
             <div>
