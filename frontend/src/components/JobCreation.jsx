@@ -144,20 +144,21 @@ const JobCreation = () => {
   };
 
   const addCodingQuestion = () => {
-    const newQuestion = {
-      id: Date.now(),
-      number: jobData.coding_questions.length + 1,
-      title: "",
-      description: "",
-      constraints: "",
-      testCases: [{ input: "", output: "" }],
-    };
-
-    setJobData((prev) => ({
-      ...prev,
-      coding_questions: [...prev.coding_questions, newQuestion],
-    }));
+  const newQuestion = {
+    id: Date.now(),
+    number: jobData.coding_questions.length + 1,
+    title: "",
+    description: "",
+    constraints: "",
+    // Added type: "public" here
+    testCases: [{ input: "", output: "", type: "public" }], 
   };
+
+  setJobData((prev) => ({
+    ...prev,
+    coding_questions: [...prev.coding_questions, newQuestion],
+  }));
+};
 
   const removeCodingQuestion = (questionId) => {
     setJobData((prev) => ({
@@ -178,15 +179,18 @@ const JobCreation = () => {
   };
 
   const addTestCase = (questionId) => {
-    setJobData((prev) => ({
-      ...prev,
-      coding_questions: prev.coding_questions.map((q) =>
-        q.id === questionId
-          ? { ...q, testCases: [...q.testCases, { input: "", output: "" }] }
-          : q
-      ),
-    }));
-  };
+  setJobData((prev) => ({
+    ...prev,
+    coding_questions: prev.coding_questions.map((q) =>
+      q.id === questionId
+        ? { 
+            ...q, 
+            testCases: [...q.testCases, { input: "", output: "", type: "public" }] 
+          }
+        : q
+    ),
+  }));
+};
 
   const removeTestCase = (questionId, testCaseIndex) => {
     setJobData((prev) => ({
@@ -952,6 +956,18 @@ const JobCreation = () => {
                                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
                                 />
                               </div>
+                              <div className="w-24">
+        <select
+          value={testCase.type}
+          onChange={(e) =>
+            handleTestCaseChange(question.id, tcIndex, "type", e.target.value)
+          }
+          className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black bg-gray-50"
+        >
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+      </div>
                               {question.testCases.length > 1 && (
                                 <button
                                   onClick={() =>
