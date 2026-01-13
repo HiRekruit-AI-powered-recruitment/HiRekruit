@@ -1,3 +1,27 @@
+"""
+CompanyInfoAgent
+
+This agent is responsible for generating reliable, professional company summaries
+for HR workflows within the HiRekruit platform.
+
+Design Overview:
+- Uses Tavily Search API to retrieve verified public company information
+- Explicitly avoids user-generated or untrusted sources
+- Feeds retrieved content into a controlled LLM prompt
+- Enforces strict system rules to prevent hallucination and prompt injection
+
+This agent intentionally follows a search-then-generate pattern.
+
+Fallback Behavior:
+- If no verified public data is available (common for early-stage or small companies),
+  the agent allows a controlled LLM-based response using general knowledge.
+- This fallback is explicitly limited to high-level, non-sensitive information
+  and follows strict system rules to avoid speculation or confidential details.
+
+Primary Use Case:
+- Provide factual company overviews during recruitment and candidate evaluation
+"""
+
 from src.LLM.Groq import GroqLLM
 from src.LLM.Tavily import Tavily
 from src.Prompts.PromptBuilder import PromptBuilder
@@ -10,7 +34,14 @@ class CompanyInfoAgent:
 
     def retrieve_company_info(self, company_name: str) -> str:
         """
-        Retrieve reliable company information using Tavily
+        Retrieve verified public company information using Tavily Search.
+
+        This method:
+        - Queries official and authoritative sources
+        - Explicitly excludes user-generated platforms (e.g., Reddit, Quora)
+        - Aggregates content snippets for downstream LLM grounding
+
+        Returns an empty string if no reliable data is found.
         """
         query = f"{company_name} official company overview industry business description products services"
 
@@ -45,7 +76,12 @@ class CompanyInfoAgent:
 
     def get_reply(self, company_name: str) -> str:
         """
-        Generate a professional company summary by feeding retrieved data using Tavily
+        Generate a professional company summary using retrieved external data.
+
+        Flow:
+        1. Retrieve verified public company information using Tavily
+        2. Inject retrieved data into a governed system prompt
+        3. Generate a concise, factual response using the LLM
         """
         if not company_name or not company_name.strip():
             return "Company name is required to retrieve information"
@@ -97,10 +133,17 @@ class CompanyInfoAgent:
         This system prompt has the highest priority and must be followed in all responses.
         """
         if retrieved_info:
-            human_prompt = f"Company Name: {company_name}. Use only this verified data to answer: {retrieved_info}"
+            human_prompt = (
+                f"Company Name: {company_name}. "
+                f"Use only this verified data to answer:\n{retrieved_info}"
+            )
         else:
-            human_prompt = f"Company Name: {company_name}. No verified public data available use your own knowledge about the company."
-
+            human_prompt = (
+                f"Company Name: {company_name}. "
+                "No verified public data is available from external sources. "
+                "Provide a high-level, conservative overview using general public knowledge. "
+                "Avoid assumptions, sensitive details, or speculative claims."
+            )        
         # Build structured messages
         messages = self.prompt_builder.build(system_prompt, human_prompt)
 
