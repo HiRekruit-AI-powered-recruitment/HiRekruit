@@ -73,6 +73,16 @@ def create_drive_controller():
     if coding_questions:
         try:
             for q in coding_questions:
+                 # Process test cases to ensure 'type' field exists
+                raw_test_cases = q.get("testCases", [])
+                processed_test_cases = [
+                    {
+                        "input": tc.get("input"),
+                        "output": tc.get("output"),
+                        "type": tc.get("type", "public")  # Default to public if not provided
+                    }
+                    for tc in raw_test_cases
+                ]
                 cq = create_coding_question(
                     title=q.get("title"),
                     description=q.get("description"),
