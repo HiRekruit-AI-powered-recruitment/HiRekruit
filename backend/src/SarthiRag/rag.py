@@ -1,3 +1,6 @@
+#PS D:\2025\PROJECTS\HireMate\backend> python -m src.SarthiRag.ingest
+# When do we need to create a db.
+
 from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from src.SarthiRag.config.mongodb import MongoDBClient
 from src.SarthiRag.embeddings.sentence_transformer import SentenceTransformerEmbeddings

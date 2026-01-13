@@ -807,11 +807,11 @@ const InterviewCompletionPage = () => {
                 <span>hirekruit@gmail.com</span>
               </a>
               <a
-                href="tel:+916202908328"
+                href="tel:+917255892578"
                 className="flex items-center gap-3 text-gray-700 px-5 py-3 border-2 border-gray-300 rounded-xl bg-white hover:border-green-500 hover:bg-green-50 transition-all font-medium"
               >
                 <Phone className="w-5 h-5 text-green-600" />
-                <span>+91 6202908328</span>
+                <span>+91 7255892578</span>
               </a>
             </div>
           </div>

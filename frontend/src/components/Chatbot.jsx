@@ -13,15 +13,15 @@ const Chatbot = () => {
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm Saarthi, your HireKruit assistant. How can I help you today?",
+      text: "Hello! I'm Saarthi, your HiRekruit assistant. How can I help you today?",
       sender: "bot",
       timestamp: new Date(),
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false); // tooltip state
-  const tooltipTimeoutRef = useRef(null); // timeout ref for delayed hide
+  const [showTooltip, setShowTooltip] = useState(false);
+  const tooltipTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const chatRef = useRef(null);
 
@@ -128,7 +128,134 @@ const Chatbot = () => {
   const handleMouseLeave = () => {
     tooltipTimeoutRef.current = setTimeout(() => {
       setShowTooltip(false);
-    }, 1000); // 5 seconds delay
+    }, 1000);
+  };
+
+  // Enhanced formatting function with markdown support
+  const formatBotMessage = (text) => {
+    if (!text) return null;
+
+    const lines = text.split("\n");
+    const elements = [];
+    let currentListItems = [];
+    let listType = null; // 'bullet' or 'numbered'
+
+    const flushList = (index) => {
+      if (currentListItems.length > 0) {
+        elements.push(
+          <ul key={`list-${index}`} className="ml-4 mb-3 space-y-1">
+            {currentListItems.map((item, i) => (
+              <li key={i} className="flex items-start">
+                <span className="mr-2 text-gray-600">•</span>
+                <span className="flex-1">{formatInlineText(item)}</span>
+              </li>
+            ))}
+          </ul>
+        );
+        currentListItems = [];
+        listType = null;
+      }
+    };
+
+    const formatInlineText = (text) => {
+      // Handle bold text **text**
+      const parts = text.split(/(\*\*.*?\*\*)/g);
+      return parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={i} className="font-semibold">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      });
+    };
+
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+
+      // Empty line
+      if (!trimmedLine) {
+        flushList(index);
+        elements.push(<div key={`empty-${index}`} className="h-2" />);
+        return;
+      }
+
+      // Heading ### or ##
+      const headingMatch = trimmedLine.match(/^(#{1,3})\s+(.+)$/);
+      if (headingMatch) {
+        flushList(index);
+        const [, hashes, content] = headingMatch;
+        const level = hashes.length;
+        const className =
+          level === 1
+            ? "text-base font-bold mb-2 mt-3"
+            : level === 2
+            ? "text-sm font-bold mb-2 mt-2"
+            : "text-sm font-semibold mb-2 mt-2";
+
+        elements.push(
+          <div key={`heading-${index}`} className={className}>
+            {formatInlineText(content)}
+          </div>
+        );
+        return;
+      }
+
+      // Bullet point with * or -
+      const bulletMatch = trimmedLine.match(/^[\*\-]\s+(.+)$/);
+      if (bulletMatch) {
+        currentListItems.push(bulletMatch[1]);
+        listType = "bullet";
+        return;
+      }
+
+      // Numbered list: "1. **Title**: Content" or "1. Content"
+      const numberedWithBoldMatch = trimmedLine.match(
+        /^(\d+)\.\s+\*\*(.+?)\*\*:\s*(.+)$/
+      );
+      if (numberedWithBoldMatch) {
+        flushList(index);
+        const [, number, title, content] = numberedWithBoldMatch;
+        elements.push(
+          <div key={`numbered-${index}`} className="mb-2 flex items-start">
+            <span className="font-semibold mr-2">{number}.</span>
+            <div>
+              <span className="font-semibold">{title}:</span> {content}
+            </div>
+          </div>
+        );
+        return;
+      }
+
+      // Simple numbered list
+      const simpleNumberMatch = trimmedLine.match(/^(\d+)\.\s+(.+)$/);
+      if (simpleNumberMatch) {
+        flushList(index);
+        const [, number, content] = simpleNumberMatch;
+        elements.push(
+          <div key={`numbered-${index}`} className="mb-2 flex items-start">
+            <span className="font-medium mr-2">{number}.</span>
+            <span className="flex-1">{formatInlineText(content)}</span>
+          </div>
+        );
+        return;
+      }
+
+      // Regular paragraph
+      flushList(index);
+      elements.push(
+        <div key={`para-${index}`} className="mb-2 leading-relaxed">
+          {formatInlineText(trimmedLine)}
+        </div>
+      );
+    });
+
+    // Flush any remaining list items
+    flushList(lines.length);
+
+    return <div className="space-y-1">{elements}</div>;
   };
 
   const ui = (
@@ -157,10 +284,13 @@ const Chatbot = () => {
             </div>
             <div>
               <h3 className="font-semibold text-lg">Saarthi</h3>
-              <p className="text-gray-300 text-sm">HireKruit Assistant</p>
+              <p className="text-gray-300 text-sm">HiRekruit Assistant</p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="p-2 rounded-full">
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-2 rounded-full hover:bg-white hover:bg-opacity-10 transition-colors"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -176,34 +306,46 @@ const Chatbot = () => {
               style={{ animation: "fadeInSlide 0.35s ease-out" }}
             >
               <div
-                className={`flex items-start space-x-2 max-w-[80%] ${
+                className={`flex items-start space-x-2 max-w-[85%] ${
                   message.sender === "user"
                     ? "flex-row-reverse space-x-reverse"
                     : ""
                 }`}
               >
                 <div
-                  className={`flex items-center justify-center overflow-hidden ${
+                  className={`flex items-center justify-center flex-shrink-0 ${
                     message.sender === "user"
                       ? "w-6 h-6 rounded-full bg-black text-white"
-                      : "w-10 h-4 rounded-full bg-white"
+                      : "w-8 h-8 rounded-full bg-white"
                   }`}
                 >
                   {message.sender === "user" ? (
                     <User className="w-4 h-4" />
                   ) : (
-                    <ShipWheel className="w-8 h-8 text-black" />
+                    <ShipWheel className="w-6 h-6 text-black" />
                   )}
                 </div>
                 <div
-                  className={`px-4 py-2 rounded-2xl ${
+                  className={`px-4 py-3 rounded-2xl ${
                     message.sender === "user"
                       ? "bg-black text-white rounded-br-md"
                       : "bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm"
                   }`}
                 >
-                  <p className="text-sm">{message.text}</p>
-                  <p className="text-xs mt-1 text-gray-400">
+                  <div className="text-sm">
+                    {message.sender === "bot" ? (
+                      formatBotMessage(message.text)
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.text}</p>
+                    )}
+                  </div>
+                  <p
+                    className={`text-xs mt-2 ${
+                      message.sender === "user"
+                        ? "text-gray-300"
+                        : "text-gray-400"
+                    }`}
+                  >
                     {formatTime(message.timestamp)}
                   </p>
                 </div>
@@ -215,13 +357,19 @@ const Chatbot = () => {
             <div className="flex justify-start">
               <div className="flex items-start space-x-2">
                 <div className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden">
-                  <ShipWheel className="w-8 h-8 text-black animate-pulse" />
+                  <ShipWheel className="w-6 h-6 text-black animate-pulse" />
                 </div>
                 <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2 shadow-sm">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-100" />
-                    <div className="w-2 h-2 bg-gray-600 rounded-full animate-bounce delay-200" />
+                    <div
+                      className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-gray-600 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    />
                   </div>
                 </div>
               </div>
@@ -238,20 +386,20 @@ const Chatbot = () => {
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type your message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black resize-none min-h-[44px] text-sm"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent resize-none min-h-[44px] max-h-[120px] text-sm"
               rows={1}
               disabled={isLoading}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputMessage.trim() || isLoading}
-              className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50"
+              className="px-4 py-2 bg-black text-white rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Powered by HireKruit
+            Powered by HiRekruit
           </p>
         </div>
       </div>
@@ -277,14 +425,14 @@ const Chatbot = () => {
 
         <motion.button
           onClick={() => setIsOpen((s) => !s)}
-          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white overflow-hidden pointer-events-auto
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white overflow-hidden pointer-events-auto transition-all
             ${
               isOpen
-                ? "bg-gray-600 rotate-45"
-                : "bg-gradient-to-r from-black to-gray-800"
+                ? "bg-gray-600"
+                : "bg-gradient-to-r from-black to-gray-800 hover:shadow-xl"
             }`}
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
           {isOpen ? (
             <X className="w-6 h-6" />

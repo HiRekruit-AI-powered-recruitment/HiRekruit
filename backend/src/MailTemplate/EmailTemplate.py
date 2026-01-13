@@ -586,7 +586,7 @@ class EmailTemplate:
                                                     <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
                                                         If you face any technical issues, please contact our support team immediately:<br>
                                                         <strong>Email:</strong> hirekruit@gmail.com<br>
-                                                        <strong>Mobile:</strong> +91 6202908328
+                                                        <strong>Mobile:</strong> +91 7255892578
                                                     </p>
                                                 </div>
                                                 

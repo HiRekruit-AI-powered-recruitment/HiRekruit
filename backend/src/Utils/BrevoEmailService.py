@@ -11,7 +11,7 @@ class BrevoEmailService:
 
         self.api_client = sib_api_v3_sdk.ApiClient(configuration)
         self.sender_email = os.getenv("BREVO_SENDER_EMAIL")
-        self.sender_name = os.getenv("BREVO_SENDER_NAME", "HireKruit")
+        self.sender_name = os.getenv("BREVO_SENDER_NAME", "HiRekruit")
 
     def _send_email(self, to_email, subject, body, html=False):
         try:
