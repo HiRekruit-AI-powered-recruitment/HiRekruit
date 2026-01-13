@@ -431,6 +431,14 @@ const Chatbot = () => {
                 ? "bg-gray-600"
                 : "bg-gradient-to-r from-black to-gray-800 hover:shadow-xl"
             }`}
+          animate={{ rotate: isOpen ? 0 : 360 }}
+          transition={{
+            rotate: {
+              repeat: isOpen ? 0 : Infinity,
+              duration: 12,
+              ease: "linear",
+            },
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
