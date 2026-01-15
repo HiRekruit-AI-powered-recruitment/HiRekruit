@@ -2,6 +2,7 @@ import { Copy } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+
 export default function Problem({ problem, darkMode }) {
   const textColor = darkMode ? "#e0e0e0" : "#1a1a1a";
   const accentColor = darkMode ? "#3a3a3a" : "#e8e8e8";
@@ -79,6 +80,7 @@ export default function Problem({ problem, darkMode }) {
 
       <div>
         <h3 style={{ fontSize: "13px", fontWeight: "600", marginBottom: "8px", opacity: 0.8 }}>TEST CASES</h3>
+        
         {problem.testCases && problem.testCases.length > 0 ? (
           problem.testCases.map((tc, idx) => (
             <div
