@@ -19,6 +19,7 @@ export default function Output({ output, darkMode }) {
 
       if (parsedOutput.success !== undefined) {
         testResults = parsedOutput;
+        console.log(testResults);
         isSuccess = parsedOutput.result === "Accepted";
         isError = !isSuccess && parsedOutput.result !== undefined;
       } else if (parsedOutput.status?.id !== 3 || parsedOutput.stderr) {
@@ -42,6 +43,7 @@ export default function Output({ output, darkMode }) {
         backgroundColor: bgColor,
       }}
     >
+
       <label
         style={{
           fontSize: "11px",
@@ -158,6 +160,8 @@ export default function Output({ output, darkMode }) {
                 >
                   {testResults.results.map((result, idx) => {
                     const isPassed = result.result === "Accepted";
+                    const isPrivate = result.type === "private";
+                    console.log(output);
                     return (
                       <div
                         key={idx}
@@ -186,7 +190,10 @@ export default function Output({ output, darkMode }) {
                             <XCircle size={14} color="#dc2626" />
                           )}
                           <span style={{ color: textColor }}>
-                            Test Case {result.test_case_number || idx + 1}
+                             {isPrivate 
+            ? `Hidden Test Case ${result.test_case_number || idx + 1}` 
+            : `Test Case ${result.test_case_number || idx + 1}`
+          }
                           </span>
                         </div>
                         <div

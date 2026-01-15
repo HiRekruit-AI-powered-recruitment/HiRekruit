@@ -179,17 +179,20 @@ export default function Assessment() {
         title: q.title,
         description: q.description,
         constraints: q.constraints,
-        testCases: q.test_cases.map((tc) => ({
-          input: tc.input,
-          output: tc.output,
-        })),
+         testCases: q.test_cases
+    .filter((tc) => tc.type === "public") 
+    .map((tc) => ({
+      input: tc.input,
+      output: tc.output,
+    })),
+      allTestCasesMetadata: q.test_cases.map(tc => tc.type), 
         difficulty: q.difficulty,
         tags: q.tags,
       }));
-
+      
       setProblems(transformedQuestions);
       setSelectedProblem(transformedQuestions[0]);
-
+      console.log(questions);
       const initialCode = {};
       transformedQuestions.forEach((problem) => {
         initialCode[problem._id] = getDefaultCode(language);
@@ -270,6 +273,39 @@ export default function Assessment() {
         },
       }));
 
+      const testCaseTypes = selectedProblem.allTestCasesMetadata || [];
+      const filteredResults = data.results.map((res, idx) => {
+      // Check metadata by index since backend doesn't provide the 'type' in results
+      const isPrivate = testCaseTypes[idx] === 'private';
+
+      if (isPrivate) {
+        return {
+          ...res,
+          type: 'private',     // Inject the type for Output.js to use
+          stdin: "[Hidden]",    // Mask the input
+          expected: "[Hidden]", // Mask the expected output
+          stdout: res.status?.id === 3 ? "[Hidden]" : "Hidden case failed",
+          stderr: res.stderr ? "Error in hidden case" : null
+        };
+      }
+      
+      return {
+        ...res,
+        type: 'public' // Mark as public for Output.js
+      };
+    });
+
+    setProblemStatus((prev) => ({
+      ...prev,
+      [selectedProblem._id]: {
+        result: data.result,
+        testCasesPassed: data.test_cases_passed,
+        totalTestCases: data.total_test_cases,
+      },
+    }));
+
+
+
       setOutput(
         JSON.stringify(
           {
@@ -277,7 +313,7 @@ export default function Assessment() {
             result: data.result,
             test_cases_passed: data.test_cases_passed,
             total_test_cases: data.total_test_cases,
-            results: data.results,
+            results: filteredResults, // Details are now sanitized
           },
           null,
           2
@@ -773,6 +809,7 @@ export default function Assessment() {
                     flexDirection: "column",
                   }}
                 >
+                  
                   <Output output={output} darkMode={darkMode} />
                 </div>
               </div>
