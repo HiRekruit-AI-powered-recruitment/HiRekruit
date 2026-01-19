@@ -246,9 +246,10 @@ def submit_question_controller():
 def run_submission(code, language_id, submission_id, question_id, test_cases):
     """
     Run code submission against test cases and update database.
+    Includes security masking for private test cases.
     """
     try:
-        # Mark question as running
+        # 1. Mark the specific question as RUNNING in the database
         db.submissions.update_one(
             {"_id": ObjectId(submission_id), "question_submissions.question_id": question_id},
             {"$set": {
@@ -264,140 +265,96 @@ def run_submission(code, language_id, submission_id, question_id, test_cases):
         max_memory_used = 0
         error_messages = []
         
-        print(f"\n=== Running submission for question {question_id} ===")
-        print(f"Total test cases: {total_test_cases}")
-        print(f"Language ID: {language_id}")
-        print(f"Code:\n{code}\n")
-        
-        # Run against each test case
+        # 2. Iterate through test cases
         for idx, tc in enumerate(test_cases):
-            # IMPORTANT: Handle different possible field names
-            # MongoDB might return 'input' or 'stdin' depending on how it was stored
+            # Normalize keys (handles variations in DB schema)
             tc_input = tc.get("input") or tc.get("stdin") or ""
             expected_output = tc.get("output") or tc.get("expected_output") or tc.get("stdout") or ""
+            is_private = tc.get("type") == "private"
             
-            # Debug logging
-            print(f"\nTest Case {idx + 1}:")
-            print(f"  Raw test case data: {tc}")
-            print(f"  Input: '{tc_input}'")
-            print(f"  Expected Output: '{expected_output}'")
-            
-            # Convert to string and handle None values
-            if tc_input is None:
-                tc_input = ""
-                print(f"  WARNING: Input was None, converted to empty string")
-            else:
-                tc_input = str(tc_input)
-            
-            if expected_output is None:
-                expected_output = ""
-                print(f"  WARNING: Expected output was None, converted to empty string")
-            else:
-                expected_output = str(expected_output)
-            
-            # Validate test case
-            if not expected_output.strip():
-                error_msg = f"Test case {idx + 1}: Missing expected output"
-                print(f"  ERROR: {error_msg}")
-                error_messages.append(error_msg)
-                results.append({
+            # Ensure values are strings and stripped of trailing whitespace
+            tc_input = str(tc_input)
+            expected_output = str(expected_output).strip()
+
+            # Logic check: If no expected output, we can't grade it
+            if not expected_output:
+                res_obj = {
                     "test_case_number": idx + 1,
                     "status": {"id": -1, "description": "Invalid Test Case"},
-                    "stdin": tc_input,
-                    "expected": expected_output,
-                    "stdout": "",
-                    "stderr": error_msg,
-                    "result": SubmissionResult.ERROR
-                })
+                    "result": SubmissionResult.ERROR,
+                    "type": tc.get("type", "public")
+                }
+                results.append(res_obj)
                 continue
-            
+
             try:
-                # Submit to Judge0
-                print(f"  Submitting to Judge0...")
-                print(f"  stdin: '{tc_input}'")
-                
-                judge0_submission = submit_and_wait(
+                # 3. Submit to Judge0
+                judge0_response = submit_and_wait(
                     source_code=code,
                     language_id=language_id,
-                    stdin=tc_input  # Pass input to Judge0
+                    stdin=tc_input
                 )
                 
-                print(f"  Judge0 Response: {judge0_submission}")
+                # Extract results from Judge0 response
+                actual_output = str(judge0_response.get("stdout") or "").strip()
+                judge0_status = judge0_response.get("status", {})
                 
-                # Determine result
-                actual_output = judge0_submission.get("stdout", "")
-                if actual_output is None:
-                    actual_output = ""
-                else:
-                    actual_output = str(actual_output)
-                
-                print(f"  Actual Output: '{actual_output}'")
-                print(f"  Expected Output: '{expected_output}'")
-                
-                result = determine_submission_result(
-                    judge0_submission.get("status", {}),
+                # 4. Determine if the test case passed
+                # This function handles status checking and string comparison
+                result_status = determine_submission_result(
+                    judge0_status,
                     expected_output,
                     actual_output
                 )
                 
-                print(f"  Result: {result}")
-                
-                # Count passed test cases
-                if result == SubmissionResult.ACCEPTED:
+                if result_status == SubmissionResult.ACCEPTED:
                     test_cases_passed += 1
-                    print(f"  ✓ PASSED")
-                else:
-                    print(f"  ✗ FAILED")
                 
-                # Track execution metrics
-                exec_time = float(judge0_submission.get("time", 0)) * 1000  # Convert to ms
-                memory = float(judge0_submission.get("memory", 0)) / 1024  # Convert to MB
+                # Track metrics
+                exec_time = float(judge0_response.get("time") or 0) * 1000 # to ms
+                memory = float(judge0_response.get("memory") or 0) / 1024  # to MB
                 total_execution_time += exec_time
                 max_memory_used = max(max_memory_used, memory)
-                
-                # Collect error messages
-                stderr = judge0_submission.get("stderr", "")
-                compile_output = judge0_submission.get("compile_output", "")
-                
-                if stderr:
-                    error_messages.append(f"Test case {idx + 1}: {stderr}")
-                if compile_output:
-                    error_messages.append(f"Compilation: {compile_output}")
-                
-                # Attach test case info
-                judge0_submission["test_case_number"] = idx + 1
-                judge0_submission["expected"] = expected_output
-                judge0_submission["result"] = result
-                judge0_submission["stdin"] = tc_input  # Include input in response
-                results.append(judge0_submission)
+
+                # Collect errors for the DB log
+                if judge0_response.get("stderr"):
+                    error_messages.append(f"TC {idx+1} Error: {judge0_response.get('stderr')}")
+
+                # 5. SECURITY MASKING: Mask data before sending to the frontend
+                # We store the real data in 'res_obj' for the DB, but mask it for the 'sanitized' list
+                res_obj = {
+                    "test_case_number": idx + 1,
+                    "status": judge0_status,
+                    "stdin": "[Hidden]" if is_private else tc_input,
+                    "expected": "[Hidden]" if is_private else expected_output,
+                    "stdout": "[Hidden]" if is_private else actual_output,
+                    "stderr": "[Hidden]" if (is_private and judge0_response.get("stderr")) else judge0_response.get("stderr"),
+                    "time": judge0_response.get("time"),
+                    "memory": judge0_response.get("memory"),
+                    "result": result_status,
+                    "type": tc.get("type", "public")
+                }
+                results.append(res_obj)
                 
             except Exception as e:
-                error_msg = f"Test case {idx + 1} execution error: {str(e)}"
-                print(f"  ERROR: {error_msg}")
-                error_messages.append(error_msg)
                 results.append({
                     "test_case_number": idx + 1,
                     "status": {"id": -1, "description": "Execution Error"},
-                    "stdin": tc_input,
-                    "expected": expected_output,
-                    "stdout": "",
                     "stderr": str(e),
-                    "result": SubmissionResult.ERROR
+                    "result": SubmissionResult.ERROR,
+                    "type": tc.get("type", "public")
                 })
-        
-        # Determine overall result
+
+        # 6. Determine overall result for this question
         if test_cases_passed == total_test_cases:
             overall_result = SubmissionResult.ACCEPTED
         elif test_cases_passed > 0:
             overall_result = SubmissionResult.WRONG_ANSWER
         else:
-            overall_result = results[0]["result"] if results else SubmissionResult.ERROR
-        
-        print(f"\n=== Submission Complete ===")
-        print(f"Test Cases Passed: {test_cases_passed}/{total_test_cases}")
-        print(f"Overall Result: {overall_result}")
-        
-        # Update question submission
+            # If no cases passed, use the result of the first failing case
+            overall_result = results[0].get("result") if results else SubmissionResult.ERROR
+
+        # 7. Update database with results and metrics
         update_fields = update_question_submission_result(
             status=SubmissionStatus.COMPLETED,
             result=overall_result,
@@ -408,12 +365,15 @@ def run_submission(code, language_id, submission_id, question_id, test_cases):
             error_message="\n".join(error_messages) if error_messages else None
         )
         
+        # We also want to store the results (masked or full) in the DB for later review
+        update_fields["question_submissions.$.test_case_results"] = results
+        
         db.submissions.update_one(
             {"_id": ObjectId(submission_id), "question_submissions.question_id": question_id},
             {"$set": update_fields}
         )
         
-        # Update overall submission statistics
+        # 8. Trigger overall submission stats update (total score, total time)
         update_overall_submission(submission_id)
         
         return {
@@ -421,17 +381,15 @@ def run_submission(code, language_id, submission_id, question_id, test_cases):
             "result": overall_result,
             "test_cases_passed": test_cases_passed,
             "total_test_cases": total_test_cases,
-            "results": results
+            "results": results # This array is now sanitized/masked
         }
         
     except Exception as e:
-        # Mark question as error
         error_message = str(e)
-        print(f"\n=== ERROR IN run_submission ===")
-        print(f"Error: {error_message}")
         import traceback
         traceback.print_exc()
         
+        # Fallback: Mark question as error in database
         db.submissions.update_one(
             {"_id": ObjectId(submission_id), "question_submissions.question_id": question_id},
             {"$set": {
@@ -627,7 +585,8 @@ def get_submission_statistics(submission_id):
         stats["status"] = submission.get("status")
         stats["started_at"] = submission.get("started_at").isoformat() if submission.get("started_at") else None
         stats["submitted_at"] = submission.get("submitted_at").isoformat() if submission.get("submitted_at") else None
-        
+        stats["problems_attempted"] = len(question_submissions)
+        stats["total_questions"] = submission.get("total_questions", 0)
         # Question-wise breakdown
         question_breakdown = []
         for qs in question_submissions:
@@ -651,4 +610,24 @@ def get_submission_statistics(submission_id):
         
     except Exception as e:
         print(f"Error in get_submission_statistics: {str(e)}")
-        return jsonify({"error": f"Server error: {str(e)}"}), 500
+        return jsonify({"error": f"Server error: {str(e)}"}), 
+
+
+
+        
+
+
+# try:
+#             submission = db.submissions.find_one({"_id": ObjectId(submission_id)})
+#             if not submission:
+#                 return jsonify({"error": "Submission not found"}), 404
+        
+#             question_submissions = submission.get("question_submissions", [])
+#             stats = calculate_submission_statistics(question_submissions)
+        
+#             # Explicitly calculate "Attempted" count
+#             # A question is attempted if it exists in the question_submissions array
+#             stats["problems_attempted"] = len(question_submissions)
+        
+#             # Ensure total_questions from the drive is included
+#             stats["total_questions"] = submission.get("total_questions", 0)
