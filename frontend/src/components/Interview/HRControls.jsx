@@ -32,8 +32,8 @@ const HRControls = ({
               {aiPaused
                 ? "AI is paused. You can speak now."
                 : hrHandRaised
-                ? "Waiting for AI to finish..."
-                : "Raise hand to pause AI and ask questions"}
+                  ? "Waiting for AI to finish..."
+                  : "Raise hand to pause AI and ask questions"}
             </p>
           </div>
         </div>

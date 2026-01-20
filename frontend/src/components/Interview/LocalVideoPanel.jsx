@@ -14,95 +14,126 @@ const LocalVideoPanel = ({
   showTranscript,
   setShowTranscript,
 }) => {
+  const displayName = isHR ? hrName : userData?.name || "Candidate";
+
+  // 🔑 Show overlay ONLY in these specific cases
+  const showOverlay =
+    cameraPermission === "denied" ||
+    cameraPermission === "prompt" ||
+    isVideoOff ||
+    !livekitConnected;
+
   return (
     <div className="bg-white border-3 border-gray-900 rounded-2xl overflow-hidden shadow-xl">
-      <div className="aspect-video bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center relative overflow-hidden">
-        {cameraPermission === "granted" && !isVideoOff ? (
+      <div className="relative aspect-video bg-black overflow-hidden">
+        {/* 🎥 VIDEO CONTAINER (ALWAYS MOUNTED) */}
+        <div
+          ref={localVideoRef}
+          className="absolute inset-0 w-full h-full"
+          style={{ zIndex: showOverlay ? 0 : 10 }}
+        />
+
+        {/* ⚠️ OVERLAY (ONLY WHEN NEEDED) */}
+        {showOverlay && (
           <div
-            ref={localVideoRef}
-            className="w-full h-full [&>video]:w-full [&>video]:h-full [&>video]:object-cover"
-          />
-        ) : cameraPermission === "denied" ? (
-          <div className="text-center p-6">
-            <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CameraOff className="w-10 h-10 text-red-400" />
-            </div>
-            <p className="text-red-300 font-semibold mb-2">
-              Camera Access Denied
-            </p>
-            <p className="text-gray-400 text-sm">
-              You can still join audio-only
-            </p>
-          </div>
-        ) : isVideoOff ? (
-          <div className="text-center">
-            <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-              <VideoOff className="w-10 h-10 text-gray-400" />
-            </div>
-            <p className="text-gray-300 font-semibold">Video is Off</p>
-          </div>
-        ) : livekitConnected ? (
-          <div
-            ref={localVideoRef}
-            className="w-full h-full [&>video]:w-full [&>video]:h-full [&>video]:object-cover"
-          />
-        ) : (
-          <div className="text-center">
-            <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <Camera className="w-10 h-10 text-indigo-400" />
-            </div>
-            <p className="text-gray-300 font-semibold">
-              Requesting Camera Access...
-            </p>
+            className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center text-center"
+            style={{ zIndex: 20 }}
+          >
+            {cameraPermission === "denied" && (
+              <>
+                <CameraOff className="w-12 h-12 text-red-400 mb-3" />
+                <p className="text-red-300 font-semibold text-lg">
+                  Camera Access Denied
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  You can still join with audio
+                </p>
+              </>
+            )}
+
+            {cameraPermission === "prompt" && (
+              <>
+                <Camera className="w-12 h-12 text-yellow-400 animate-pulse mb-3" />
+                <p className="text-yellow-300 font-semibold text-lg">
+                  Requesting Camera Access
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Please allow camera and microphone
+                </p>
+              </>
+            )}
+
+            {cameraPermission === "granted" && isVideoOff && (
+              <>
+                <VideoOff className="w-12 h-12 text-gray-400 mb-3" />
+                <p className="text-gray-300 font-semibold text-lg">
+                  Camera is Off
+                </p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Click the camera button to turn it on
+                </p>
+              </>
+            )}
+
+            {!livekitConnected && cameraPermission !== "denied" && (
+              <>
+                <Camera className="w-12 h-12 text-indigo-400 animate-pulse mb-3" />
+                <p className="text-indigo-300 font-semibold text-lg">
+                  Connecting to Room…
+                </p>
+                <p className="text-gray-400 text-sm mt-1">Please wait...</p>
+              </>
+            )}
           </div>
         )}
 
+        {/* 🔴 RECORDING INDICATOR */}
         {isRecording && (
-          <div className="absolute top-4 left-4 bg-red-600 text-white px-4 py-2 rounded-xl text-sm flex items-center gap-2 font-bold border-2 border-red-700 shadow-lg">
-            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+          <div className="absolute top-4 left-4 z-30 bg-red-600 text-white px-3 py-1.5 rounded-xl text-sm flex items-center gap-2 font-bold shadow-lg">
+            <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
             RECORDING
           </div>
         )}
 
+        {/* 🔇 MUTED INDICATOR */}
         {isMuted && (
-          <div className="absolute top-4 right-4 bg-red-600 text-white p-3 rounded-xl border-2 border-red-700 shadow-lg">
+          <div className="absolute top-4 right-4 z-30 bg-red-600 text-white p-3 rounded-xl shadow-lg">
             <MicOff className="w-5 h-5" />
           </div>
         )}
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+        {/* 👤 USER INFO BAR */}
+        <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/80 via-black/60 to-transparent p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold border-2 border-white shadow-lg ${
                   isHR
                     ? "bg-gradient-to-br from-purple-500 to-pink-600"
                     : "bg-gradient-to-br from-blue-500 to-indigo-600"
-                } rounded-full flex items-center justify-center border-2 border-white shadow-lg`}
+                }`}
               >
-                <span className="text-white font-bold text-sm">
-                  {isHR
-                    ? hrName.charAt(0).toUpperCase()
-                    : userData?.name?.charAt(0).toUpperCase() || "C"}
-                </span>
+                {displayName.charAt(0).toUpperCase()}
               </div>
+
               <div>
                 <p className="text-white font-semibold text-sm">
-                  {isHR ? hrName : userData?.name || "Candidate"}
+                  {displayName}
                 </p>
-                <p className="text-white/80 text-xs">
+                <p className="text-white/70 text-xs">
                   {isHR ? "HR Manager" : "You"}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-black/50 backdrop-blur-sm rounded-full border border-white/20">
-              <div
+
+            <div className="flex items-center gap-2 px-3 py-1 bg-black/50 rounded-full border border-white/20">
+              <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   livekitConnected
                     ? "bg-green-500 animate-pulse"
-                    : "bg-yellow-500"
+                    : "bg-yellow-500 animate-pulse"
                 }`}
-              ></div>
+              />
               <span className="text-xs text-white font-medium">
                 {livekitConnected ? "Connected" : "Connecting"}
               </span>
@@ -111,21 +142,15 @@ const LocalVideoPanel = ({
         </div>
       </div>
 
-      <div className="p-5 border-t-3 border-gray-900 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold text-gray-700">
-              Your Feed
-            </span>
-          </div>
-          <button
-            onClick={() => setShowTranscript(!showTranscript)}
-            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
-          >
-            {showTranscript ? "Hide" : "View"} Transcript
-          </button>
-        </div>
+      {/* 🔽 FOOTER */}
+      <div className="p-4 border-t-3 border-gray-900 bg-gray-100 flex justify-between items-center">
+        <span className="text-sm font-semibold text-gray-700">Your Feed</span>
+        <button
+          onClick={() => setShowTranscript(!showTranscript)}
+          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 px-3 py-1 rounded-lg hover:bg-indigo-50 transition-colors"
+        >
+          {showTranscript ? "Hide" : "View"} Transcript
+        </button>
       </div>
     </div>
   );

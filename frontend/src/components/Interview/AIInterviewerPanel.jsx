@@ -1,3 +1,4 @@
+// AIInterviewerPanel.jsx
 import React from "react";
 import { Hand, MessageSquare, Volume2 } from "lucide-react";
 import AnimatedAvatar from "./AnimatedAvatar";

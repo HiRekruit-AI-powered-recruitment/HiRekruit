@@ -1,5 +1,5 @@
 import React from "react";
-import { Pause, Volume2 } from "lucide-react";
+import { Pause } from "lucide-react";
 
 const AnimatedAvatar = ({
   blinkState,

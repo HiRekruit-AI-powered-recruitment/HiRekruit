@@ -18,6 +18,7 @@ export const useVapi = ({
   vapiListeningRef,
 }) => {
   const vapiClientRef = useRef(null);
+  const isMutedRef = useRef(false); // ✅ NEW: Track mute state
 
   const initializeVapi = useCallback(() => {
     if (interviewAlreadyCompleted || isHR) {
@@ -50,16 +51,76 @@ export const useVapi = ({
       let finalMessages = [];
 
       client.on("message", (msg) => {
+        // ✅ ENHANCED: Check both AI pause and mute state
         if (!vapiListeningRef.current) {
           console.log("🔇 Ignoring Vapi message - AI is paused");
           return;
         }
 
-        if (msg.messages && Array.isArray(msg.messages)) {
-          finalMessages = msg.messages;
-          setConversation([...msg.messages]);
+        // ✅ NEW: Process transcript messages and filter based on mute state
+        if (msg.type === "transcript" && msg.transcriptType === "final") {
+          const isUserSpeaking = msg.role === "user";
+          const isAssistantSpeaking = msg.role === "assistant";
 
-          const transcript = msg.messages
+          // ✅ CRITICAL: Ignore user speech when muted
+          if (isUserSpeaking && isMutedRef.current) {
+            console.log("🔇 IGNORING user speech - microphone is MUTED");
+            console.log("   Ignored text:", msg.transcript);
+            return; // Don't process or add to transcript
+          }
+
+          console.log(
+            `🎤 ${isUserSpeaking ? "User" : "AI"} speaking:`,
+            msg.transcript,
+          );
+
+          // Add to transcript
+          const transcriptEntry = {
+            role: msg.role,
+            content: msg.transcript,
+            timestamp: new Date().toISOString(),
+          };
+
+          setFullTranscript((prev) => [...prev, transcriptEntry]);
+
+          // Update conversation
+          if (isUserSpeaking) {
+            setConversation((prev) => [
+              ...prev,
+              {
+                role: "user",
+                message: msg.transcript,
+                time: new Date().toISOString(),
+              },
+            ]);
+          } else if (isAssistantSpeaking) {
+            setCurrentQuestion(msg.transcript);
+            setConversation((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                message: msg.transcript,
+                time: new Date().toISOString(),
+              },
+            ]);
+          }
+        }
+
+        // ✅ KEEP: Handle legacy message format (if your VAPI version uses it)
+        if (msg.messages && Array.isArray(msg.messages)) {
+          // Filter out user messages if muted
+          const filteredMessages = msg.messages.filter((m) => {
+            if (m.role === "user" && isMutedRef.current) {
+              console.log("🔇 FILTERING muted user message from conversation");
+              return false;
+            }
+            return true;
+          });
+
+          finalMessages = filteredMessages;
+          setConversation([...filteredMessages]);
+
+          const transcript = filteredMessages
             .filter((m) => m.role === "user" || m.role === "assistant")
             .map((m) => ({
               role: m.role,
@@ -68,7 +129,7 @@ export const useVapi = ({
             }));
           setFullTranscript(transcript);
 
-          const lastAssistantMessage = msg.messages
+          const lastAssistantMessage = filteredMessages
             .filter((m) => m.role === "assistant")
             .pop();
           if (lastAssistantMessage) {
@@ -176,9 +237,29 @@ export const useVapi = ({
     }
   }, [resumeText, prompt, setIsConnecting, setConnectionError]);
 
+  // ✅ NEW: Function to update mute state from InterviewPage
+  const updateMuteState = useCallback((muted) => {
+    console.log("🔇 Updating VAPI mute state:", muted ? "MUTED" : "UNMUTED");
+    isMutedRef.current = muted;
+
+    // ✅ OPTIONAL: If VAPI client has a mute property, update it too
+    const client = vapiClientRef.current;
+    if (client) {
+      // Some VAPI versions support this
+      if (typeof client.setMuted === "function") {
+        client.setMuted(muted);
+        console.log("✅ VAPI client.setMuted() called");
+      }
+      // Store mute state on client object for reference
+      client.isMuted = muted;
+      console.log("✅ VAPI mute state updated");
+    }
+  }, []);
+
   return {
     vapiClientRef,
     initializeVapi,
     handleStartInterview,
+    updateMuteState, // ✅ NEW: Export the mute state updater
   };
 };

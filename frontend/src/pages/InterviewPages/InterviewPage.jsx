@@ -80,6 +80,8 @@ const InterviewPage = () => {
   const {
     livekitRoomRef,
     localVideoRef,
+    localVideoTrackRef,
+    localAudioTrackRef,
     initializeLiveKit,
     stopCamera,
     toggleVideo: toggleVideoFn,
@@ -103,7 +105,12 @@ const InterviewPage = () => {
     setRemoteParticipants,
   });
 
-  const { vapiClientRef, initializeVapi, handleStartInterview } = useVapi({
+  const {
+    vapiClientRef,
+    initializeVapi,
+    handleStartInterview,
+    updateMuteState,
+  } = useVapi({
     resumeText,
     interviewAlreadyCompleted,
     isHR,
@@ -138,7 +145,7 @@ const InterviewPage = () => {
       console.log("🔍 Checking if interview is already completed...");
       setIsCheckingCompletion(true);
       const response = await fetch(
-        `${BASE_URL}/api/interview/candidate/${driveCandidateId}`
+        `${BASE_URL}/api/interview/candidate/${driveCandidateId}`,
       );
 
       if (!response.ok) {
@@ -152,7 +159,7 @@ const InterviewPage = () => {
       const currentRound = roundsStatus.find(
         (round) =>
           round.round_type &&
-          round.round_type.toLowerCase().trim() === normalizedInterviewType
+          round.round_type.toLowerCase().trim() === normalizedInterviewType,
       );
 
       const isCompleted = currentRound && currentRound.completed === "yes";
@@ -166,15 +173,27 @@ const InterviewPage = () => {
     }
   }, [driveCandidateId, interviewType, isHR]);
 
-  // Toggle video wrapper
+  // ✅ FIXED: Toggle video wrapper
   const toggleVideo = useCallback(() => {
+    console.log("📹 toggleVideo called, current isVideoOff:", isVideoOff);
     toggleVideoFn(isVideoOff, setIsVideoOff);
   }, [isVideoOff, toggleVideoFn]);
 
-  // Toggle audio wrapper
+  // ✅ FIXED: Toggle audio wrapper that ALSO updates VAPI
   const toggleAudio = useCallback(() => {
+    console.log("🎤 toggleAudio called, current isMuted:", isMuted);
+
+    // Toggle LiveKit audio
     toggleAudioFn(isMuted, setIsMuted);
-  }, [isMuted, toggleAudioFn]);
+
+    // ✅ CRITICAL: Also update VAPI mute state
+    const newMutedState = !isMuted;
+    updateMuteState(newMutedState);
+
+    console.log(
+      `🔇 Audio ${newMutedState ? "MUTED" : "UNMUTED"} (both LiveKit and VAPI)`,
+    );
+  }, [isMuted, toggleAudioFn, updateMuteState]);
 
   // AI speaking animation
   useEffect(() => {
@@ -193,25 +212,15 @@ const InterviewPage = () => {
 
   // Blink animation
   useEffect(() => {
-    const blinkInterval = setInterval(() => {
-      setBlinkState(true);
-      setTimeout(() => setBlinkState(false), 150);
-    }, 3000 + Math.random() * 2000);
+    const blinkInterval = setInterval(
+      () => {
+        setBlinkState(true);
+        setTimeout(() => setBlinkState(false), 150);
+      },
+      3000 + Math.random() * 2000,
+    );
     return () => clearInterval(blinkInterval);
   }, []);
-
-  // Attach video track when localTracks changes
-  useEffect(() => {
-    if (localTracks.length > 0 && localVideoRef.current) {
-      const videoTrack = localTracks.find((t) => t.kind === Track.Kind.Video);
-      if (videoTrack) {
-        console.log("🎥 Attaching video track from state update");
-        const element = videoTrack.attach();
-        localVideoRef.current.innerHTML = "";
-        localVideoRef.current.appendChild(element);
-      }
-    }
-  }, [localTracks]);
 
   // End interview
   const handleEndInterview = useCallback(async () => {
@@ -226,7 +235,7 @@ const InterviewPage = () => {
       }
     }
 
-    stopCamera();
+    stopCamera(localTracks);
 
     const conversationData = conversation
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -264,6 +273,7 @@ const InterviewPage = () => {
     resumeText,
     interviewType,
     stopCamera,
+    localTracks,
     isHR,
     vapiClientRef,
   ]);
@@ -273,6 +283,7 @@ const InterviewPage = () => {
     if (!interviewStarted) return;
     console.log("✋ HR raised hand - PAUSING AI");
     vapiListeningRef.current = false;
+    updateMuteState(false); // HR wants to speak, unmute VAPI
     setHrHandRaised(true);
     setAiPaused(true);
     setIsSpeaking(false);
@@ -282,7 +293,7 @@ const InterviewPage = () => {
       timestamp: new Date().toISOString(),
     };
     setFullTranscript((prev) => [...prev, hrInterventionMessage]);
-  }, [interviewStarted, hrName]);
+  }, [interviewStarted, hrName, updateMuteState]);
 
   const handleHrStartSpeaking = useCallback(() => {
     console.log("🎤 HR started speaking");
@@ -443,10 +454,8 @@ const InterviewPage = () => {
         }
       }
 
-      // Use ref instead of state for cleanup
       if (livekitRoomRef.current) {
         try {
-          // Get tracks from room participant instead of state
           const participant = livekitRoomRef.current.localParticipant;
           if (participant) {
             participant.tracks.forEach((publication) => {
@@ -468,7 +477,7 @@ const InterviewPage = () => {
         }
       }
     };
-  }, []); // Empty array - only cleanup on actual unmount
+  }, []);
 
   // Show loader during initial setup
   if (!isHR && (isCheckingCompletion || isLoadingLiveKit)) {
@@ -541,12 +550,12 @@ const InterviewPage = () => {
     totalParticipants <= 2
       ? "lg:grid-cols-2"
       : totalParticipants === 3
-      ? "lg:grid-cols-3"
-      : "lg:grid-cols-2";
+        ? "lg:grid-cols-3"
+        : "lg:grid-cols-2";
 
   // Check if any HR is present
   const hrPresent = remoteParticipants.some((p) =>
-    p.identity.startsWith("hr_")
+    p.identity.startsWith("hr_"),
   );
 
   return (
