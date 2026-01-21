@@ -1002,3 +1002,55 @@ def get_selected_candidates_by_job():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Server error"}), 500
+
+
+# Add this to your drive_controller.py
+
+def update_round_deadlines(drive_id):
+    """
+    Updates the deadline for specific rounds in a drive.
+    Expects JSON: { "deadlines": [{ "round_number": 1, "deadline": "2026-01-25T18:00:00Z" }] }
+    """
+    try:
+        data = request.get_json()
+        deadlines_to_update = data.get("deadlines", []) # List of {round_number, deadline}
+
+        if not deadlines_to_update:
+            return jsonify({"error": "No deadline data provided"}), 400
+
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+
+        for item in deadlines_to_update:
+            round_num = item.get("round_number")
+            new_deadline = item.get("deadline") # Should be ISO format string
+
+            # 1. Update the 'rounds' array in the Drive document
+            db.drives.update_one(
+                {"_id": object_id, "rounds.number": round_num}, # Assuming 'number' exists
+                {"$set": {"rounds.$.deadline": new_deadline}}
+            )
+            
+            # 2. Update the 'round_statuses' array in the Drive document
+            db.drives.update_one(
+                {"_id": object_id, "round_statuses.round_number": round_num},
+                {"$set": {"round_statuses.$.deadline": new_deadline}}
+            )
+
+            # 3. Update all Candidates assigned to this drive
+            candidate_round_field = f"rounds_status.{round_num - 1}.deadline"
+            db.drive_candidates.update_many(
+                {"drive_id": drive_id},
+                {"$set": {candidate_round_field: new_deadline}}
+            )
+
+        return jsonify({
+            "message": "Deadlines updated successfully",
+            "drive_id": drive_id
+        }), 200
+
+    except Exception as e:
+        print(f"Error updating deadlines: {str(e)}")
+        return jsonify({"error": str(e)}), 500

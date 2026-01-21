@@ -24,7 +24,7 @@ export default function Assessment() {
 
   const [driveId, setDriveId] = useState(null);
   const [candidateId, setCandidateId] = useState(null);
-
+  const [deadline, setDeadline] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(3600);
   const [timerActive, setTimerActive] = useState(false);
 
@@ -153,6 +153,38 @@ export default function Assessment() {
 
       setDriveId(drive_id);
       setCandidateId(candidate_id);
+
+       const statusResponse = await fetch(
+        `${BASE_URL}/api/coding-assessment/candidate-status?candidate_id=${candidate_id}&drive_id=${drive_id}`
+      );
+      if (!statusResponse.ok) {
+        throw new Error("Failed to verify candidate status");
+      }
+
+
+      const statusData = await statusResponse.json();
+
+      // Check if deadline exists
+      if (!statusData.deadline) {
+        setError("Assessment hasn't been scheduled yet. Please wait for the HR to set a deadline.");
+        setLoading(false);
+        return;
+      }
+
+
+      const deadlineDate = new Date(statusData.deadline);
+      const now = new Date();
+      if (now > deadlineDate) {
+        setError("The assessment deadline has already passed.");
+        setLoading(false);
+        return;
+      }
+
+      setDeadline(statusData.deadline);
+      
+      // Sync remaining time with the deadline
+      const secondsLeft = Math.floor((deadlineDate - now) / 1000);
+      setTimeRemaining(secondsLeft);
 
       const questionsResponse = await fetch(
         `${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}
