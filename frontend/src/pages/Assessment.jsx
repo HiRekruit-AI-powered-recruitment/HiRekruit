@@ -25,6 +25,7 @@ export default function Assessment() {
   const [driveId, setDriveId] = useState(null);
   const [candidateId, setCandidateId] = useState(null);
   const [deadline, setDeadline] = useState(null);
+  const [canStartTest,setCanStartTest] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(3600);
   const [timerActive, setTimerActive] = useState(false);
 
@@ -154,34 +155,32 @@ export default function Assessment() {
       setDriveId(drive_id);
       setCandidateId(candidate_id);
 
-       const statusResponse = await fetch(
-        `${BASE_URL}/api/coding-assessment/candidate-status?candidate_id=${candidate_id}&drive_id=${drive_id}`
-      );
-      if (!statusResponse.ok) {
-        throw new Error("Failed to verify candidate status");
+       
+      const deadlineRes = await fetch(`${BASE_URL}/api/drive/get_deadline?drive_id=${drive_id}`);
+      const deadlineData = await deadlineRes.json();
+      console.log("Deadline is");
+      console.log(deadlineData);
+      if (!deadlineRes.ok) {
+        alert("Some Internal Error :}")
+        throw new Error(deadlineData.error || "Failed to fetch deadline");}
+      if (deadlineData.deadline === "null") {
+      setError("Assessment has not been scheduled yet. Please wait for HR to set a deadline.");
+      setCanStartTest(false);
+      setLoading(false);
+      return;
       }
 
 
-      const statusData = await statusResponse.json();
-
-      // Check if deadline exists
-      if (!statusData.deadline) {
-        setError("Assessment hasn't been scheduled yet. Please wait for the HR to set a deadline.");
-        setLoading(false);
-        return;
-      }
-
-
-      const deadlineDate = new Date(statusData.deadline);
-      const now = new Date();
-      if (now > deadlineDate) {
-        setError("The assessment deadline has already passed.");
-        setLoading(false);
-        return;
-      }
-
-      setDeadline(statusData.deadline);
       
+    const deadlineDate = new Date(deadlineData.deadline);
+    const now = new Date();
+
+    if (now > deadlineDate) {
+      setError("The deadline for this assessment has already passed.");
+      setLoading(false);
+      return;
+    }
+      setCanStartTest(true);
       // Sync remaining time with the deadline
       const secondsLeft = Math.floor((deadlineDate - now) / 1000);
       setTimeRemaining(secondsLeft);
@@ -496,6 +495,11 @@ export default function Assessment() {
 
   if (loading) {
     return <Loader />;
+  }
+
+
+  if(canStartTest === false){
+    return <><h1>You Missed Deadline... Or Contact HR</h1></>;
   }
 
   if (error) {

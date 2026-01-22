@@ -5,7 +5,9 @@ from src.Controllers.drive_controller import (
     update_drive_status,
     get_drive_by_id,
     get_all_drives,
+    get_deadline_controller,
     get_hr_info,
+    update_round_deadlines,
     get_drive_candidates,
     get_drive_candidates_by_job,
     remove_application_by_job,
@@ -76,6 +78,16 @@ def get_drive_status(driveId):
         }), 200
     else:
         return response, status_code
+
+
+@drive_bp.route("/get_deadline", methods=["GET"])
+def get_deadline():
+    return get_deadline_controller()
+
+@drive_bp.route("/<drive_id>/deadlines", methods=["PUT"])
+def update_deadlines(drive_id):
+    return update_round_deadlines(drive_id)
+
 
 # Get HR info by email
 @drive_bp.route("/hr-info", methods=["GET"])
