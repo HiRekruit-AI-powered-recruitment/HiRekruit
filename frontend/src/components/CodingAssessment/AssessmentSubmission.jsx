@@ -146,7 +146,7 @@ export default function AssessmentSubmission() {
           <StatCard 
             icon={<Clock size={32} color="#0284c7" />} 
             label="TIME TAKEN" 
-            value={formatTime(totalTime)} 
+            value={totalTime} 
             bg={cardBg} 
             border={borderColor} 
           />

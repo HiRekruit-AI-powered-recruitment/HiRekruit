@@ -31,7 +31,7 @@ const Process = () => {
   const [steps, setSteps] = useState([]);
   const [roundProgress, setRoundProgress] = useState([]);
   const [selectedDeadline, setSelectedDeadline] = useState("");
-
+  const [deadline,setDeadline] = useState("");
   // Default icons for different round types
   const roundTypeIcons = {
     Technical: Settings,
@@ -87,16 +87,25 @@ const Process = () => {
       const response = await fetch(`${BaseURL}/api/drive/${driveId}`);
 
       if (!response.ok) throw new Error("Failed to fetch drive details");
-
+      
       const data = await response.json();
       const drive = data.drive;
 
       setDriveData(drive);
       setSteps(buildStepsFromStages(drive));
       setCurrentStep(drive.currentStage || 0);
-
+      // console.log("drive Info");
+      // console.log(drive);
+      console.log(drive.round_statuses[0].round_type);
       if (drive.round_progress) {
         setRoundProgress(drive.round_progress);
+      }
+      if(drive.round_statuses[0].round_type === "Coding"){
+        console.log("HERE");
+    const deadlineRes = await fetch(`${BaseURL}/api/drive/get_deadline?drive_id=${driveId}`);
+    const deadlineData = await deadlineRes.json();
+    console.log(deadlineData);
+    setDeadline(deadlineData.deadline);
       }
     } catch (err) {
       setError(err.message);
@@ -335,7 +344,7 @@ const Process = () => {
                         <div className="flex justify-between text-xs">
                           <span className="text-slate-500">Current Deadline</span>
                           <span className="font-bold text-red-600">
-                            {rp.deadline ? new Date(rp.deadline).toLocaleString() : "Not Set"}
+                            {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
                           </span>
                         </div>
                         <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
