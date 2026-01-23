@@ -829,7 +829,7 @@ const Home = () => {
       </section>
 
       {/* Our Clients*/}
-      <ClientLogos />
+      {/* <ClientLogos /> */}
 
       {/* Testimonials Section */}
       <div className="bg-white py-20 px-6">
