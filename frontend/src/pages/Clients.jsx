@@ -125,7 +125,7 @@ const TestimonialsSlider = () => {
                   </div>
                 </div>
               </div>
-            )
+            ),
           )}
         </div>
       </div>
@@ -265,7 +265,7 @@ const Clients = () => {
               Join 500+ companies who trust HiRekruit for their hiring needs
             </p>
           </div>
-          <ClientLogos />
+          {/* <ClientLogos /> */}
 
           {/* Stats Section */}
           {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-16 max-w-4xl mx-auto">
