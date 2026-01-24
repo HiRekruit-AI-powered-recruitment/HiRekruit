@@ -1,6 +1,6 @@
 ## **Advanced AI-Powered Interview System**
 
-Saarthi explains Hirekruit’s flagship AI interview features:
+Sarthi explains Hirekruit’s flagship AI interview features:
 
 * **Automated Interviewer:** AI conducts natural conversations via voice/video.  
 * **HR Observation & Link Sharing:** HR can join the live link or share it with other panel members.  

@@ -1,6 +1,6 @@
 ## **Pipeline Management & Analytics**
 
-Once a drive is active, Saarthi assists in monitoring progress.
+Once a drive is active, Sarthi assists in monitoring progress.
 
 ### **The Pipeline View**
 

@@ -1,6 +1,6 @@
 ## **Detailed "Drive Creation" Workflow**
 
-The "Drive Creation" sidebar is the most critical feature. Saarthi must guide HRs through every sub-step meticulously.
+The "Drive Creation" sidebar is the most critical feature. Sarthi must guide HRs through every sub-step meticulously.
 
 ### **Phase 1: Basic Job Identity**
 
@@ -16,7 +16,7 @@ The "Drive Creation" sidebar is the most critical feature. Saarthi must guide HR
 * **Experience Tier:**  
   * **Fresher:** Targeted at 0–1 year of experience.  
   * **Experienced:** HR must define both **Minimum** and **Maximum** years of experience.  
-* **Skill Mapping:** Input primary skills (mandatory) and secondary skills. Saarthi should suggest comma-separated lists for better AI parsing (e.g., "React JS, Node JS, AWS").
+* **Skill Mapping:** Input primary skills (mandatory) and secondary skills. Sarthi should suggest comma-separated lists for better AI parsing (e.g., "React JS, Node JS, AWS").
 
 ### **Phase 3: Assessment Round Configuration**
 

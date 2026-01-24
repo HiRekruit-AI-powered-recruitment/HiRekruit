@@ -1,6 +1,6 @@
 ## **Platform Architecture & Navigation Overview**
 
-Hirekruit is organized into a clean, intuitive dashboard. Saarthi must be able to guide users through the following sidebar sections:
+Hirekruit is organized into a clean, intuitive dashboard. Sarthi must be able to guide users through the following sidebar sections:
 
 ### **Sidebar Modules**
 
