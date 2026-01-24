@@ -31,6 +31,7 @@ export default function AssessmentSubmission() {
           if (response.ok) {
             const data = await response.json();
             // Your backend returns { statistics: { ... } }
+            
             setStats(data.statistics);
           }
         } else {
@@ -59,13 +60,25 @@ export default function AssessmentSubmission() {
   const totalProblems = stats?.total_questions || 0;
   const attemptedProblems = stats?.question_breakdown?.length || 0;
   const solvedProblems = stats?.questions_solved || 0;
-  const totalTime = stats?.total_time_taken || timeTaken || 0;
+  const totalTime = timeTaken || 0;
 
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
+  // Use Math.abs to force the number to be positive
+  console.log(seconds);
+  const totalSeconds = Math.abs(parseFloat(seconds));
+
+  if (isNaN(totalSeconds) || totalSeconds === 0) return "0s";
+
+  if (totalSeconds < 1) {
+    return `${(totalSeconds * 1000).toFixed(0)}ms`;
+  }
+
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = Math.floor(totalSeconds % 60);
+
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+};
 
   const bgColor = darkMode ? "#0d0d0d" : "#ffffff";
   const textColor = darkMode ? "#e0e0e0" : "#000000";
@@ -146,7 +159,7 @@ export default function AssessmentSubmission() {
           <StatCard 
             icon={<Clock size={32} color="#0284c7" />} 
             label="TIME TAKEN" 
-            value={totalTime} 
+            value={formatTime(totalTime)} 
             bg={cardBg} 
             border={borderColor} 
           />

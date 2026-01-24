@@ -28,6 +28,7 @@ export default function Assessment() {
   const [canStartTest,setCanStartTest] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(3600);
   const [timerActive, setTimerActive] = useState(false);
+  const [startTime, setStartTime] = useState(null);
 
   const [problemCode, setProblemCode] = useState({});
   const [language, setLanguage] = useState("python");
@@ -248,6 +249,7 @@ export default function Assessment() {
   };
 
   const handleStartAssessment = () => {
+    setStartTime(Date.now());
     setAssessmentStarted(true);
     setTimerActive(true);
   };
@@ -368,7 +370,8 @@ export default function Assessment() {
       alert("Assessment not properly initialized");
       return;
     }
-
+    //alert(startTime);
+    const timeSpentSeconds = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
     setIsSubmitting(true);
 
     try {
@@ -396,7 +399,7 @@ export default function Assessment() {
             statistics: data.statistics,
             candidateId: candidateId,
             driveId: driveId,
-            timeTaken: 3600 - timeRemaining,
+            timeTaken: timeSpentSeconds,
           },
         });
       } else {
