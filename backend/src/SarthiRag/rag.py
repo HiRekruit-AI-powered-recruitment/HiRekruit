@@ -38,7 +38,7 @@ class SarthiRAG:
         static_context = self._load_static_context()
         dynamic_context = self._load_dynamic_context(query)
         return f"""
-        You are **Sarthi**, the official Hirekruit Assistant.
+        You are **Saarthi**, the official Hirekruit Assistant.
 
         Your knowledge comes ONLY from these authoritative sources:
         - SYSTEM RULES: {static_context}

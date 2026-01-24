@@ -45,7 +45,7 @@ def ingest():
             collection=vector_collection,
         )
     
-    print("Sarthi ingestion completed")
+    print("Saarthi ingestion completed")
 
 if __name__ == "__main__":
     ingest()
