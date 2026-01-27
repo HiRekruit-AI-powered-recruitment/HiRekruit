@@ -1002,3 +1002,88 @@ def get_selected_candidates_by_job():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Server error"}), 500
+
+
+# Add this to your drive_controller.py
+# Helper Logic (The "Model" part of the logic)
+def get_active_round_deadline(drive_doc):
+    current_round_num = drive_doc.get("current_round")
+    if not current_round_num:
+        return None
+    
+    # Look into round_statuses for the deadline
+    round_statuses = drive_doc.get("round_statuses", [])
+    active_round = next(
+        (rs for rs in round_statuses if rs.get("round_number") == current_round_num), 
+        None
+    )
+    return active_round.get("deadline") if active_round else None
+
+# --- Existing Controllers ---
+
+def get_deadline_controller():
+    drive_id = request.args.get("drive_id")
+    if not drive_id:
+        return jsonify({"error": "drive_id is required"}), 400
+    try:
+        drive = db.drives.find_one({"_id": ObjectId(drive_id)})
+        if not drive:
+            return jsonify({"error": "Drive not found"}), 404
+
+        deadline = get_active_round_deadline(drive)
+        return jsonify({
+            "drive_id": drive_id,
+            "current_round": drive.get("current_round"),
+            "deadline": deadline,
+            "status": "success"
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+def update_round_deadlines(drive_id):
+    """
+    Updates the deadline for specific rounds in a drive and syncs to candidates.
+    """
+    try:
+        data = request.get_json()
+        deadlines_to_update = data.get("deadlines", [])
+
+        if not deadlines_to_update:
+            return jsonify({"error": "No deadline data provided"}), 400
+
+        # Validate ObjectId
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+
+        # This loop must be OUTSIDE the except block and INSIDE the main try
+        for item in deadlines_to_update:
+            round_num = item.get("round_number")
+            new_deadline = item.get("deadline") 
+
+            # All database updates must be indented INSIDE the for loop
+            # 1. Update round config
+            db.drives.update_one(
+                {"_id": object_id, "rounds.number": round_num},
+                {"$set": {"rounds.$.deadline": new_deadline}}
+            )
+            
+            # 2. Update tracking status
+            db.drives.update_one(
+                {"_id": object_id, "round_statuses.round_number": round_num},
+                {"$set": {"round_statuses.$.deadline": new_deadline}}
+            )
+
+            # 3. Update all candidates
+            candidate_round_field = f"rounds_status.{round_num - 1}.deadline"
+            db.drive_candidates.update_many(
+                {"drive_id": drive_id},
+                {"$set": {candidate_round_field: new_deadline}}
+            )
+
+        return jsonify({"message": "Deadlines updated successfully"}), 200
+
+    except Exception as e:
+        # This handles errors for the outer try block
+        print(f"❌ Error in update_round_deadlines: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
