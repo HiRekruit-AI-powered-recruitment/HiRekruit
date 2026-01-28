@@ -156,54 +156,54 @@ export default function Assessment() {
       setDriveId(drive_id);
       setCandidateId(candidate_id);
 
-       
-      const deadlineRes = await fetch(`${BASE_URL}/api/drive/get_deadline?drive_id=${drive_id}`);
-      const deadlineData = await deadlineRes.json();
-      console.log("Deadline is");
-      console.log(deadlineData);
-      if (!deadlineRes.ok) {
-        alert("Some Internal Error :}")
-        throw new Error(deadlineData.error || "Failed to fetch deadline");}
-      if (deadlineData.deadline === "null") {
-      setError("Assessment has not been scheduled yet. Please wait for HR to set a deadline.");
-      setCanStartTest(false);
-      setLoading(false);
-      return;
+      // 1. Fetch the Drive Data (Contains Duration and Round Info)
+      const driveRes = await fetch(`${BASE_URL}/api/drive/${drive_id}`);
+      if (!driveRes.ok) throw new Error("Failed to fetch drive information");
+      const driveResult = await driveRes.json();
+      const drive = driveResult.drive;
+
+      // 2. Identify the active round and its deadline
+      const currentRoundNum = drive.current_round;
+      const activeRound = drive.round_statuses?.find(r => r.round_number === currentRoundNum);
+
+      if (!activeRound || !activeRound.deadline || activeRound.deadline === "null") {
+        setError("Assessment has not been scheduled yet. Please wait for HR to set a deadline.");
+        setCanStartTest(false);
+        setLoading(false);
+        return;
       }
 
+      const deadlineDate = new Date(activeRound.deadline);
+      const now = new Date();
 
+      if (now > deadlineDate) {
+        setError("The deadline for this assessment has already passed.");
+        setCanStartTest(false);
+        setLoading(false);
+        return;
+      }
+
+      // 3. CALCULATE TIME REMAINING
+      // Calculate allocated time from HR (hours/minutes)
+      const hrs = parseInt(drive.assessment_duration_hours) || 0;
+      const mins = parseInt(drive.assessment_duration_minutes) || 0;
+      const allocatedSeconds = (hrs * 3600) + (mins * 60);
+
+      // Calculate absolute seconds until the round closes
+      const secondsUntilRoundEnd = Math.floor((deadlineDate - now) / 1000);
+
+      // Final time is the SHORTER of the two
+      // (You get your 1 hour, UNLESS the round ends in 10 minutes)
+      const finalTime = Math.min(allocatedSeconds, secondsUntilRoundEnd);
       
-    const deadlineDate = new Date(deadlineData.deadline);
-    const now = new Date();
-
-    if (now > deadlineDate) {
-      setError("The deadline for this assessment has already passed.");
-      setLoading(false);
-      return;
-    }
+      setTimeRemaining(finalTime);
       setCanStartTest(true);
-      // Sync remaining time with the deadline
-      const secondsLeft = Math.floor((deadlineDate - now) / 1000);
-      setTimeRemaining(secondsLeft);
 
-      const questionsResponse = await fetch(
-        `${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}
-        `
-      );
-
-      if (!questionsResponse.ok) {
-        if (questionsResponse.status === 404) {
-          throw new Error("No coding questions found for this assessment.");
-        }
-        throw new Error("Failed to fetch coding questions");
-      }
-
+      // 4. Fetch Problems
+      const questionsResponse = await fetch(`${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}`);
+      if (!questionsResponse.ok) throw new Error("Failed to fetch coding questions");
+      
       const questions = await questionsResponse.json();
-
-      if (!questions || questions.length === 0) {
-        throw new Error("No coding questions found");
-      }
-
       const transformedQuestions = questions.map((q, index) => ({
         _id: q._id,
         id: q._id,
@@ -211,25 +211,22 @@ export default function Assessment() {
         title: q.title,
         description: q.description,
         constraints: q.constraints,
-         testCases: q.test_cases
-    .filter((tc) => tc.type === "public") 
-    .map((tc) => ({
-      input: tc.input,
-      output: tc.output,
-    })),
-      allTestCasesMetadata: q.test_cases.map(tc => tc.type), 
+        testCases: q.test_cases.filter((tc) => tc.type === "public") 
+          .map((tc) => ({ input: tc.input, output: tc.output })),
+        allTestCasesMetadata: q.test_cases.map(tc => tc.type), 
         difficulty: q.difficulty,
         tags: q.tags,
       }));
       
       setProblems(transformedQuestions);
       setSelectedProblem(transformedQuestions[0]);
-      console.log(questions);
+      
       const initialCode = {};
       transformedQuestions.forEach((problem) => {
         initialCode[problem._id] = getDefaultCode(language);
       });
       setProblemCode(initialCode);
+
     } catch (err) {
       console.error("Error fetching problems:", err);
       setError(err.message);
@@ -249,7 +246,8 @@ export default function Assessment() {
   };
 
   const handleStartAssessment = () => {
-    setStartTime(Date.now());
+    const now = Date.now();
+    setStartTime(now);
     setAssessmentStarted(true);
     setTimerActive(true);
   };

@@ -37,6 +37,11 @@ const JobCreation = () => {
     job_type: "full-time",
     internship_duration: "",
     coding_questions: [],
+
+//setting time duration 
+  assessment_duration_hours: "1", 
+  assessment_duration_minutes: "0",
+
   });
 
   // Fetch HR info when component mounts
@@ -250,6 +255,8 @@ const JobCreation = () => {
       experience_type,
       experience_min,
       experience_max,
+      assessment_duration_hours,
+      assessment_duration_minutes,
     } = jobData;
 
     if (
@@ -324,6 +331,18 @@ const JobCreation = () => {
         return;
       }
     }
+
+    if (showCodingQuestions) {
+  const totalMinutes = (parseInt(assessment_duration_hours) || 0) * 60 + (parseInt(assessment_duration_minutes) || 0);
+  if (totalMinutes <= 0) {
+    toast.error("Assessment duration must be greater than 0 minutes", {
+      position: "top-right",
+      autoClose: 3000,
+    });
+    setLoading(false);
+    return;
+  }
+  }
 
     // Validate coding questions if coding round exists
     if (showCodingQuestions && jobData.coding_questions.length > 0) {
@@ -804,7 +823,50 @@ const JobCreation = () => {
           </div>
         </div>
 
+
+
+
+      {/* Assessment Duration Section */}
+{showCodingQuestions && (
+  <div className="bg-gray-50 p-4 rounded-md border border-gray-300 mb-6">
+    <label className="block text-gray-700 mb-3 font-medium">
+      Assessment Duration <span className="text-red-500">*</span>
+    </label>
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="0"
+          max="24"
+          value={jobData.assessment_duration_hours}
+          onChange={(e) => handleInputChange("assessment_duration_hours", e.target.value)}
+          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
+        />
+        <span className="text-sm text-gray-600">Hours</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="0"
+          max="59"
+          value={jobData.assessment_duration_minutes}
+          onChange={(e) => handleInputChange("assessment_duration_minutes", e.target.value)}
+          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
+        />
+        <span className="text-sm text-gray-600">Minutes</span>
+      </div>
+    </div>
+    <p className="text-xs text-gray-500 mt-2 italic">
+      This is the total time candidates will have to complete the coding assessment.
+    </p>
+  </div>
+)}
+
+
+
+
         {/* Coding Questions Section (conditional) */}
+
         {showCodingQuestions && (
           <div className="border-t pt-6">
             <div className="flex justify-between items-center mb-4">

@@ -21,9 +21,20 @@ from src.Tasks.tasks import (
 )
 
 
+from flask import request, jsonify
+from datetime import datetime
+from src.Model.Drive import create_drive, JobType, DriveStatus
+from src.Model.CodingQuestion import create_coding_question
+from src.Utils.Database import db
+
 def create_drive_controller():
-    print("Create Drive Controller called.")
+    print("--- Create Drive Controller called ---")
     data = request.get_json()
+
+    # Log the incoming duration data specifically
+    duration_hrs = data.get("assessment_duration_hours")
+    duration_mins = data.get("assessment_duration_minutes")
+    print(f"DEBUG: Duration Received -> Hours: {duration_hrs}, Minutes: {duration_mins}")
 
     company_id = data.get("company_id")
     role = data.get("role")
@@ -57,10 +68,17 @@ def create_drive_controller():
         candidates_to_hire = int(candidates_to_hire)
         if candidates_to_hire < 1:
             return jsonify({"error": "candidates_to_hire must be >= 1"}), 400
-    except:
+    except ValueError:
         return jsonify({"error": "candidates_to_hire must be integer"}), 400
 
-    # Unique job_id
+    # Convert duration to integers
+    try:
+        duration_hrs = int(duration_hrs) if duration_hrs else 0
+        duration_mins = int(duration_mins) if duration_mins else 0
+    except ValueError:
+        return jsonify({"error": "Assessment duration must be numeric values"}), 400
+
+    # Unique job_id validation
     if db.drives.find_one({"job_id": job_id}):
         return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
 
@@ -73,20 +91,19 @@ def create_drive_controller():
     if coding_questions:
         try:
             for q in coding_questions:
-                 # Process test cases to ensure 'type' field exists
                 raw_test_cases = q.get("testCases", [])
                 processed_test_cases = [
                     {
                         "input": tc.get("input"),
                         "output": tc.get("output"),
-                        "type": tc.get("type", "public")  # Default to public if not provided
+                        "type": tc.get("type", "public")
                     }
                     for tc in raw_test_cases
                 ]
                 cq = create_coding_question(
                     title=q.get("title"),
                     description=q.get("description"),
-                    test_cases=q.get("testCases", []),
+                    test_cases=processed_test_cases,
                     constraints=q.get("constraints", ""),
                     difficulty=q.get("difficulty", "medium"),
                     tags=q.get("tags", []),
@@ -100,7 +117,7 @@ def create_drive_controller():
         except Exception as e:
             return jsonify({"error": f"Error creating coding questions: {str(e)}"}), 500
 
-    # Create drive
+    # Create drive document using model helper
     try:
         drive = create_drive(
             company_id=company_id,
@@ -118,6 +135,8 @@ def create_drive_controller():
             experience_type=experience_type,
             experience_min=experience_min,
             experience_max=experience_max,
+            assessment_duration_hours=duration_hrs,   # New Field
+            assessment_duration_minutes=duration_mins, # New Field
             status=DriveStatus.DRIVE_CREATED
         )
     except ValueError as e:
@@ -127,15 +146,15 @@ def create_drive_controller():
     result = db.drives.insert_one(drive)
     drive["_id"] = str(result.inserted_id)
 
+    print(f"SUCCESS: Drive created with ID {drive['_id']} and duration {duration_hrs}h {duration_mins}m")
+
     return jsonify({
         "message": "Drive created successfully",
         "drive": drive,
         "coding_questions_count": len(coding_question_ids),
         "rounds_count": len(rounds)
     }), 201
-
-
-
+    
 def get_drives_by_company(company_id):
     """
     Get all drives for a specific company with round progress.

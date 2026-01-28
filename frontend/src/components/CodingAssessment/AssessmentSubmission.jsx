@@ -60,7 +60,7 @@ export default function AssessmentSubmission() {
   const totalProblems = stats?.total_questions || 0;
   const attemptedProblems = stats?.question_breakdown?.length || 0;
   const solvedProblems = stats?.questions_solved || 0;
-  const totalTime = timeTaken || 0;
+  const totalTime =  timeTaken || 0;
 
   const formatTime = (seconds) => {
   // Use Math.abs to force the number to be positive
