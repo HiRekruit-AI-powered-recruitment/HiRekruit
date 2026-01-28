@@ -9,6 +9,8 @@ import Input from "../components/CodingAssessment/Input";
 import Output from "../components/CodingAssessment/Output";
 import { useParams } from "react-router-dom";
 import Loader from "../components/Loader";
+import { Clock, AlertCircle, Mail, Home, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 export default function Assessment() {
@@ -499,9 +501,14 @@ export default function Assessment() {
   }
 
 
-  if(canStartTest === false){
-    return <><h1>You Missed Deadline... Or Contact HR</h1></>;
-  }
+ if (canStartTest === false) {
+  return (
+    <AssessmentBlocked 
+      darkMode={darkMode} 
+      error={error} 
+    />
+  );
+}
 
   if (error) {
     return (
@@ -942,3 +949,68 @@ export default function Assessment() {
     </>
   );
 }
+
+
+
+
+
+
+const AssessmentBlocked = ({ error, darkMode }) => {
+  return (
+    <div className={`min-h-screen flex items-center justify-center p-6 ${darkMode ? 'bg-[#0d0d0d]' : 'bg-slate-50'}`}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border ${
+          darkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-slate-200'
+        }`}
+      >
+        {/* Top Banner with Icon */}
+        <div className={`h-32 flex items-center justify-center ${darkMode ? 'bg-red-950/30' : 'bg-red-50'}`}>
+          <div className={`p-4 rounded-full ${darkMode ? 'bg-red-500/20' : 'bg-red-100'}`}>
+            <Clock size={48} className="text-red-500" />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 text-center">
+          <h1 className={`text-2xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            Access Restricted
+          </h1>
+          
+          <p className={`text-sm leading-relaxed mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            {error || "It looks like the assessment deadline has passed or has not been scheduled yet. Please reach out to your HR coordinator for further instructions."}
+          </p>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <button 
+              onClick={() => window.location.href = "mailto:hr@company.com"} // Replace with dynamic email
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-black hover:bg-slate-800 text-white rounded-xl font-semibold transition-all active:scale-95"
+            >
+              <Mail size={18} />
+              Contact HR Support
+            </button>
+            
+            <button 
+              onClick={() => window.history.back()}
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all border ${
+                darkMode 
+                ? 'border-white/10 text-white hover:bg-white/5' 
+                : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <ArrowLeft size={18} />
+              Go Back
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className={`px-8 py-4 text-xs ${darkMode ? 'bg-black/20 text-slate-500' : 'bg-slate-50 text-slate-400'}`}>
+          Reference ID: {window.location.pathname.split('/').pop()}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
