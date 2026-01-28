@@ -111,8 +111,7 @@ def submit_question_controller():
         time_taken = data.get("time_taken", 0)
         
         # Validation
-        if not source_code or len(source_code.strip()) == 0:
-            return jsonify({"error": "CODE IS NOT WRITTEN"}), 400
+        
 
         if not candidate_id:
             return jsonify({"error": "candidate_id is required"}), 400
