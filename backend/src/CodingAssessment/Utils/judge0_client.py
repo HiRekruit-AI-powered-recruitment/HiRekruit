@@ -10,13 +10,13 @@ TIMEOUT = int(os.environ.get("0_TIMEOUT_SEC", 30))
 def _build_headers():
     headers = {
         "Content-Type": "application/json",
-        "X-RapidAPI-Key": 0_API_KEY,
-        "X-RapidAPI-Host": 0_HOST
+        "X-RapidAPI-Key": JUDGE0_API_KEY,
+        "X-RapidAPI-Host": JUDGE0_HOST
     }
     return headers
 
 def submit_and_wait(source_code: str, language_id: int = 71, stdin: str = "") -> dict:
-    endpoint = 0_URL.rstrip("/") + "/submissions/?base64_encoded=false&wait=true"
+    endpoint = JUDGE0_URL.rstrip("/") + "/submissions/?base64_encoded=false&wait=true"
     payload = {
         "language_id": language_id,
         "source_code": source_code,
