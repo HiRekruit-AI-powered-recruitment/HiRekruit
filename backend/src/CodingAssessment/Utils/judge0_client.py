@@ -2,9 +2,9 @@ import os
 import requests
 import json
 
-0_URL = os.environ.get("0_URL", "https://0-ce.p.rapidapi.com")
-0_API_KEY = os.environ.get("0_API_KEY")
-0_HOST = os.environ.get("0_HOST", "0-ce.p.rapidapi.com")
+JUDGE0_URL = os.environ.get("0_URL", "https://0-ce.p.rapidapi.com")
+JUDGE0_API_KEY = os.environ.get("0_API_KEY")
+JUDGE0_HOST = os.environ.get("0_HOST", "0-ce.p.rapidapi.com")
 TIMEOUT = int(os.environ.get("0_TIMEOUT_SEC", 30))
 
 def _build_headers():
