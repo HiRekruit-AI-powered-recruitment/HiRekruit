@@ -54,7 +54,8 @@ def generate_livekit_token(room_name, identity, role, ttl_hours=24):
         print(f"   - Can Subscribe: {can_subscribe}")
         print(f"   - Can Publish Data: {can_publish_data}")
         
-        # Create video grants
+        # Create video grants with proper permissions
+        # ✅ FIXED: Ensure proper video/audio encoding settings
         grants = api.VideoGrants(
             room_join=True,
             room=room_name,

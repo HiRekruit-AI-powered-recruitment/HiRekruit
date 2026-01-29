@@ -23,14 +23,44 @@ const LocalVideoPanel = ({
     isVideoOff ||
     !livekitConnected;
 
+  // 🔴 DEBUG: Log state changes (with proper useEffect to prevent loops)
+  React.useEffect(() => {
+    console.log("📹 LocalVideoPanel state changed:", {
+      cameraPermission,
+      isVideoOff,
+      livekitConnected,
+      showOverlay,
+    });
+  }, [cameraPermission, isVideoOff, livekitConnected, showOverlay]);
+
   return (
     <div className="bg-white border-3 border-gray-900 rounded-2xl overflow-hidden shadow-xl">
-      <div className="relative aspect-video bg-black overflow-hidden">
-        {/* 🎥 VIDEO CONTAINER (ALWAYS MOUNTED) */}
+      <div
+        className="relative w-full"
+        style={{
+          aspectRatio: "16 / 9",
+          backgroundColor: "#000000",
+          minHeight: "300px", // 🔴 DEBUG: Ensure minimum height
+        }}
+      >
+        {/* 🎥 VIDEO CONTAINER (ALWAYS MOUNTED) - Simple and direct */}
         <div
           ref={localVideoRef}
-          className="absolute inset-0 w-full h-full"
-          style={{ zIndex: showOverlay ? 0 : 10 }}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 10,
+            backgroundColor: "#000000",
+            display: "block",
+            overflow: "hidden",
+            border: "2px solid #ff00ff", // 🔴 DEBUG: Magenta border to see the container
+            visibility: "visible",
+            opacity: 1,
+          }}
+          className="!block !visible" // Tailwind utility as fallback
         />
 
         {/* ⚠️ OVERLAY (ONLY WHEN NEEDED) */}

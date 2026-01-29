@@ -190,13 +190,14 @@ const ParticipantVideo = ({ participant }) => {
         hasTrack: !!publication.track,
       });
 
-      if (
-        publication.track &&
-        publication.isSubscribed &&
-        !publication.isMuted
-      ) {
-        console.log(`   ✅ Attaching existing video track`);
+      // ✅ FIXED: Attach video track if it exists and is subscribed
+      // Don't check isMuted here - muted tracks can be unmuted later
+      if (publication.track && publication.isSubscribed) {
+        console.log(
+          `   ✅ Attaching existing video track (muted: ${publication.isMuted})`,
+        );
         attachTrack(publication.track, publication);
+        setHasVideo(!publication.isMuted); // Set hasVideo based on muted state
       }
     });
 
@@ -209,12 +210,11 @@ const ParticipantVideo = ({ participant }) => {
         hasTrack: !!publication.track,
       });
 
-      if (
-        publication.track &&
-        publication.isSubscribed &&
-        !publication.isMuted
-      ) {
-        console.log(`   ✅ Attaching existing audio track`);
+      // ✅ FIXED: Attach audio track if it exists and is subscribed
+      if (publication.track && publication.isSubscribed) {
+        console.log(
+          `   ✅ Attaching existing audio track (muted: ${publication.isMuted})`,
+        );
         attachTrack(publication.track, publication);
       }
     });
