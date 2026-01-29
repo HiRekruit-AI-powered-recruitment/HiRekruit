@@ -29,11 +29,6 @@ const Footer = () => {
       href: "https://instagram.com/hirekruit",
       icon: Instagram,
     },
-    {
-      name: "GitHub",
-      href: "https://github.com/hirekruit",
-      icon: Github,
-    },
   ];
 
   const footerLinks = {
