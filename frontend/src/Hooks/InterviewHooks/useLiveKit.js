@@ -200,315 +200,370 @@ export const useLiveKit = ({
         }
 
         // ✅ CRITICAL: Attach video track to the DOM using LiveKit's attach method
-        if (videoTrack && localVideoRef.current) {
-          console.log(
-            "📹 Attaching video track to DOM using LiveKit attach...",
-          );
-          console.log("📹 localVideoRef.current:", localVideoRef.current);
+        // 🔴 ADD RETRY LOGIC: localVideoRef might not be set yet, try multiple times
+        const attachVideoWithRetry = async () => {
+          let retryCount = 0;
+          const maxRetries = 20; // Try for up to 10 seconds (20 * 500ms)
 
-          // ⚠️ CRITICAL FIX: Check container dimensions
-          const containerSize = {
-            offsetWidth: localVideoRef.current.offsetWidth,
-            offsetHeight: localVideoRef.current.offsetHeight,
-            clientWidth: localVideoRef.current.clientWidth,
-            clientHeight: localVideoRef.current.clientHeight,
-          };
-          console.log("📹 Container size:", containerSize);
-
-          // 🚨 If container has zero dimensions, wait a bit
-          if (
-            containerSize.offsetWidth === 0 ||
-            containerSize.offsetHeight === 0
+          while (
+            retryCount < maxRetries &&
+            (!videoTrack || !localVideoRef.current)
           ) {
-            console.warn(
-              "⚠️ Container has zero dimensions! Waiting for layout...",
-            );
+            if (!videoTrack) {
+              console.warn(
+                "⚠️ RETRY: videoTrack is still null, waiting...",
+                retryCount,
+              );
+            }
+            if (!localVideoRef.current) {
+              console.warn(
+                "⚠️ RETRY: localVideoRef.current is null, waiting...",
+                retryCount,
+              );
+            }
             await new Promise((resolve) => setTimeout(resolve, 500));
-            const containerSizeAfter = {
+            retryCount++;
+          }
+
+          if (!videoTrack) {
+            console.error(
+              "❌ CRITICAL: videoTrack is still null after retries!",
+            );
+            return;
+          }
+
+          if (!localVideoRef.current) {
+            console.error(
+              "❌ CRITICAL: localVideoRef.current is still null after retries!",
+            );
+            console.log(
+              "📹 This means the LocalVideoPanel component hasn't mounted yet",
+            );
+            return;
+          }
+
+          if (videoTrack && localVideoRef.current) {
+            console.log(
+              "📹 Attaching video track to DOM using LiveKit attach...",
+            );
+            console.log("📹 localVideoRef.current:", localVideoRef.current);
+
+            // ⚠️ CRITICAL FIX: Check container dimensions
+            const containerSize = {
               offsetWidth: localVideoRef.current.offsetWidth,
               offsetHeight: localVideoRef.current.offsetHeight,
               clientWidth: localVideoRef.current.clientWidth,
               clientHeight: localVideoRef.current.clientHeight,
             };
-            console.log("📹 Container size after wait:", containerSizeAfter);
+            console.log("📹 Container size:", containerSize);
 
-            // 🚨 If STILL zero, force a minimum size
-            if (containerSizeAfter.offsetWidth === 0) {
-              console.error(
-                "❌ Container STILL has zero width! This is a critical layout issue",
+            // 🚨 If container has zero dimensions, wait a bit
+            if (
+              containerSize.offsetWidth === 0 ||
+              containerSize.offsetHeight === 0
+            ) {
+              console.warn(
+                "⚠️ Container has zero dimensions! Waiting for layout...",
               );
-              // Try to force visibility
-              localVideoRef.current.style.minWidth = "640px";
-              localVideoRef.current.style.minHeight = "480px";
-              console.log("🔴 Forced minimum dimensions on container");
-            }
-          }
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              const containerSizeAfter = {
+                offsetWidth: localVideoRef.current.offsetWidth,
+                offsetHeight: localVideoRef.current.offsetHeight,
+                clientWidth: localVideoRef.current.clientWidth,
+                clientHeight: localVideoRef.current.clientHeight,
+              };
+              console.log("📹 Container size after wait:", containerSizeAfter);
 
-          try {
-            // Clear any existing content FIRST
-            localVideoRef.current.innerHTML = "";
-            console.log("✅ Cleared container");
-
-            // 🔴 DEBUG: Check track properties BEFORE attaching
-            console.log("📹 Track properties BEFORE attach:", {
-              trackKind: videoTrack.kind,
-              trackSource: videoTrack.source,
-              trackSid: videoTrack.sid,
-              trackIsMuted: videoTrack.isMuted,
-              hasMediaStream: !!videoTrack.mediaStream,
-              mediaStreamTracks:
-                videoTrack.mediaStream?.getTracks().length || 0,
-            });
-
-            // Use LiveKit's track.attach() method which properly creates a video element
-            const videoElement = videoTrack.attach();
-
-            console.log("📹 Video element created:", videoElement);
-            console.log("📹 Video element tag:", videoElement.tagName);
-            console.log("📹 Video element initial state:", {
-              autoplay: videoElement.autoplay,
-              paused: videoElement.paused,
-              muted: videoElement.muted,
-              srcObject: videoElement.srcObject,
-              srcObjectTracks: videoElement.srcObject?.getTracks().length || 0,
-              readyState: videoElement.readyState,
-              networkState: videoElement.networkState,
-            });
-
-            // ⚠️ CRITICAL: Ensure video element has proper configuration
-            videoElement.autoplay = true;
-            videoElement.playsInline = true;
-            videoElement.muted = true; // Mute own video to prevent echo
-
-            // 🔴 FALLBACK: If attach() didn't set srcObject, manually set it from track
-            if (!videoElement.srcObject && videoTrack.mediaStream) {
-              console.log(
-                "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
-              );
-              videoElement.srcObject = videoTrack.mediaStream;
-              console.log(
-                "📹 srcObject set, tracks count:",
-                videoElement.srcObject.getTracks().length,
-              );
-            } else if (!videoElement.srcObject) {
-              console.error(
-                "❌ CRITICAL: No srcObject on videoElement and no mediaStream on track!",
-              );
-              console.log("📹 Track mediaStream:", videoTrack.mediaStream);
+              // 🚨 If STILL zero, force a minimum size
+              if (containerSizeAfter.offsetWidth === 0) {
+                console.error(
+                  "❌ Container STILL has zero width! This is a critical layout issue",
+                );
+                // Try to force visibility
+                localVideoRef.current.style.minWidth = "640px";
+                localVideoRef.current.style.minHeight = "480px";
+                console.log("🔴 Forced minimum dimensions on container");
+              }
             }
 
-            // Apply inline styles with !important where needed
-            Object.assign(videoElement.style, {
-              width: "100%",
-              maxWidth: "100%",
-              minWidth: "100%",
-              height: "100%",
-              maxHeight: "100%",
-              minHeight: "100%",
-              objectFit: "cover",
-              transform: "scaleX(-1)",
-              display: "block",
-              visibility: "visible",
-              opacity: "1",
-              pointerEvents: "auto",
-              position: "relative",
-              backgroundColor: "transparent",
-            });
+            try {
+              // Clear any existing content FIRST
+              localVideoRef.current.innerHTML = "";
+              console.log("✅ Cleared container");
 
-            // 🔴 CRITICAL: Use setProperty with !important to override any CSS rules
-            videoElement.style.setProperty("display", "block", "important");
-            videoElement.style.setProperty(
-              "visibility",
-              "visible",
-              "important",
-            );
-            videoElement.style.setProperty("opacity", "1", "important");
-            videoElement.style.setProperty("width", "100%", "important");
-            videoElement.style.setProperty("height", "100%", "important");
-            videoElement.style.setProperty("position", "relative", "important");
-
-            videoElement.setAttribute("playsinline", "true");
-            videoElement.setAttribute("autoplay", "true");
-            videoElement.setAttribute("muted", "true");
-
-            console.log("📹 Styles applied to video element");
-
-            // Add event listeners BEFORE appending
-            videoElement.onloadedmetadata = () => {
-              console.log("✅ Video metadata loaded");
-              console.log("📹 Video dimensions:", {
-                width: videoElement.videoWidth,
-                height: videoElement.videoHeight,
-                currentTime: videoElement.currentTime,
-                duration: videoElement.duration,
+              // 🔴 DEBUG: Check track properties BEFORE attaching
+              console.log("📹 Track properties BEFORE attach:", {
+                trackKind: videoTrack.kind,
+                trackSource: videoTrack.source,
+                trackSid: videoTrack.sid,
+                trackIsMuted: videoTrack.isMuted,
+                hasMediaStream: !!videoTrack.mediaStream,
+                mediaStreamTracks:
+                  videoTrack.mediaStream?.getTracks().length || 0,
               });
-            };
 
-            videoElement.onplay = () => {
-              console.log("✅ Local video PLAYING");
-              console.log(
-                "📹 Video rendered size:",
-                videoElement.offsetWidth,
-                "x",
-                videoElement.offsetHeight,
+              // Use LiveKit's track.attach() method which properly creates a video element
+              const videoElement = videoTrack.attach();
+
+              console.log("📹 Video element created:", videoElement);
+              console.log("📹 Video element tag:", videoElement.tagName);
+              console.log("📹 Video element initial state:", {
+                autoplay: videoElement.autoplay,
+                paused: videoElement.paused,
+                muted: videoElement.muted,
+                srcObject: videoElement.srcObject,
+                srcObjectTracks:
+                  videoElement.srcObject?.getTracks().length || 0,
+                readyState: videoElement.readyState,
+                networkState: videoElement.networkState,
+              });
+
+              // ⚠️ CRITICAL: Ensure video element has proper configuration
+              videoElement.autoplay = true;
+              videoElement.playsInline = true;
+              videoElement.muted = true; // Mute own video to prevent echo
+
+              // 🔴 FALLBACK: If attach() didn't set srcObject, manually set it from track
+              if (!videoElement.srcObject && videoTrack.mediaStream) {
+                console.log(
+                  "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
+                );
+                videoElement.srcObject = videoTrack.mediaStream;
+                console.log(
+                  "📹 srcObject set, tracks count:",
+                  videoElement.srcObject.getTracks().length,
+                );
+              } else if (!videoElement.srcObject) {
+                console.error(
+                  "❌ CRITICAL: No srcObject on videoElement and no mediaStream on track!",
+                );
+                console.log("📹 Track mediaStream:", videoTrack.mediaStream);
+              }
+
+              // Apply inline styles with !important where needed
+              Object.assign(videoElement.style, {
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: "100%",
+                height: "100%",
+                maxHeight: "100%",
+                minHeight: "100%",
+                objectFit: "cover",
+                transform: "scaleX(-1)",
+                display: "block",
+                visibility: "visible",
+                opacity: "1",
+                pointerEvents: "auto",
+                position: "relative",
+                backgroundColor: "transparent",
+              });
+
+              // 🔴 CRITICAL: Use setProperty with !important to override any CSS rules
+              videoElement.style.setProperty("display", "block", "important");
+              videoElement.style.setProperty(
+                "visibility",
+                "visible",
+                "important",
               );
-            };
-
-            videoElement.onpause = () => {
-              console.log("⏸️ Video paused");
-            };
-
-            videoElement.onloadstart = () => {
-              console.log("📹 Video loadstart event fired");
-            };
-
-            videoElement.oncanplay = () => {
-              console.log("✅ Video can play event fired");
-            };
-
-            videoElement.oncanplaythrough = () => {
-              console.log("✅ Video can play through event fired");
-            };
-
-            videoElement.onerror = (e) => {
-              console.error("❌ Video element error:", e);
-              console.error("❌ Video error code:", videoElement.error?.code);
-              console.error(
-                "❌ Video error message:",
-                videoElement.error?.message,
+              videoElement.style.setProperty("opacity", "1", "important");
+              videoElement.style.setProperty("width", "100%", "important");
+              videoElement.style.setProperty("height", "100%", "important");
+              videoElement.style.setProperty(
+                "position",
+                "relative",
+                "important",
               );
-            };
 
-            // Store reference BEFORE appending
-            videoElementRef.current = videoElement;
+              videoElement.setAttribute("playsinline", "true");
+              videoElement.setAttribute("autoplay", "true");
+              videoElement.setAttribute("muted", "true");
 
-            // Append to container
-            console.log("📹 Appending video element to DOM...");
-            localVideoRef.current.appendChild(videoElement);
+              console.log("📹 Styles applied to video element");
 
-            // 🔴 CRITICAL: Ensure parent container is also visible and properly sized
-            localVideoRef.current.style.setProperty(
-              "display",
-              "block",
-              "important",
-            );
-            localVideoRef.current.style.setProperty(
-              "visibility",
-              "visible",
-              "important",
-            );
-            localVideoRef.current.style.setProperty(
-              "opacity",
-              "1",
-              "important",
-            );
-
-            // 🔴 If parent still has zero size, log it and investigate the page structure
-            const parentRect = localVideoRef.current.getBoundingClientRect();
-            if (parentRect.width === 0 || parentRect.height === 0) {
-              console.error(
-                "❌ CRITICAL: Parent container has zero size after appending video!",
-              );
-              console.error("Parent rect:", parentRect);
-              console.error(
-                "Parent parent:",
-                localVideoRef.current.parentElement,
-              );
-            }
-
-            console.log("✅ Video element appended to DOM");
-            console.log("📹 Verification:", {
-              inDOM: localVideoRef.current.contains(videoElement),
-              childCount: localVideoRef.current.children.length,
-              computedDisplay: window.getComputedStyle(videoElement).display,
-              computedVisibility:
-                window.getComputedStyle(videoElement).visibility,
-              offsetWidth: videoElement.offsetWidth,
-              offsetHeight: videoElement.offsetHeight,
-              parentOffsetWidth: localVideoRef.current.offsetWidth,
-              parentOffsetHeight: localVideoRef.current.offsetHeight,
-              srcObject: videoElement.srcObject ? "SET" : "NULL",
-              srcObjectTracks: videoElement.srcObject?.getTracks().length || 0,
-            });
-
-            // 🔴 DEBUG: Check if video element is actually visible in DOM
-            console.log("📹 Parent container details:", {
-              isDisplayed: localVideoRef.current.offsetParent !== null,
-              computedStyle: window.getComputedStyle(localVideoRef.current),
-              rect: localVideoRef.current.getBoundingClientRect(),
-            });
-
-            // Force layout reflow
-            void videoElement.offsetWidth; // Trigger reflow
-
-            // Attempt to play
-            console.log("📹 Attempting to play video...");
-            const playPromise = videoElement.play();
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  console.log("✅ Video play() promise resolved");
-                  // Check state after successful play
-                  setTimeout(() => {
-                    console.log("📹 Video state after play (delayed):", {
-                      readyState: videoElement.readyState,
-                      networkState: videoElement.networkState,
-                      duration: videoElement.duration,
-                      currentTime: videoElement.currentTime,
-                      paused: videoElement.paused,
-                      srcObject: videoElement.srcObject ? "SET" : "NULL",
-                      srcObjectTracks:
-                        videoElement.srcObject?.getTracks().length || 0,
-                      videoWidth: videoElement.videoWidth,
-                      videoHeight: videoElement.videoHeight,
-                    });
-                  }, 1000);
-
-                  // 🔴 CONTINUOUS MONITORING: Check video state every 2 seconds
-                  const monitorInterval = setInterval(() => {
-                    if (!mountedRef.current) {
-                      clearInterval(monitorInterval);
-                      return;
-                    }
-
-                    const videoState = {
-                      timestamp: new Date().toLocaleTimeString(),
-                      readyState: videoElement.readyState,
-                      networkState: videoElement.networkState,
-                      paused: videoElement.paused,
-                      videoWidth: videoElement.videoWidth,
-                      videoHeight: videoElement.videoHeight,
-                      currentTime: videoElement.currentTime,
-                      srcObject: videoElement.srcObject ? "SET" : "NULL",
-                    };
-
-                    // Only log if video dimensions are still 0 (problem)
-                    if (
-                      videoElement.videoWidth === 0 ||
-                      videoElement.videoHeight === 0
-                    ) {
-                      console.warn("⚠️ Video dimensions still 0:", videoState);
-                    }
-                  }, 2000);
-                })
-                .catch((err) => {
-                  console.error("❌ Video play() promise rejected:", err);
-                  console.error("❌ Error code:", err.code || "Unknown");
-                  console.error("❌ Error name:", err.name || "Unknown");
-                  console.error("❌ Video element state when play failed:", {
-                    readyState: videoElement.readyState,
-                    networkState: videoElement.networkState,
-                    srcObject: videoElement.srcObject ? "SET" : "NULL",
-                  });
+              // Add event listeners BEFORE appending
+              videoElement.onloadedmetadata = () => {
+                console.log("✅ Video metadata loaded");
+                console.log("📹 Video dimensions:", {
+                  width: videoElement.videoWidth,
+                  height: videoElement.videoHeight,
+                  currentTime: videoElement.currentTime,
+                  duration: videoElement.duration,
                 });
+              };
+
+              videoElement.onplay = () => {
+                console.log("✅ Local video PLAYING");
+                console.log(
+                  "📹 Video rendered size:",
+                  videoElement.offsetWidth,
+                  "x",
+                  videoElement.offsetHeight,
+                );
+              };
+
+              videoElement.onpause = () => {
+                console.log("⏸️ Video paused");
+              };
+
+              videoElement.onloadstart = () => {
+                console.log("📹 Video loadstart event fired");
+              };
+
+              videoElement.oncanplay = () => {
+                console.log("✅ Video can play event fired");
+              };
+
+              videoElement.oncanplaythrough = () => {
+                console.log("✅ Video can play through event fired");
+              };
+
+              videoElement.onerror = (e) => {
+                console.error("❌ Video element error:", e);
+                console.error("❌ Video error code:", videoElement.error?.code);
+                console.error(
+                  "❌ Video error message:",
+                  videoElement.error?.message,
+                );
+              };
+
+              // Store reference BEFORE appending
+              videoElementRef.current = videoElement;
+
+              // Append to container
+              console.log("📹 Appending video element to DOM...");
+              localVideoRef.current.appendChild(videoElement);
+
+              // 🔴 CRITICAL: Ensure parent container is also visible and properly sized
+              localVideoRef.current.style.setProperty(
+                "display",
+                "block",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "visibility",
+                "visible",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "opacity",
+                "1",
+                "important",
+              );
+
+              // 🔴 If parent still has zero size, log it and investigate the page structure
+              const parentRect = localVideoRef.current.getBoundingClientRect();
+              if (parentRect.width === 0 || parentRect.height === 0) {
+                console.error(
+                  "❌ CRITICAL: Parent container has zero size after appending video!",
+                );
+                console.error("Parent rect:", parentRect);
+                console.error(
+                  "Parent parent:",
+                  localVideoRef.current.parentElement,
+                );
+              }
+
+              console.log("✅ Video element appended to DOM");
+              console.log("📹 Verification:", {
+                inDOM: localVideoRef.current.contains(videoElement),
+                childCount: localVideoRef.current.children.length,
+                computedDisplay: window.getComputedStyle(videoElement).display,
+                computedVisibility:
+                  window.getComputedStyle(videoElement).visibility,
+                offsetWidth: videoElement.offsetWidth,
+                offsetHeight: videoElement.offsetHeight,
+                parentOffsetWidth: localVideoRef.current.offsetWidth,
+                parentOffsetHeight: localVideoRef.current.offsetHeight,
+                srcObject: videoElement.srcObject ? "SET" : "NULL",
+                srcObjectTracks:
+                  videoElement.srcObject?.getTracks().length || 0,
+              });
+
+              // 🔴 DEBUG: Check if video element is actually visible in DOM
+              console.log("📹 Parent container details:", {
+                isDisplayed: localVideoRef.current.offsetParent !== null,
+                computedStyle: window.getComputedStyle(localVideoRef.current),
+                rect: localVideoRef.current.getBoundingClientRect(),
+              });
+
+              // Force layout reflow
+              void videoElement.offsetWidth; // Trigger reflow
+
+              // Attempt to play
+              console.log("📹 Attempting to play video...");
+              const playPromise = videoElement.play();
+              if (playPromise !== undefined) {
+                playPromise
+                  .then(() => {
+                    console.log("✅ Video play() promise resolved");
+                    // Check state after successful play
+                    setTimeout(() => {
+                      console.log("📹 Video state after play (delayed):", {
+                        readyState: videoElement.readyState,
+                        networkState: videoElement.networkState,
+                        duration: videoElement.duration,
+                        currentTime: videoElement.currentTime,
+                        paused: videoElement.paused,
+                        srcObject: videoElement.srcObject ? "SET" : "NULL",
+                        srcObjectTracks:
+                          videoElement.srcObject?.getTracks().length || 0,
+                        videoWidth: videoElement.videoWidth,
+                        videoHeight: videoElement.videoHeight,
+                      });
+                    }, 1000);
+
+                    // 🔴 CONTINUOUS MONITORING: Check video state every 2 seconds
+                    const monitorInterval = setInterval(() => {
+                      if (!mountedRef.current) {
+                        clearInterval(monitorInterval);
+                        return;
+                      }
+
+                      const videoState = {
+                        timestamp: new Date().toLocaleTimeString(),
+                        readyState: videoElement.readyState,
+                        networkState: videoElement.networkState,
+                        paused: videoElement.paused,
+                        videoWidth: videoElement.videoWidth,
+                        videoHeight: videoElement.videoHeight,
+                        currentTime: videoElement.currentTime,
+                        srcObject: videoElement.srcObject ? "SET" : "NULL",
+                      };
+
+                      // Only log if video dimensions are still 0 (problem)
+                      if (
+                        videoElement.videoWidth === 0 ||
+                        videoElement.videoHeight === 0
+                      ) {
+                        console.warn(
+                          "⚠️ Video dimensions still 0:",
+                          videoState,
+                        );
+                      }
+                    }, 2000);
+                  })
+                  .catch((err) => {
+                    console.error("❌ Video play() promise rejected:", err);
+                    console.error("❌ Error code:", err.code || "Unknown");
+                    console.error("❌ Error name:", err.name || "Unknown");
+                    console.error("❌ Video element state when play failed:", {
+                      readyState: videoElement.readyState,
+                      networkState: videoElement.networkState,
+                      srcObject: videoElement.srcObject ? "SET" : "NULL",
+                    });
+                  });
+              }
+            } catch (attachError) {
+              console.error("❌ Error attaching video:", attachError);
+              console.error("❌ Error type:", attachError.name);
+              console.error("❌ Error message:", attachError.message);
+              console.error("❌ Stack:", attachError.stack);
             }
-          } catch (attachError) {
-            console.error("❌ Error attaching video:", attachError);
-            console.error("❌ Error type:", attachError.name);
-            console.error("❌ Error message:", attachError.message);
-            console.error("❌ Stack:", attachError.stack);
           }
-        }
+        };
+
+        // 🔴 CALL THE RETRY FUNCTION
+        await attachVideoWithRetry();
 
         if (mountedRef.current) {
           setLocalTracks(tracks);
