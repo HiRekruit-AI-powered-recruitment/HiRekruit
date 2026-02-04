@@ -211,6 +211,32 @@ const JobCreation = () => {
     }));
   };
 
+
+const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== "application/pdf") {
+        toast.error("Please upload only PDF files");
+        return;
+      }
+      setJobData((prev) => ({
+        ...prev,
+        assessment_pdf: file,
+        assessment_pdf_name: file.name,
+      }));
+    }
+  };
+
+const removeFile = () => {
+    setJobData((prev) => ({
+      ...prev,
+      assessment_pdf: null,
+      assessment_pdf_name: "",
+    }));
+};
+
+
+
   const handleTestCaseChange = (questionId, testCaseIndex, field, value) => {
     setJobData((prev) => ({
       ...prev,
@@ -825,7 +851,6 @@ const JobCreation = () => {
 
 
 
-
       {/* Assessment Duration Section */}
 {showCodingQuestions && (
   <div className="bg-gray-50 p-4 rounded-md border border-gray-300 mb-6">
@@ -861,7 +886,65 @@ const JobCreation = () => {
     </p>
   </div>
 )}
+{showCodingQuestions && (
+  <> {/* <--- ADD THIS FRAGMENT START */}
+    {/* PDF Upload Section */}
+    <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-black transition-colors relative">
+      <label className="block text-gray-700 font-medium mb-2">
+        Upload Question Document (PDF)
+      </label>
+      
+      {!jobData.assessment_pdf_name ? (
+        <div className="flex flex-col items-center justify-center py-4">
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={handleFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          <div className="text-gray-400 mb-2">
+            <svg className="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+          <p className="text-xs text-gray-400 mt-1">PDF only (Max 5MB)</p>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="bg-red-100 p-2 rounded text-red-600">
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0111 2.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                {jobData.assessment_pdf_name}
+              </p>
+              <p className="text-xs text-gray-500">Ready to upload</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={removeFile}
+            className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
 
+    <div className="relative flex py-4 items-center">
+        <div className="flex-grow border-t border-gray-300"></div>
+        <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">OR Manual Entry</span>
+        <div className="flex-grow border-t border-gray-300"></div>
+    </div>
+  </> 
+)}
 
 
 
