@@ -72,6 +72,9 @@ const InterviewPage = () => {
   const [isLoadingLiveKit, setIsLoadingLiveKit] = useState(true);
   const [localTracks, setLocalTracks] = useState([]);
 
+  // 🔴 COMPREHENSIVE: Ready state - wait for ALL initialization before showing UI
+  const [isFullyReady, setIsFullyReady] = useState(false);
+
   // Transcript states
   const [fullTranscript, setFullTranscript] = useState([]);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -80,6 +83,8 @@ const InterviewPage = () => {
   const {
     livekitRoomRef,
     localVideoRef,
+    localVideoTrackRef,
+    localAudioTrackRef,
     initializeLiveKit,
     stopCamera,
     toggleVideo: toggleVideoFn,
@@ -103,7 +108,12 @@ const InterviewPage = () => {
     setRemoteParticipants,
   });
 
-  const { vapiClientRef, initializeVapi, handleStartInterview } = useVapi({
+  const {
+    vapiClientRef,
+    initializeVapi,
+    handleStartInterview,
+    updateMuteState,
+  } = useVapi({
     resumeText,
     interviewAlreadyCompleted,
     isHR,
@@ -138,7 +148,7 @@ const InterviewPage = () => {
       console.log("🔍 Checking if interview is already completed...");
       setIsCheckingCompletion(true);
       const response = await fetch(
-        `${BASE_URL}/api/interview/candidate/${driveCandidateId}`
+        `${BASE_URL}/api/interview/candidate/${driveCandidateId}`,
       );
 
       if (!response.ok) {
@@ -152,7 +162,7 @@ const InterviewPage = () => {
       const currentRound = roundsStatus.find(
         (round) =>
           round.round_type &&
-          round.round_type.toLowerCase().trim() === normalizedInterviewType
+          round.round_type.toLowerCase().trim() === normalizedInterviewType,
       );
 
       const isCompleted = currentRound && currentRound.completed === "yes";
@@ -166,15 +176,27 @@ const InterviewPage = () => {
     }
   }, [driveCandidateId, interviewType, isHR]);
 
-  // Toggle video wrapper
+  // ✅ FIXED: Toggle video wrapper
   const toggleVideo = useCallback(() => {
+    console.log("📹 toggleVideo called, current isVideoOff:", isVideoOff);
     toggleVideoFn(isVideoOff, setIsVideoOff);
   }, [isVideoOff, toggleVideoFn]);
 
-  // Toggle audio wrapper
+  // ✅ FIXED: Toggle audio wrapper that ALSO updates VAPI
   const toggleAudio = useCallback(() => {
+    console.log("🎤 toggleAudio called, current isMuted:", isMuted);
+
+    // Toggle LiveKit audio
     toggleAudioFn(isMuted, setIsMuted);
-  }, [isMuted, toggleAudioFn]);
+
+    // ✅ CRITICAL: Also update VAPI mute state
+    const newMutedState = !isMuted;
+    updateMuteState(newMutedState);
+
+    console.log(
+      `🔇 Audio ${newMutedState ? "MUTED" : "UNMUTED"} (both LiveKit and VAPI)`,
+    );
+  }, [isMuted, toggleAudioFn, updateMuteState]);
 
   // AI speaking animation
   useEffect(() => {
@@ -193,25 +215,15 @@ const InterviewPage = () => {
 
   // Blink animation
   useEffect(() => {
-    const blinkInterval = setInterval(() => {
-      setBlinkState(true);
-      setTimeout(() => setBlinkState(false), 150);
-    }, 3000 + Math.random() * 2000);
+    const blinkInterval = setInterval(
+      () => {
+        setBlinkState(true);
+        setTimeout(() => setBlinkState(false), 150);
+      },
+      3000 + Math.random() * 2000,
+    );
     return () => clearInterval(blinkInterval);
   }, []);
-
-  // Attach video track when localTracks changes
-  useEffect(() => {
-    if (localTracks.length > 0 && localVideoRef.current) {
-      const videoTrack = localTracks.find((t) => t.kind === Track.Kind.Video);
-      if (videoTrack) {
-        console.log("🎥 Attaching video track from state update");
-        const element = videoTrack.attach();
-        localVideoRef.current.innerHTML = "";
-        localVideoRef.current.appendChild(element);
-      }
-    }
-  }, [localTracks]);
 
   // End interview
   const handleEndInterview = useCallback(async () => {
@@ -226,7 +238,7 @@ const InterviewPage = () => {
       }
     }
 
-    stopCamera();
+    stopCamera(localTracks);
 
     const conversationData = conversation
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -264,6 +276,7 @@ const InterviewPage = () => {
     resumeText,
     interviewType,
     stopCamera,
+    localTracks,
     isHR,
     vapiClientRef,
   ]);
@@ -273,6 +286,7 @@ const InterviewPage = () => {
     if (!interviewStarted) return;
     console.log("✋ HR raised hand - PAUSING AI");
     vapiListeningRef.current = false;
+    updateMuteState(false); // HR wants to speak, unmute VAPI
     setHrHandRaised(true);
     setAiPaused(true);
     setIsSpeaking(false);
@@ -282,7 +296,7 @@ const InterviewPage = () => {
       timestamp: new Date().toISOString(),
     };
     setFullTranscript((prev) => [...prev, hrInterventionMessage]);
-  }, [interviewStarted, hrName]);
+  }, [interviewStarted, hrName, updateMuteState]);
 
   const handleHrStartSpeaking = useCallback(() => {
     console.log("🎤 HR started speaking");
@@ -324,50 +338,57 @@ const InterviewPage = () => {
     setFullTranscript((prev) => [...prev, resumeMessage]);
   }, []);
 
-  // STEP 1: Check completion (candidates only) - RUNS ONCE
+  // STEP 1: Check completion (candidates only) - RUNS IMMEDIATELY & IN PARALLEL
   useEffect(() => {
-    if (!isHR) {
-      console.log("📋 STEP 1: Checking interview completion");
-      checkInterviewCompletion();
-    } else {
+    if (isHR) {
       console.log("👤 STEP 1: HR mode - skipping completion check");
       setIsCheckingCompletion(false);
+      return;
     }
-  }, []);
 
-  // STEP 2: Initialize LiveKit (when ready) - RUNS ONCE
+    console.log("📋 STEP 1: Checking interview completion (parallel)");
+    checkInterviewCompletion();
+  }, []); // Empty deps - runs once on mount
+
+  // STEP 1.5: Initialize LiveKit IMMEDIATELY for HR, or after completion check for candidates
   useEffect(() => {
-    const shouldInitLiveKit = isHR
-      ? !isCheckingCompletion
-      : !isCheckingCompletion && !interviewAlreadyCompleted;
+    // For HR: start immediately
+    if (isHR && !hasInitializedRef.current && !initializingRef.current) {
+      console.log("🎥 STEP 1.5: HR mode - initializing LiveKit immediately");
+      initializeLiveKit();
+      return;
+    }
 
+    // For candidates: start after completion check completes
     if (
-      shouldInitLiveKit &&
+      !isHR &&
+      !isCheckingCompletion &&
+      !interviewAlreadyCompleted &&
       !hasInitializedRef.current &&
       !initializingRef.current
     ) {
-      console.log("🎥 STEP 2: Initializing LiveKit");
+      console.log(
+        "🎥 STEP 1.5: Candidate mode - initializing LiveKit after completion check",
+      );
       initializeLiveKit();
     }
   }, [
+    isHR,
     isCheckingCompletion,
     interviewAlreadyCompleted,
-    isHR,
     initializeLiveKit,
   ]);
 
-  // STEP 3: Initialize Vapi (candidates only, after LiveKit)
+  // STEP 2: Initialize Vapi (candidates only, as soon as LiveKit is ready)
   useEffect(() => {
     if (
       !isHR &&
       !interviewAlreadyCompleted &&
-      !isCheckingCompletion &&
-      livekitConnected &&
-      !isLoadingLiveKit &&
+      livekitConnected && // Don't wait for isLoadingLiveKit = false, just need connection
       resumeText &&
       !vapiClientRef.current
     ) {
-      console.log("🤖 STEP 3: Initializing Vapi for candidate");
+      console.log("🤖 STEP 2: Initializing Vapi (as soon as LiveKit connects)");
       const client = initializeVapi();
 
       return () => {
@@ -386,14 +407,12 @@ const InterviewPage = () => {
   }, [
     isHR,
     interviewAlreadyCompleted,
-    isCheckingCompletion,
-    livekitConnected,
-    isLoadingLiveKit,
+    livekitConnected, // Only this - don't need isCheckingCompletion or isLoadingLiveKit
     resumeText,
     initializeVapi,
   ]);
 
-  // STEP 4: Auto-start interview (candidates only, when everything ready)
+  // STEP 3: Auto-start interview (candidates only, when everything ready)
   useEffect(() => {
     if (
       !isHR &&
@@ -406,7 +425,7 @@ const InterviewPage = () => {
       livekitConnected &&
       (cameraPermission === "granted" || cameraPermission === "denied")
     ) {
-      console.log("🎬 STEP 4: Auto-starting interview");
+      console.log("🎬 STEP 3: Auto-starting interview");
       const timer = setTimeout(() => {
         handleStartInterview();
       }, 1500);
@@ -422,6 +441,58 @@ const InterviewPage = () => {
     interviewAlreadyCompleted,
     cameraPermission,
     livekitConnected,
+  ]);
+
+  // 🔴 CRITICAL: Determine when fully ready to show UI (wait for ALL initialization)
+  useEffect(() => {
+    let isReady = false;
+
+    if (isHR) {
+      // HR: Ready when LiveKit is connected and loaded
+      isReady = livekitConnected && !isLoadingLiveKit;
+      console.log("🔴 HR readiness check:", {
+        livekitConnected,
+        isLoadingLiveKit,
+        isReady,
+      });
+    } else {
+      // Candidate: Ready when completion check done, LiveKit ready, AND either:
+      // 1. Interview already completed, OR
+      // 2. Vapi is ready and camera permission granted/denied
+      const completionCheckDone = !isCheckingCompletion;
+      const livekitReady = livekitConnected && !isLoadingLiveKit;
+      const vapiOrNotNeeded = interviewAlreadyCompleted || isVapiReady;
+      const permissionResolved =
+        cameraPermission === "granted" || cameraPermission === "denied";
+
+      isReady =
+        completionCheckDone &&
+        livekitReady &&
+        vapiOrNotNeeded &&
+        permissionResolved;
+
+      console.log("🔴 Candidate readiness check:", {
+        completionCheckDone,
+        livekitReady,
+        vapiOrNotNeeded,
+        permissionResolved,
+        isReady,
+      });
+    }
+
+    if (isReady !== isFullyReady) {
+      console.log(`🎯 Setting isFullyReady to ${isReady}`);
+      setIsFullyReady(isReady);
+    }
+  }, [
+    isHR,
+    isCheckingCompletion,
+    livekitConnected,
+    isLoadingLiveKit,
+    isVapiReady,
+    cameraPermission,
+    interviewAlreadyCompleted,
+    isFullyReady,
   ]);
 
   // Component unmount cleanup - CRITICAL
@@ -443,10 +514,8 @@ const InterviewPage = () => {
         }
       }
 
-      // Use ref instead of state for cleanup
       if (livekitRoomRef.current) {
         try {
-          // Get tracks from room participant instead of state
           const participant = livekitRoomRef.current.localParticipant;
           if (participant) {
             participant.tracks.forEach((publication) => {
@@ -468,42 +537,35 @@ const InterviewPage = () => {
         }
       }
     };
-  }, []); // Empty array - only cleanup on actual unmount
+  }, []);
 
-  // Show loader during initial setup
-  if (!isHR && (isCheckingCompletion || isLoadingLiveKit)) {
+  // Show loader during initial setup - ONLY show when NOT fully ready
+  if (!isFullyReady) {
+    const isHRMode = isHR;
+    const loadingMessage = isHRMode
+      ? "Joining Interview Room"
+      : isCheckingCompletion
+        ? "Checking interview status..."
+        : isLoadingLiveKit
+          ? "Setting up video and audio..."
+          : "Initializing interview...";
+    const loadingSubtext = isHRMode
+      ? "Connecting as HR observer..."
+      : "💡 HR can join anytime during the interview";
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
+      <div
+        className={`min-h-screen bg-gradient-to-br ${isHRMode ? "from-purple-50 to-pink-50" : "from-blue-50 to-indigo-50"} flex items-center justify-center p-4`}
+      >
         <div className="max-w-md mx-auto bg-white border-3 border-gray-900 rounded-2xl p-8 text-center shadow-2xl">
           <Loader className="w-20 h-20 mx-auto mb-6" />
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            {isCheckingCompletion
-              ? "Preparing Interview"
-              : "Connecting to Interview Room"}
+            {isHRMode ? "Joining Interview Room" : "Preparing Interview"}
           </h2>
-          <p className="text-gray-600 text-lg">
-            {isCheckingCompletion
-              ? "Checking interview status..."
-              : "Setting up video and audio..."}
-          </p>
+          <p className="text-gray-600 text-lg">{loadingMessage}</p>
           <p className="text-indigo-600 text-sm mt-4 font-medium">
-            💡 HR can join anytime during the interview
+            {loadingSubtext}
           </p>
-        </div>
-      </div>
-    );
-  }
-
-  // HR loader
-  if (isHR && isLoadingLiveKit) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-4">
-        <div className="max-w-md mx-auto bg-white border-3 border-gray-900 rounded-2xl p-8 text-center shadow-2xl">
-          <Loader className="w-20 h-20 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            Joining Interview Room
-          </h2>
-          <p className="text-gray-600 text-lg">Connecting as HR observer...</p>
         </div>
       </div>
     );
@@ -541,12 +603,12 @@ const InterviewPage = () => {
     totalParticipants <= 2
       ? "lg:grid-cols-2"
       : totalParticipants === 3
-      ? "lg:grid-cols-3"
-      : "lg:grid-cols-2";
+        ? "lg:grid-cols-3"
+        : "lg:grid-cols-2";
 
   // Check if any HR is present
   const hrPresent = remoteParticipants.some((p) =>
-    p.identity.startsWith("hr_")
+    p.identity.startsWith("hr_"),
   );
 
   return (

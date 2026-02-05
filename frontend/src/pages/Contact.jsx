@@ -56,7 +56,7 @@ const Contact = () => {
         SERVICE_ID,
         TEMPLATE_ID,
         form.current,
-        PUBLIC_KEY
+        PUBLIC_KEY,
       );
 
       console.log("Email sent successfully:", result.text);
@@ -77,7 +77,7 @@ const Contact = () => {
     } catch (error) {
       console.error("Email send failed:", error);
       setSubmitError(
-        "Failed to send message. Please try again or contact us directly."
+        "Failed to send message. Please try again or contact us directly.",
       );
     } finally {
       setIsSubmitting(false);
@@ -100,8 +100,8 @@ const Contact = () => {
     {
       icon: MapPin,
       title: "Visit Us",
-      details: "NITK, Surathkal, India",
-      description: "Our headquarters in Karnataka",
+      details: "Bihar, India",
+      description: "Our headquarters in Bihar",
     },
     {
       icon: Clock,

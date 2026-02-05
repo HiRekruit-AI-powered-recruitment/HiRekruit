@@ -1,5 +1,5 @@
-import { useCallback, useRef } from "react";
-import { Room, RoomEvent, Track, createLocalTracks } from "livekit-client";
+import { useRef, useCallback } from "react";
+import { Room, RoomEvent, Track } from "livekit-client";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -23,256 +23,583 @@ export const useLiveKit = ({
 }) => {
   const livekitRoomRef = useRef(null);
   const localVideoRef = useRef(null);
-
-  const updateRemoteParticipants = useCallback(
-    (room) => {
-      if (!mountedRef.current) return;
-      const participants = Array.from(room.remoteParticipants.values());
-      console.log("📊 Remote participants:", participants.length);
-      setRemoteParticipants(participants);
-    },
-    [mountedRef, setRemoteParticipants]
-  );
+  const localVideoTrackRef = useRef(null);
+  const localAudioTrackRef = useRef(null);
+  const videoElementRef = useRef(null); // Store video element reference
 
   const initializeLiveKit = useCallback(async () => {
-    if (initializingRef.current || hasInitializedRef.current) {
-      console.log("⚠️ LiveKit initialization blocked");
+    if (hasInitializedRef.current || initializingRef.current) {
+      console.log("⏭️ LiveKit already initialized or initializing");
       return;
     }
 
-    if (!mountedRef.current) {
-      console.log("⚠️ Component unmounted, skipping LiveKit init");
-      return;
-    }
+    initializingRef.current = true;
+    console.log("🎥 Initializing LiveKit...");
 
     try {
-      initializingRef.current = true;
       setIsLoadingLiveKit(true);
-      console.log("🎥 Initializing LiveKit...");
 
-      const role = isHR ? "hr" : "candidate";
+      // Generate identity
       const identity = isHR
-        ? `hr_${hrName.replace(/\s+/g, "_")}`
-        : `candidate_${userData?.name?.replace(/\s+/g, "_") || "user"}`;
+        ? `hr_${hrName.replace(/\s+/g, "_")}_${Date.now()}`
+        : `candidate_${driveCandidateId}`;
 
-      console.log(`🔑 Requesting token for ${role}: ${identity}`);
+      console.log(`📋 Identity: ${identity}`);
 
-      const response = await fetch(
-        `${BASE_URL}/api/livekit/token?driveCandidateId=${driveCandidateId}&type=${interviewType}&role=${role}&identity=${identity}`
+      // Fetch token
+      const tokenResponse = await fetch(
+        `${BASE_URL}/api/livekit/token?` +
+          new URLSearchParams({
+            driveCandidateId,
+            type: interviewType,
+            role: isHR ? "hr" : "candidate",
+            identity,
+          }),
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to get LiveKit token");
+      if (!tokenResponse.ok) {
+        throw new Error(`Failed to get token: ${tokenResponse.status}`);
       }
 
-      const data = await response.json();
-      const livekitUrl = import.meta.env.VITE_LIVEKIT_URL;
+      const { token, livekitUrl, roomName } = await tokenResponse.json();
+      console.log(`🔑 Token received for room: ${roomName}`);
 
-      if (!livekitUrl) {
-        throw new Error("LiveKit URL is missing in environment");
-      }
-
-      console.log(`🌐 Connecting to LiveKit: ${data.roomName}`);
-
+      // Create room
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
         videoCaptureDefaults: {
-          resolution: { width: 1280, height: 720, frameRate: 30 },
+          resolution: {
+            width: 640,
+            height: 480,
+            frameRate: 24,
+          },
+          facingMode: "user",
         },
-        // Add connection timeout and retry settings
-        reconnectPolicy: {
-          maxRetries: 3,
-          retryDelays: [1000, 2000, 3000],
+        audioDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
         },
       });
 
-      // Set up event listeners
-      room
-        .on(RoomEvent.ParticipantConnected, (participant) => {
-          if (!mountedRef.current) return;
-          console.log("✅ Participant connected:", participant.identity);
-          updateRemoteParticipants(room);
-
-          if (participant.identity.startsWith("hr_") && interviewStarted) {
-            const hrJoinMessage = {
-              role: "system",
-              content: `👥 ${participant.identity.replace(
-                /_/g,
-                " "
-              )} joined the interview`,
-              timestamp: new Date().toISOString(),
-            };
-            setFullTranscript((prev) => [...prev, hrJoinMessage]);
-          }
-        })
-        .on(RoomEvent.ParticipantDisconnected, (participant) => {
-          if (!mountedRef.current) return;
-          console.log("❌ Participant disconnected:", participant.identity);
-          updateRemoteParticipants(room);
-
-          if (participant.identity.startsWith("hr_")) {
-            const hrLeaveMessage = {
-              role: "system",
-              content: `👋 ${participant.identity.replace(
-                /_/g,
-                " "
-              )} left the interview`,
-              timestamp: new Date().toISOString(),
-            };
-            setFullTranscript((prev) => [...prev, hrLeaveMessage]);
-          }
-        })
-        .on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-          if (!mountedRef.current) return;
-          console.log("📹 Track subscribed:", track.kind, participant.identity);
-          if (track.kind === Track.Kind.Video) {
-            updateRemoteParticipants(room);
-          }
-        })
-        .on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-          if (!mountedRef.current) return;
-          console.log(
-            "📹 Track unsubscribed:",
-            track.kind,
-            participant.identity
-          );
-          updateRemoteParticipants(room);
-        })
-        .on(RoomEvent.LocalTrackPublished, (publication) => {
-          console.log("📤 Local track published:", publication.kind);
-        })
-        .on(RoomEvent.Disconnected, () => {
-          console.log("🔌 Disconnected from room");
-          if (mountedRef.current) {
-            setLivekitConnected(false);
-          }
-        });
-
-      console.log("🔗 Connecting to LiveKit room...");
-      await room.connect(livekitUrl, data.token);
-
-      if (!mountedRef.current) {
-        console.log("⚠️ Component unmounted during connection, cleaning up");
-        await room.disconnect();
-        return;
-      }
-
-      console.log("✅ Connected to LiveKit room:", data.roomName);
-
       livekitRoomRef.current = room;
-      setLivekitConnected(true);
 
-      // Wait longer for connection to stabilize before publishing tracks
-      console.log("⏳ Waiting for connection to stabilize...");
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Increased from 1s to 2s
+      // Setup event listeners
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log(
+          `📺 Track subscribed from ${participant.identity}:`,
+          track.kind,
+        );
+        if (mountedRef.current) {
+          setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+        }
+      });
+
+      room.on(
+        RoomEvent.TrackUnsubscribed,
+        (track, publication, participant) => {
+          console.log(`📺 Track unsubscribed from ${participant.identity}`);
+          if (mountedRef.current) {
+            setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+          }
+        },
+      );
+
+      room.on(RoomEvent.ParticipantConnected, (participant) => {
+        console.log(`👤 Participant connected: ${participant.identity}`);
+        if (mountedRef.current) {
+          setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+        }
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        console.log(`👋 Participant disconnected: ${participant.identity}`);
+        if (mountedRef.current) {
+          setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+        }
+      });
+
+      room.on(RoomEvent.LocalTrackPublished, (publication) => {
+        console.log("✅ Local track published:", publication.kind);
+      });
+
+      room.on(RoomEvent.Disconnected, () => {
+        console.log("📴 Room disconnected");
+        if (mountedRef.current) {
+          setLivekitConnected(false);
+        }
+      });
+
+      // Connect to room
+      console.log("🔌 Connecting to LiveKit room...");
+      await room.connect(livekitUrl, token);
+      console.log("✅ Connected to LiveKit room");
 
       if (!mountedRef.current) {
-        console.log("⚠️ Component unmounted, skipping track creation");
+        room.disconnect();
         return;
       }
 
-      // Verify room is still connected
-      if (!room || room.state === "disconnected") {
-        throw new Error("Room disconnected before track creation");
-      }
-
-      console.log("🎤 Requesting local media tracks...");
+      // Request camera/mic permissions and publish
       try {
-        const tracks = await createLocalTracks({
+        console.log("🎥 Requesting camera and microphone...");
+
+        const tracks = await room.localParticipant.createTracks({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
           },
           video: {
-            resolution: { width: 1280, height: 720 },
+            resolution: {
+              width: 640,
+              height: 480,
+              frameRate: 24,
+            },
+            facingMode: "user",
           },
         });
 
-        if (!mountedRef.current) {
-          console.log("⚠️ Component unmounted, stopping tracks");
-          tracks.forEach((track) => track.stop());
-          return;
-        }
+        console.log(`✅ Created ${tracks.length} local tracks`);
 
-        console.log(`✅ Got ${tracks.length} local tracks`);
-
-        // Store local tracks FIRST before publishing
-        setLocalTracks(tracks);
-
-        // Attach local video track to the video element BEFORE publishing
+        // Store track references
         const videoTrack = tracks.find((t) => t.kind === Track.Kind.Video);
         const audioTrack = tracks.find((t) => t.kind === Track.Kind.Audio);
 
-        if (videoTrack && localVideoRef.current) {
-          const element = videoTrack.attach();
-          localVideoRef.current.innerHTML = "";
-          localVideoRef.current.appendChild(element);
-          console.log("✅ Video track attached to element (before publish)");
-        }
+        console.log("📋 Track details:", {
+          videoTrack: videoTrack
+            ? {
+                kind: videoTrack.kind,
+                source: videoTrack.source,
+                isMuted: videoTrack.isMuted,
+              }
+            : null,
+          audioTrack: audioTrack
+            ? {
+                kind: audioTrack.kind,
+                source: audioTrack.source,
+                isMuted: audioTrack.isMuted,
+              }
+            : null,
+        });
 
-        // Publish audio track first (usually faster)
-        if (audioTrack) {
-          try {
-            console.log("📤 Publishing audio track...");
-            await room.localParticipant.publishTrack(audioTrack, {
-              name: "microphone",
-            });
-            console.log("✅ Audio track published successfully");
-          } catch (audioError) {
-            console.error(
-              "⚠️ Failed to publish audio track:",
-              audioError.message
-            );
-            // Continue anyway - video might still work
-          }
-        }
-
-        // Small delay between audio and video
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Publish video track
         if (videoTrack) {
-          try {
-            console.log("📤 Publishing video track...");
-            await room.localParticipant.publishTrack(videoTrack, {
-              name: "camera",
-              simulcast: true, // Enable simulcast for better quality adaptation
-            });
-            console.log("✅ Video track published successfully");
-          } catch (videoError) {
-            console.error(
-              "⚠️ Failed to publish video track:",
-              videoError.message
-            );
-            // Local preview should still work even if publish fails
-            console.log("ℹ️ Local video preview is still available");
-          }
+          localVideoTrackRef.current = videoTrack;
+          console.log("✅ Video track reference stored");
+        }
+        if (audioTrack) {
+          localAudioTrackRef.current = audioTrack;
+          console.log("✅ Audio track reference stored");
         }
 
-        setCameraPermission("granted");
-        console.log("✅ Camera permission granted");
-      } catch (mediaError) {
-        console.error("⚠️ Media access error:", mediaError);
-        if (mediaError.name === "NotAllowedError") {
+        // Publish tracks
+        for (const track of tracks) {
+          await room.localParticipant.publishTrack(track);
+          console.log(`📤 Published ${track.kind} track`);
+        }
+
+        // ✅ CRITICAL: Attach video track to the DOM using LiveKit's attach method
+        // 🔴 ADD RETRY LOGIC: localVideoRef might not be set yet, try multiple times
+        const attachVideoWithRetry = async () => {
+          let retryCount = 0;
+          const maxRetries = 20; // Try for up to 10 seconds (20 * 500ms)
+
+          while (
+            retryCount < maxRetries &&
+            (!videoTrack || !localVideoRef.current)
+          ) {
+            if (!videoTrack) {
+              console.warn(
+                "⚠️ RETRY: videoTrack is still null, waiting...",
+                retryCount,
+              );
+            }
+            if (!localVideoRef.current) {
+              console.warn(
+                "⚠️ RETRY: localVideoRef.current is null, waiting...",
+                retryCount,
+              );
+            }
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            retryCount++;
+          }
+
+          if (!videoTrack) {
+            console.error(
+              "❌ CRITICAL: videoTrack is still null after retries!",
+            );
+            return;
+          }
+
+          if (!localVideoRef.current) {
+            console.error(
+              "❌ CRITICAL: localVideoRef.current is still null after retries!",
+            );
+            console.log(
+              "📹 This means the LocalVideoPanel component hasn't mounted yet",
+            );
+            return;
+          }
+
+          if (videoTrack && localVideoRef.current) {
+            console.log(
+              "📹 Attaching video track to DOM using LiveKit attach...",
+            );
+            console.log("📹 localVideoRef.current:", localVideoRef.current);
+
+            // ⚠️ CRITICAL FIX: Check container dimensions
+            const containerSize = {
+              offsetWidth: localVideoRef.current.offsetWidth,
+              offsetHeight: localVideoRef.current.offsetHeight,
+              clientWidth: localVideoRef.current.clientWidth,
+              clientHeight: localVideoRef.current.clientHeight,
+            };
+            console.log("📹 Container size:", containerSize);
+
+            // 🚨 If container has zero dimensions, wait a bit
+            if (
+              containerSize.offsetWidth === 0 ||
+              containerSize.offsetHeight === 0
+            ) {
+              console.warn(
+                "⚠️ Container has zero dimensions! Waiting for layout...",
+              );
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              const containerSizeAfter = {
+                offsetWidth: localVideoRef.current.offsetWidth,
+                offsetHeight: localVideoRef.current.offsetHeight,
+                clientWidth: localVideoRef.current.clientWidth,
+                clientHeight: localVideoRef.current.clientHeight,
+              };
+              console.log("📹 Container size after wait:", containerSizeAfter);
+
+              // 🚨 If STILL zero, force a minimum size
+              if (containerSizeAfter.offsetWidth === 0) {
+                console.error(
+                  "❌ Container STILL has zero width! This is a critical layout issue",
+                );
+                // Try to force visibility
+                localVideoRef.current.style.minWidth = "640px";
+                localVideoRef.current.style.minHeight = "480px";
+                console.log("🔴 Forced minimum dimensions on container");
+              }
+            }
+
+            try {
+              // Clear any existing content FIRST
+              localVideoRef.current.innerHTML = "";
+              console.log("✅ Cleared container");
+
+              // 🔴 DEBUG: Check track properties BEFORE attaching
+              console.log("📹 Track properties BEFORE attach:", {
+                trackKind: videoTrack.kind,
+                trackSource: videoTrack.source,
+                trackSid: videoTrack.sid,
+                trackIsMuted: videoTrack.isMuted,
+                hasMediaStream: !!videoTrack.mediaStream,
+                mediaStreamTracks:
+                  videoTrack.mediaStream?.getTracks().length || 0,
+              });
+
+              // Use LiveKit's track.attach() method which properly creates a video element
+              const videoElement = videoTrack.attach();
+
+              console.log("📹 Video element created:", videoElement);
+              console.log("📹 Video element tag:", videoElement.tagName);
+              console.log("📹 Video element initial state:", {
+                autoplay: videoElement.autoplay,
+                paused: videoElement.paused,
+                muted: videoElement.muted,
+                srcObject: videoElement.srcObject,
+                srcObjectTracks:
+                  videoElement.srcObject?.getTracks().length || 0,
+                readyState: videoElement.readyState,
+                networkState: videoElement.networkState,
+              });
+
+              // ⚠️ CRITICAL: Ensure video element has proper configuration
+              videoElement.autoplay = true;
+              videoElement.playsInline = true;
+              videoElement.muted = true; // Mute own video to prevent echo
+
+              // 🔴 FALLBACK: If attach() didn't set srcObject, manually set it from track
+              if (!videoElement.srcObject && videoTrack.mediaStream) {
+                console.log(
+                  "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
+                );
+                videoElement.srcObject = videoTrack.mediaStream;
+                console.log(
+                  "📹 srcObject set, tracks count:",
+                  videoElement.srcObject.getTracks().length,
+                );
+              } else if (!videoElement.srcObject) {
+                console.error(
+                  "❌ CRITICAL: No srcObject on videoElement and no mediaStream on track!",
+                );
+                console.log("📹 Track mediaStream:", videoTrack.mediaStream);
+              }
+
+              // Apply inline styles with !important where needed
+              Object.assign(videoElement.style, {
+                width: "100%",
+                maxWidth: "100%",
+                minWidth: "100%",
+                height: "100%",
+                maxHeight: "100%",
+                minHeight: "100%",
+                objectFit: "cover",
+                transform: "scaleX(-1)",
+                display: "block",
+                visibility: "visible",
+                opacity: "1",
+                pointerEvents: "auto",
+                position: "relative",
+                backgroundColor: "transparent",
+              });
+
+              // 🔴 CRITICAL: Use setProperty with !important to override any CSS rules
+              videoElement.style.setProperty("display", "block", "important");
+              videoElement.style.setProperty(
+                "visibility",
+                "visible",
+                "important",
+              );
+              videoElement.style.setProperty("opacity", "1", "important");
+              videoElement.style.setProperty("width", "100%", "important");
+              videoElement.style.setProperty("height", "100%", "important");
+              videoElement.style.setProperty(
+                "position",
+                "relative",
+                "important",
+              );
+
+              videoElement.setAttribute("playsinline", "true");
+              videoElement.setAttribute("autoplay", "true");
+              videoElement.setAttribute("muted", "true");
+
+              console.log("📹 Styles applied to video element");
+
+              // Add event listeners BEFORE appending
+              videoElement.onloadedmetadata = () => {
+                console.log("✅ Video metadata loaded");
+                console.log("📹 Video dimensions:", {
+                  width: videoElement.videoWidth,
+                  height: videoElement.videoHeight,
+                  currentTime: videoElement.currentTime,
+                  duration: videoElement.duration,
+                });
+              };
+
+              videoElement.onplay = () => {
+                console.log("✅ Local video PLAYING");
+                console.log(
+                  "📹 Video rendered size:",
+                  videoElement.offsetWidth,
+                  "x",
+                  videoElement.offsetHeight,
+                );
+              };
+
+              videoElement.onpause = () => {
+                console.log("⏸️ Video paused");
+              };
+
+              videoElement.onloadstart = () => {
+                console.log("📹 Video loadstart event fired");
+              };
+
+              videoElement.oncanplay = () => {
+                console.log("✅ Video can play event fired");
+              };
+
+              videoElement.oncanplaythrough = () => {
+                console.log("✅ Video can play through event fired");
+              };
+
+              videoElement.onerror = (e) => {
+                console.error("❌ Video element error:", e);
+                console.error("❌ Video error code:", videoElement.error?.code);
+                console.error(
+                  "❌ Video error message:",
+                  videoElement.error?.message,
+                );
+              };
+
+              // Store reference BEFORE appending
+              videoElementRef.current = videoElement;
+
+              // Append to container
+              console.log("📹 Appending video element to DOM...");
+              localVideoRef.current.appendChild(videoElement);
+
+              // 🔴 CRITICAL: Ensure parent container is also visible and properly sized
+              localVideoRef.current.style.setProperty(
+                "display",
+                "block",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "visibility",
+                "visible",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "opacity",
+                "1",
+                "important",
+              );
+
+              // 🔴 If parent still has zero size, log it and investigate the page structure
+              const parentRect = localVideoRef.current.getBoundingClientRect();
+              if (parentRect.width === 0 || parentRect.height === 0) {
+                console.error(
+                  "❌ CRITICAL: Parent container has zero size after appending video!",
+                );
+                console.error("Parent rect:", parentRect);
+                console.error(
+                  "Parent parent:",
+                  localVideoRef.current.parentElement,
+                );
+              }
+
+              console.log("✅ Video element appended to DOM");
+              console.log("📹 Verification:", {
+                inDOM: localVideoRef.current.contains(videoElement),
+                childCount: localVideoRef.current.children.length,
+                computedDisplay: window.getComputedStyle(videoElement).display,
+                computedVisibility:
+                  window.getComputedStyle(videoElement).visibility,
+                offsetWidth: videoElement.offsetWidth,
+                offsetHeight: videoElement.offsetHeight,
+                parentOffsetWidth: localVideoRef.current.offsetWidth,
+                parentOffsetHeight: localVideoRef.current.offsetHeight,
+                srcObject: videoElement.srcObject ? "SET" : "NULL",
+                srcObjectTracks:
+                  videoElement.srcObject?.getTracks().length || 0,
+              });
+
+              // 🔴 DEBUG: Check if video element is actually visible in DOM
+              console.log("📹 Parent container details:", {
+                isDisplayed: localVideoRef.current.offsetParent !== null,
+                computedStyle: window.getComputedStyle(localVideoRef.current),
+                rect: localVideoRef.current.getBoundingClientRect(),
+              });
+
+              // Force layout reflow
+              void videoElement.offsetWidth; // Trigger reflow
+
+              // Attempt to play
+              console.log("📹 Attempting to play video...");
+              const playPromise = videoElement.play();
+              if (playPromise !== undefined) {
+                playPromise
+                  .then(() => {
+                    console.log("✅ Video play() promise resolved");
+                    // Check state after successful play
+                    setTimeout(() => {
+                      console.log("📹 Video state after play (delayed):", {
+                        readyState: videoElement.readyState,
+                        networkState: videoElement.networkState,
+                        duration: videoElement.duration,
+                        currentTime: videoElement.currentTime,
+                        paused: videoElement.paused,
+                        srcObject: videoElement.srcObject ? "SET" : "NULL",
+                        srcObjectTracks:
+                          videoElement.srcObject?.getTracks().length || 0,
+                        videoWidth: videoElement.videoWidth,
+                        videoHeight: videoElement.videoHeight,
+                      });
+                    }, 1000);
+
+                    // 🔴 CONTINUOUS MONITORING: Check video state every 2 seconds
+                    const monitorInterval = setInterval(() => {
+                      if (!mountedRef.current) {
+                        clearInterval(monitorInterval);
+                        return;
+                      }
+
+                      const videoState = {
+                        timestamp: new Date().toLocaleTimeString(),
+                        readyState: videoElement.readyState,
+                        networkState: videoElement.networkState,
+                        paused: videoElement.paused,
+                        videoWidth: videoElement.videoWidth,
+                        videoHeight: videoElement.videoHeight,
+                        currentTime: videoElement.currentTime,
+                        srcObject: videoElement.srcObject ? "SET" : "NULL",
+                      };
+
+                      // Only log if video dimensions are still 0 (problem)
+                      if (
+                        videoElement.videoWidth === 0 ||
+                        videoElement.videoHeight === 0
+                      ) {
+                        console.warn(
+                          "⚠️ Video dimensions still 0:",
+                          videoState,
+                        );
+                      }
+                    }, 2000);
+                  })
+                  .catch((err) => {
+                    console.error("❌ Video play() promise rejected:", err);
+                    console.error("❌ Error code:", err.code || "Unknown");
+                    console.error("❌ Error name:", err.name || "Unknown");
+                    console.error("❌ Video element state when play failed:", {
+                      readyState: videoElement.readyState,
+                      networkState: videoElement.networkState,
+                      srcObject: videoElement.srcObject ? "SET" : "NULL",
+                    });
+                  });
+              }
+            } catch (attachError) {
+              console.error("❌ Error attaching video:", attachError);
+              console.error("❌ Error type:", attachError.name);
+              console.error("❌ Error message:", attachError.message);
+              console.error("❌ Stack:", attachError.stack);
+            }
+          }
+        };
+
+        // 🔴 CALL THE RETRY FUNCTION
+        await attachVideoWithRetry();
+
+        if (mountedRef.current) {
+          setLocalTracks(tracks);
+          setCameraPermission("granted");
+        }
+
+        console.log("✅ All tracks published successfully");
+      } catch (permissionError) {
+        console.warn("⚠️ Camera/Mic permission denied:", permissionError);
+        if (mountedRef.current) {
           setCameraPermission("denied");
-          console.log("⚠️ Camera/mic denied, but room connection is OK");
+          setConnectionError(
+            "Camera or microphone access denied. You can still join with audio only.",
+          );
         }
       }
 
-      setIsLoadingLiveKit(false);
-      hasInitializedRef.current = true;
-      updateRemoteParticipants(room);
+      if (mountedRef.current) {
+        console.log(
+          "🔴 SETTING livekitConnected TO TRUE - VIDEO SHOULD NOW BE VISIBLE",
+        );
+        setLivekitConnected(true);
+        setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+        hasInitializedRef.current = true;
+      }
 
       console.log("✅ LiveKit initialization complete");
     } catch (error) {
       console.error("❌ LiveKit initialization error:", error);
       if (mountedRef.current) {
-        setConnectionError(`Failed to connect video: ${error.message}`);
-        setIsLoadingLiveKit(false);
+        setConnectionError(`Failed to connect: ${error.message}`);
       }
     } finally {
+      if (mountedRef.current) {
+        setIsLoadingLiveKit(false);
+      }
       initializingRef.current = false;
     }
   }, [
@@ -281,7 +608,6 @@ export const useLiveKit = ({
     isHR,
     hrName,
     userData,
-    interviewStarted,
     mountedRef,
     hasInitializedRef,
     initializingRef,
@@ -290,67 +616,93 @@ export const useLiveKit = ({
     setLocalTracks,
     setCameraPermission,
     setConnectionError,
-    setFullTranscript,
-    updateRemoteParticipants,
+    setRemoteParticipants,
   ]);
 
-  const stopCamera = useCallback(
-    (tracks) => {
-      console.log("🛑 Stopping camera and cleaning up...");
-
-      if (livekitRoomRef.current) {
-        try {
-          livekitRoomRef.current.disconnect();
-        } catch (error) {
-          console.error("Error disconnecting room:", error);
-        }
-        livekitRoomRef.current = null;
+  const stopCamera = useCallback((tracks) => {
+    console.log("🛑 Stopping camera and microphone");
+    tracks.forEach((track) => {
+      try {
+        track.stop();
+        console.log(`✅ Stopped ${track.kind} track`);
+      } catch (error) {
+        console.error(`❌ Error stopping ${track.kind} track:`, error);
       }
+    });
 
-      // Stop local tracks if provided
-      if (tracks && tracks.length > 0) {
-        tracks.forEach((track) => {
-          try {
-            track.stop();
-          } catch (error) {
-            console.error("Error stopping track:", error);
-          }
-        });
-      }
-
-      if (mountedRef.current) {
-        setLivekitConnected(false);
-        setLocalTracks([]);
-      }
-
-      console.log("✅ Camera stopped and cleaned up");
-    },
-    [mountedRef, setLivekitConnected, setLocalTracks]
-  );
+    // Clear video element
+    if (videoElementRef.current) {
+      videoElementRef.current.srcObject = null;
+      videoElementRef.current = null;
+    }
+  }, []);
 
   const toggleVideo = useCallback((isVideoOff, setIsVideoOff) => {
-    const room = livekitRoomRef.current;
-    if (!room) return;
+    console.log("🎥 Toggle video called. Current state (off):", isVideoOff);
 
-    const newState = !isVideoOff;
-    room.localParticipant.setCameraEnabled(!newState);
-    setIsVideoOff(newState);
-    console.log(`📹 Video ${newState ? "disabled" : "enabled"}`);
+    const videoTrack = localVideoTrackRef.current;
+    const videoElement = videoElementRef.current;
+
+    if (!videoTrack) {
+      console.warn("⚠️ Video track not available");
+      return;
+    }
+
+    try {
+      if (isVideoOff) {
+        // Currently off, turn it ON
+        videoTrack.unmute();
+        if (videoElement) {
+          videoElement.style.display = "block";
+        }
+        setIsVideoOff(false);
+        console.log("✅ Video ENABLED (unmuted)");
+      } else {
+        // Currently on, turn it OFF
+        videoTrack.mute();
+        if (videoElement) {
+          videoElement.style.display = "none";
+        }
+        setIsVideoOff(true);
+        console.log("✅ Video DISABLED (muted)");
+      }
+    } catch (error) {
+      console.error("❌ Error toggling video:", error);
+    }
   }, []);
 
   const toggleAudio = useCallback((isMuted, setIsMuted) => {
-    const room = livekitRoomRef.current;
-    if (!room) return;
+    console.log("🎤 Toggle audio called. Current state (muted):", isMuted);
 
-    const newState = !isMuted;
-    room.localParticipant.setMicrophoneEnabled(!newState);
-    setIsMuted(newState);
-    console.log(`🎤 Audio ${newState ? "disabled" : "enabled"}`);
+    const audioTrack = localAudioTrackRef.current;
+
+    if (!audioTrack) {
+      console.warn("⚠️ Audio track not available");
+      return;
+    }
+
+    try {
+      if (isMuted) {
+        // Currently muted, UNMUTE it
+        audioTrack.unmute();
+        setIsMuted(false);
+        console.log("✅ Audio ENABLED (unmuted)");
+      } else {
+        // Currently unmuted, MUTE it
+        audioTrack.mute();
+        setIsMuted(true);
+        console.log("✅ Audio DISABLED (muted)");
+      }
+    } catch (error) {
+      console.error("❌ Error toggling audio:", error);
+    }
   }, []);
 
   return {
     livekitRoomRef,
     localVideoRef,
+    localVideoTrackRef,
+    localAudioTrackRef,
     initializeLiveKit,
     stopCamera,
     toggleVideo,

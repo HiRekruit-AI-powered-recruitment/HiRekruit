@@ -8,7 +8,7 @@ const TranscriptPanel = ({ fullTranscript, userData, isHR }) => {
 
   return (
     <div className="bg-white border-3 border-gray-900 rounded-2xl p-6 mb-6 shadow-xl max-h-96 overflow-y-auto">
-      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 sticky top-0 bg-white pb-2 border-b-2 border-gray-200">
         <MessageSquare className="w-5 h-5 text-indigo-600" />
         Live Transcript
       </h3>
@@ -20,8 +20,8 @@ const TranscriptPanel = ({ fullTranscript, userData, isHR }) => {
               entry.role === "assistant"
                 ? "bg-indigo-50 border-2 border-indigo-200"
                 : entry.role === "user"
-                ? "bg-blue-50 border-2 border-blue-200"
-                : "bg-yellow-50 border-2 border-yellow-200"
+                  ? "bg-blue-50 border-2 border-blue-200"
+                  : "bg-yellow-50 border-2 border-yellow-200"
             }`}
           >
             <div className="flex items-start gap-3">
@@ -30,18 +30,18 @@ const TranscriptPanel = ({ fullTranscript, userData, isHR }) => {
                   entry.role === "assistant"
                     ? "bg-indigo-600 text-white"
                     : entry.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-yellow-600 text-white"
+                      ? "bg-blue-600 text-white"
+                      : "bg-yellow-600 text-white"
                 }`}
               >
                 <span className="text-xs font-bold">
                   {entry.role === "assistant"
                     ? "AI"
                     : entry.role === "user"
-                    ? isHR
-                      ? "C"
-                      : "You"
-                    : "SYS"}
+                      ? isHR
+                        ? "C"
+                        : "You"
+                      : "SYS"}
                 </span>
               </div>
               <div className="flex-1">
@@ -50,8 +50,8 @@ const TranscriptPanel = ({ fullTranscript, userData, isHR }) => {
                     {entry.role === "assistant"
                       ? "AI Interviewer"
                       : entry.role === "user"
-                      ? userData?.name || "Candidate"
-                      : "System"}
+                        ? userData?.name || "Candidate"
+                        : "System"}
                   </span>
                   <span className="text-xs text-gray-400">
                     {new Date(entry.timestamp).toLocaleTimeString()}
