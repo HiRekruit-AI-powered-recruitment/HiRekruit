@@ -19,7 +19,7 @@ const JobCreation = () => {
   const [companyId, setCompanyId] = useState(null);
   const [fetchingHRInfo, setFetchingHRInfo] = useState(true);
   const [showCodingQuestions, setShowCodingQuestions] = useState(false);
-
+  const [isExtracting, setIsExtracting] = useState(false);
   const [jobData, setJobData] = useState({
     company_id: "",
     job_id: "",
@@ -212,20 +212,77 @@ const JobCreation = () => {
   };
 
 
-const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        toast.error("Please upload only PDF files");
-        return;
-      }
+
+const handleFileChange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    toast.error("Please upload a PDF file");
+    return;
+  }
+
+  // Update UI to show filename
+  setJobData((prev) => ({
+    ...prev,
+    assessment_pdf: file,
+    assessment_pdf_name: file.name,
+  }));
+
+  // TRIGGER EXTRACTION IMMEDIATELY
+  await extractQuestions(file);
+};
+
+const extractQuestions = async (file) => {
+  try {
+    setIsExtracting(true);
+    toast.info("AI is extracting questions from your PDF...");
+
+    const formData = new FormData();
+    formData.append("assessment_file", file);
+
+    const response = await fetch(`${BASE_URL}/api/drive/extract-questions`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error("Extraction failed");
+
+    const extractedData = await response.json(); 
+    // Assuming backend returns: { questions: [{title, description, constraints, testCases}, ...] }
+
+    if (extractedData.questions && extractedData.questions.length > 0) {
+      // Map extracted questions to include unique IDs and numbers for the UI
+      const formattedQuestions = extractedData.questions.map((q, index) => ({
+        id: Date.now() + index,
+        number: jobData.coding_questions.length + index + 1,
+        title: q.title || "",
+        description: q.description || "",
+        constraints: q.constraints || "",
+        testCases: q.testCases || [{ input: "", output: "", type: "public" }],
+      }));
+      console.log(formattedQuestions);
+      // AUTO-FILL THE MANUAL ENTRY PART
       setJobData((prev) => ({
         ...prev,
-        assessment_pdf: file,
-        assessment_pdf_name: file.name,
+        coding_questions: [...prev.coding_questions, ...formattedQuestions],
       }));
+
+      toast.success(`${extractedData.questions.length} questions extracted successfully!`);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error("AI could not read the PDF. Please enter questions manually.");
+  } finally {
+    setIsExtracting(false);
+  }
+};
+
+
+
+
+
+
 
 const removeFile = () => {
     setJobData((prev) => ({
@@ -945,6 +1002,13 @@ const removeFile = () => {
     </div>
   </> 
 )}
+{isExtracting && (
+      <div className="flex items-center justify-center p-4 bg-black text-white rounded-lg mb-4 animate-pulse">
+        <Loader size="sm" className="mr-2" />
+        <span className="text-sm font-medium">AI is reading your document... Please wait</span>
+      </div>
+      
+    )}
 
 
 

@@ -107,3 +107,8 @@ def hr_info_route():
 
 drive_bp.route("/job", methods=["GET"])(get_drive_id_by_job)
 
+
+@drive_bp.route('/extract-questions', methods=['POST'])
+def extract_questions_only():
+    from src.Controllers.drive_controller import extract_questions_controller
+    return extract_questions_controller()
