@@ -1,39 +1,89 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle, Code, TrendingUp, Clock } from "lucide-react";
+import { CheckCircle, Code, TrendingUp, Clock, Target, Home } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function AssessmentSubmission() {
   const location = useLocation();
   const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const BASE_URL = import.meta.env.VITE_BASE_URL;
 
+  // 1. Extract data from router state
   const { statistics, candidateId, driveId, timeTaken } = location.state || {};
 
   useEffect(() => {
-    // If no data is passed, redirect to home or assessment page
-    if (!statistics) {
-      navigate("/");
-    }
-  }, [statistics, navigate]);
+    const fetchFinalStats = async () => {
+      // If statistics were passed directly from the final-submit call, use them immediately
+      if (statistics) {
+        setStats(statistics);
+        setLoading(false);
+        return;
+      }
 
-  if (!statistics) {
-    return null;
+      // Fallback: If page is refreshed, fetch stats from the backend using IDs
+      try {
+        if (candidateId && driveId) {
+          const response = await fetch(
+            `${BASE_URL}/api/coding-assessment/submission/statistics?candidate_id=${candidateId}&drive_id=${driveId}`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            // Your backend returns { statistics: { ... } }
+            
+            setStats(data.statistics);
+          }
+        } else {
+          // No data found at all, redirect to home
+          navigate("/");
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFinalStats();
+  }, [candidateId, driveId, statistics, navigate, BASE_URL]);
+
+  if (loading) {
+    return (
+      <div style={{ height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", backgroundColor: darkMode ? "#0d0d0d" : "#ffffff" }}>
+        <p style={{ color: darkMode ? "#fff" : "#000" }}>Calculating results...</p>
+      </div>
+    );
   }
 
+  // 2. Map data based on your specific JSON response
+  const totalProblems = stats?.total_questions || 0;
+  const attemptedProblems = stats?.question_breakdown?.length || 0;
+  const solvedProblems = stats?.questions_solved || 0;
+  const totalTime =  timeTaken || 0;
+
   const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
-  };
+  // Use Math.abs to force the number to be positive
+  console.log(seconds);
+  const totalSeconds = Math.abs(parseFloat(seconds));
+
+  if (isNaN(totalSeconds) || totalSeconds === 0) return "0s";
+
+  if (totalSeconds < 1) {
+    return `${(totalSeconds * 1000).toFixed(0)}ms`;
+  }
+
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = Math.floor(totalSeconds % 60);
+
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs}s`;
+};
 
   const bgColor = darkMode ? "#0d0d0d" : "#ffffff";
-  const borderColor = darkMode ? "#2a2a2a" : "#e5e5e5";
   const textColor = darkMode ? "#e0e0e0" : "#000000";
   const cardBg = darkMode ? "#1a1a1a" : "#fafafa";
-
-  const totalProblems = statistics.total_questions || 0;
-  const solvedProblems = statistics.problems_solved || 0;
-  const totalTime = timeTaken || statistics.total_time_taken || 0;
+  const borderColor = darkMode ? "#2a2a2a" : "#e5e5e5";
 
   return (
     <div
@@ -44,11 +94,11 @@ export default function AssessmentSubmission() {
         fontFamily: "system-ui, -apple-system, sans-serif",
         padding: "40px 20px",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
       }}
     >
-      <div style={{ maxWidth: "800px", width: "100%" }}>
+      <div style={{ maxWidth: "900px", width: "100%" }}>
         {/* Success Header */}
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
           <div
@@ -65,29 +115,11 @@ export default function AssessmentSubmission() {
           >
             <CheckCircle size={60} color="#16a34a" strokeWidth={2.5} />
           </div>
-          <h1
-            style={{
-              margin: "0 0 16px 0",
-              fontSize: "40px",
-              fontWeight: "700",
-              color: textColor,
-            }}
-          >
-            Assessment Submitted Successfully!
+          <h1 style={{ margin: "0 0 16px 0", fontSize: "36px", fontWeight: "800" }}>
+            Assessment Submitted!
           </h1>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "18px",
-              color: darkMode ? "#999999" : "#666666",
-              maxWidth: "600px",
-              marginLeft: "auto",
-              marginRight: "auto",
-              lineHeight: "1.6",
-            }}
-          >
-            Thank you for completing the coding assessment. Your submission has
-            been recorded.
+          <p style={{ fontSize: "18px", color: "#666", lineHeight: "1.6" }}>
+            Great job! Your coding assessment has been successfully recorded and is under review.
           </p>
         </div>
 
@@ -95,207 +127,123 @@ export default function AssessmentSubmission() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             gap: "24px",
             marginBottom: "48px",
           }}
         >
-          {/* Total Problems */}
-          <div
-            style={{
-              padding: "32px 24px",
-              backgroundColor: cardBg,
-              borderRadius: "12px",
-              border: `1px solid ${borderColor}`,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                padding: "12px",
-                backgroundColor: darkMode ? "#2a2a2a" : "#f5f5f5",
-                borderRadius: "12px",
-                marginBottom: "16px",
-              }}
-            >
-              <Code size={32} color={darkMode ? "#e0e0e0" : "#000000"} />
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: "700",
-                color: darkMode ? "#999999" : "#666666",
-                letterSpacing: "1.5px",
-                marginBottom: "8px",
-              }}
-            >
-              TOTAL PROBLEMS
-            </div>
-            <div
-              style={{
-                fontSize: "48px",
-                fontWeight: "700",
-                color: textColor,
-                lineHeight: "1",
-              }}
-            >
-              {totalProblems}
-            </div>
-          </div>
+          <StatCard 
+            icon={<Code size={32} />} 
+            label="TOTAL PROBLEMS" 
+            value={totalProblems} 
+            bg={cardBg} 
+            border={borderColor} 
+          />
 
-          {/* Problems Attempted */}
-          <div
-            style={{
-              padding: "32px 24px",
-              backgroundColor: cardBg,
-              borderRadius: "12px",
-              border: `1px solid ${borderColor}`,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                padding: "12px",
-                backgroundColor: "#fffbeb",
-                borderRadius: "12px",
-                marginBottom: "16px",
-              }}
-            >
-              <TrendingUp size={32} color="#d97706" />
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: "700",
-                color: darkMode ? "#999999" : "#666666",
-                letterSpacing: "1.5px",
-                marginBottom: "8px",
-              }}
-            >
-              ATTEMPTED
-            </div>
-            <div
-              style={{
-                fontSize: "48px",
-                fontWeight: "700",
-                color: textColor,
-                lineHeight: "1",
-              }}
-            >
-              {solvedProblems}
-            </div>
-          </div>
+          <StatCard 
+            icon={<TrendingUp size={32} color="#d97706" />} 
+            label="ATTEMPTED" 
+            value={attemptedProblems} 
+            bg={cardBg} 
+            border={borderColor} 
+          />
 
-          {/* Time Taken */}
-          <div
-            style={{
-              padding: "32px 24px",
-              backgroundColor: cardBg,
-              borderRadius: "12px",
-              border: `1px solid ${borderColor}`,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                display: "inline-flex",
-                padding: "12px",
-                backgroundColor: "#f0f9ff",
-                borderRadius: "12px",
-                marginBottom: "16px",
-              }}
-            >
-              <Clock size={32} color="#0284c7" />
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: "700",
-                color: darkMode ? "#999999" : "#666666",
-                letterSpacing: "1.5px",
-                marginBottom: "8px",
-              }}
-            >
-              TIME TAKEN
-            </div>
-            <div
-              style={{
-                fontSize: "48px",
-                fontWeight: "700",
-                color: textColor,
-                lineHeight: "1",
-              }}
-            >
-              {formatTime(totalTime)}
-            </div>
-          </div>
+          <StatCard 
+            icon={<Target size={32} color="#16a34a" />} 
+            label="FULLY SOLVED" 
+            value={solvedProblems} 
+            bg={cardBg} 
+            border={borderColor} 
+          />
+
+          <StatCard 
+            icon={<Clock size={32} color="#0284c7" />} 
+            label="TIME TAKEN" 
+            value={formatTime(totalTime)} 
+            bg={cardBg} 
+            border={borderColor} 
+          />
         </div>
 
-        {/* Thank You Message */}
+        {/* Message Card */}
         <div
           style={{
             padding: "32px",
             backgroundColor: cardBg,
-            borderRadius: "12px",
+            borderRadius: "16px",
             border: `1px solid ${borderColor}`,
             textAlign: "center",
-            marginBottom: "32px",
+            marginBottom: "40px",
           }}
         >
-          <h2
-            style={{
-              margin: "0 0 16px 0",
-              fontSize: "24px",
-              fontWeight: "700",
-              color: textColor,
-            }}
-          >
-            Thank You!
+          <h2 style={{ marginBottom: "16px", fontSize: "22px", fontWeight: "700" }}>
+            What happens next?
           </h2>
-          <p
-            style={{
-              margin: 0,
-              fontSize: "16px",
-              color: darkMode ? "#999999" : "#666666",
-              lineHeight: "1.8",
-              maxWidth: "600px",
-              marginLeft: "auto",
-              marginRight: "auto",
-            }}
-          >
-            Your submission has been recorded and will be reviewed by our team.
-            You will receive feedback via email within 3-5 business days. We
-            appreciate your time and effort in completing this assessment.
+          <p style={{ color: "#666", lineHeight: "1.8", margin: 0 }}>
+            Your solution is being evaluated against our internal benchmarks. You will receive 
+            an automated feedback report and next-step instructions via email shortly.
           </p>
         </div>
 
-        {/* Action Button */}
+        {/* Home Button */}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <button
             onClick={() => navigate("/")}
             style={{
-              padding: "16px 48px",
-              backgroundColor: darkMode ? "#ffffff" : "#000000",
-              color: darkMode ? "#000000" : "#ffffff",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "16px 40px",
+              backgroundColor: "#000",
+              color: "#fff",
               border: "none",
-              borderRadius: "8px",
+              borderRadius: "10px",
               cursor: "pointer",
               fontSize: "16px",
               fontWeight: "600",
-              transition: "opacity 0.2s",
+              transition: "transform 0.2s",
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = "0.8";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = "1";
-            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.02)"}
+            onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
           >
-            Back to Home
+            <Home size={18} />
+            Back to Dashboard
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Reusable StatCard Component
+function StatCard({ icon, label, value, bg, border }) {
+  return (
+    <div
+      style={{
+        padding: "32px 24px",
+        backgroundColor: bg,
+        borderRadius: "16px",
+        border: `1px solid ${border}`,
+        textAlign: "center",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "16px" }}>
+        {icon}
+      </div>
+      <div
+        style={{
+          fontSize: "12px",
+          fontWeight: "700",
+          color: "#888",
+          letterSpacing: "1.5px",
+          marginBottom: "8px",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: "40px", fontWeight: "800", lineHeight: "1" }}>
+        {value}
       </div>
     </div>
   );

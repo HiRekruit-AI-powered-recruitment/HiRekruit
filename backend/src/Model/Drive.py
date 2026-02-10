@@ -57,7 +57,9 @@ def create_drive(
     coding_question_ids=None,
     experience_type=None,
     experience_min=None,
-    experience_max=None
+    experience_max=None,
+    assessment_duration_hours=0,    # 🔥 NEW PARAMETER
+    assessment_duration_minutes=0   # 🔥 NEW PARAMETER
 ):
     """
     Create a drive (job posting) document with dynamic round statuses and stages.
@@ -136,13 +138,18 @@ def create_drive(
         "skills": skills or [],
         "rounds": rounds,
         "round_statuses": round_statuses,
-        "stages": stages,                 # 🔥 NEW
-        "currentStage": 0,                # 🔥 NEW
+        "stages": stages,
+        "currentStage": 0,
         "status": status_val,
         "coding_question_ids": coding_question_ids or [],
         "experience_type": experience_type,
         "experience_min": experience_min,
         "experience_max": experience_max,
+        
+        # 🔥 STORE ASSESSMENT DURATION
+        "assessment_duration_hours": int(assessment_duration_hours),
+        "assessment_duration_minutes": int(assessment_duration_minutes),
+        
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }

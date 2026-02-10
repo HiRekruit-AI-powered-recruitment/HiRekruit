@@ -2,9 +2,9 @@ import os
 import requests
 import json
 
-JUDGE0_URL = os.environ.get("JUDGE0_URL", "https://judge0-ce.p.rapidapi.com")
+JUDGE0_URL = os.environ.get("JUDGE0_URL", "https://0-ce.p.rapidapi.com")
 JUDGE0_API_KEY = os.environ.get("JUDGE0_API_KEY")
-JUDGE0_HOST = os.environ.get("JUDGE0_HOST", "judge0-ce.p.rapidapi.com")
+JUDGE0_HOST = os.environ.get("JUDGE0_HOST", "0-ce.p.rapidapi.com")
 TIMEOUT = int(os.environ.get("JUDGE0_TIMEOUT_SEC", 30))
 
 def _build_headers():
@@ -27,15 +27,15 @@ def submit_and_wait(source_code: str, language_id: int = 71, stdin: str = "") ->
     try:
         r = requests.post(endpoint, headers=headers, json=payload, timeout=TIMEOUT)
     except Exception as e:
-        return {"error": "Failed to reach Judge0", "detail": str(e)}
+        return {"error": "Failed to reach 0", "detail": str(e)}
 
     if r.status_code not in (200, 201):
-        return {"error": "Judge0 returned error", "status_code": r.status_code, "body": r.text}
+        return {"error": "0 returned error", "status_code": r.status_code, "body": r.text}
 
     try:
         resp = r.json()
     except json.JSONDecodeError:
-        return {"error": "Invalid JSON from Judge0", "body": r.text}
+        return {"error": "Invalid JSON from 0", "body": r.text}
 
     return {
         "stdout": resp.get("stdout"),
