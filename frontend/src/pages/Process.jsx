@@ -9,11 +9,11 @@ import {
   UserCheck,
   AlertCircle,
   Code,
-  MessageSquare,
   Target,
   Settings,
   CheckCircle2,
   Computer,
+  Clock,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import Loader from "../components/Loader";
@@ -22,16 +22,17 @@ const BaseURL = import.meta.env.VITE_BASE_URL;
 
 const Process = () => {
   const { driveId } = useParams();
-  console.log("Drive ID:", driveId);
 
+  // State Management
   const [currentStep, setCurrentStep] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [driveData, setDriveData] = useState(null);
   const [steps, setSteps] = useState([]);
   const [roundProgress, setRoundProgress] = useState([]);
+  const [selectedDeadline, setSelectedDeadline] = useState("");
+  const [deadline, setDeadline] = useState("");
 
-  // Default icons for different round types
   const roundTypeIcons = {
     Technical: Settings,
     HR: Computer,
@@ -42,72 +43,12 @@ const Process = () => {
     Final: CheckCircle2,
   };
 
-  // Fetch current drive status on component mount
-  useEffect(() => {
-    if (driveId) {
-      console.log("Component mounted with driveId:", driveId);
-      fetchDriveStatus();
-    } else {
-      console.log("No driveId provided");
-      setError("Drive ID is required");
-    }
-  }, [driveId]);
-
-  const fetchDriveStatus = async () => {
-    console.log("Fetching status for drive ID:", driveId);
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch drive details
-      const response = await fetch(`${BaseURL}/api/drive/${driveId}`);
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error("Drive not found");
-        } else if (response.status === 400) {
-          throw new Error("Invalid drive ID format");
-        }
-        throw new Error(
-          `HTTP ${response.status}: Failed to fetch drive details`
-        );
-      }
-
-      const data = await response.json();
-      console.log("Fetched drive data:", data);
-
-      const drive = data.drive;
-      setDriveData(drive);
-
-      // Build steps from drive.stages
-      const stepsFromStages = buildStepsFromStages(drive);
-      setSteps(stepsFromStages);
-
-      // Use drive.currentStage to set the current step index
-      const currentStageIndex = drive.currentStage || 0;
-      setCurrentStep(currentStageIndex);
-
-      // Fetch round progress if available
-      if (drive.round_progress) {
-        setRoundProgress(drive.round_progress);
-      }
-
-      console.log("Current stage index:", currentStageIndex);
-    } catch (err) {
-      console.error("Error fetching drive status:", err);
-      setError(`Failed to load drive status: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Map stage names to step objects
   const stageToStepMap = {
     resumeUploaded: {
       id: "resume_upload",
       label: "Resume Upload",
-      shortLabel: "Resume Upload",
-      description: "Upload and collect candidate resumes",
+      shortLabel: "Resumes",
+      description: "Collecting candidate resumes for the role.",
       icon: Upload,
       status: "resumeUploaded",
     },
@@ -115,528 +56,304 @@ const Process = () => {
       id: "resume_shortlist",
       label: "Resume Shortlisting",
       shortLabel: "Shortlisting",
-      description: "Review and shortlist qualified candidates",
+      description: "Reviewing and shortlisting candidates based on skills.",
       icon: Users,
       status: "resumeShortlisted",
     },
     emailSent: {
       id: "email_sent",
-      label: "Send Email",
-      shortLabel: "Send Email",
-      description: "Send invitation emails to shortlisted candidates",
+      label: "Invitation Emails",
+      shortLabel: "Invitations",
+      description: "Sending round invitations to shortlisted candidates.",
       icon: Mail,
       status: "emailSent",
     },
     finalMail: {
       id: "selection_email",
-      label: "Final Mail to Selected",
-      shortLabel: "Final Selection",
-      description: "Send final confirmation to hired candidates",
+      label: "Final Selection",
+      shortLabel: "Hiring",
+      description: "Sending final offers and selection emails.",
       icon: UserCheck,
       status: "selectionEmailSent",
     },
   };
+
+  const fetchDriveStatus = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${BaseURL}/api/drive/${driveId}`);
+
+      if (!response.ok) throw new Error("Failed to fetch drive details");
+
+      const data = await response.json();
+      const drive = data.drive;
+
+      setDriveData(drive);
+      setSteps(buildStepsFromStages(drive));
+      setCurrentStep(drive.currentStage || 0);
+
+      if (drive.round_progress) {
+        setRoundProgress(drive.round_progress);
+      }
+
+      // Check if current round is coding to get deadline
+      const currentStepData = buildStepsFromStages(drive)[drive.currentStage || 0];
+      if (currentStepData?.isRound && currentStepData.roundType === "Coding") {
+        const deadlineRes = await fetch(`${BaseURL}/api/drive/get_deadline?drive_id=${driveId}`);
+        const deadlineData = await deadlineRes.json();
+        setDeadline(deadlineData.deadline);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (driveId) fetchDriveStatus();
+  }, [driveId]);
 
   const buildStepsFromStages = (drive) => {
     const stages = drive.stages || [];
     const rounds = drive.rounds || [];
     const steps = [];
 
-    for (const stage of stages) {
-      // Check if it's a base stage
+    stages.forEach((stage) => {
       if (stageToStepMap[stage]) {
         steps.push(stageToStepMap[stage]);
       } else if (stage.startsWith("schedule") && stage.endsWith("Round")) {
-        // Extract round type from stage name: "scheduleTechnicalRound" -> "Technical"
-        // First remove "schedule" prefix and "Round" suffix
-        let roundTypeName = stage
-          .replace(/^schedule/, "")
-          .replace(/Round$/, "");
+        let roundTypeName = stage.replace(/^schedule/, "").replace(/Round$/, "");
+        roundTypeName = roundTypeName.replace(/([A-Z])/g, " $1").trim();
 
-        // Handle cases where round type name is in camelCase or with spaces
-        // For example: "TechnicalRound" -> "Technical", "SystemDesignRound" -> "System Design"
-        // We need to split camelCase and rejoin with spaces
-        roundTypeName = roundTypeName
-          .replace(/([A-Z])/g, " $1") // Insert space before uppercase letters
-          .trim()
-          .replace(/\s+/g, " "); // Normalize multiple spaces
-
-        console.log(
-          "Looking for round type:",
-          roundTypeName,
-          "in rounds:",
-          rounds.map((r) => r.type)
-        );
-
-        // Find the corresponding round to get its details
-        // Case-insensitive comparison
         const roundIndex = rounds.findIndex(
           (r) => r.type.toLowerCase() === roundTypeName.toLowerCase()
         );
 
-        console.log("Found round index:", roundIndex, "for stage:", stage);
-
         if (roundIndex >= 0) {
           const round = rounds[roundIndex];
-          const roundNumber = roundIndex + 1;
-          const icon = roundTypeIcons[round.type] || Calendar;
-
           steps.push({
-            id: `round_${roundNumber}`,
-            label: `Round ${roundNumber}: ${round.type}`,
+            id: `round_${roundIndex + 1}`,
+            label: `Round ${roundIndex + 1}: ${round.type}`,
             shortLabel: round.type,
-            description: round.description || `Complete ${round.type} round`,
-            icon: icon,
-            roundNumber: roundNumber,
+            description: round.description || `Managing the ${round.type} round.`,
+            icon: roundTypeIcons[round.type] || Calendar,
+            roundNumber: roundIndex + 1,
             roundType: round.type,
             isRound: true,
           });
         }
       }
-    }
-    console.log("all steps :", steps);
-    console.log("stages from drive:", stages);
+    });
     return steps;
   };
 
-  const updateDriveStatus = async (step) => {
-    console.log("Updating drive status for step:", step);
-    if (!driveId) {
-      setError("Drive ID is required");
-      return false;
-    }
+  const handleNextStep = async () => {
+    if (currentStep >= steps.length - 1) return;
+    const nextStepData = steps[currentStep + 1];
 
     try {
       setLoading(true);
-      setError(null);
-
-      let requestBody = {};
-
-      // Handle different step types
-      if (step.isRound) {
-        // This is a round step. Include round type so backend/tasks can schedule correctly.
-        requestBody = {
-          status: "ROUND_SCHEDULING",
-          round_number: step.roundNumber,
-          round_type: step.roundType,
-        };
-      } else if (step.status) {
-        // This is a standard status step
-        requestBody = {
-          status: step.status,
-        };
-      }
-
-      console.log("Sending request:", requestBody);
+      let requestBody = nextStepData.isRound
+        ? { status: "ROUND_SCHEDULING", round_number: nextStepData.roundNumber, round_type: nextStepData.roundType }
+        : { status: nextStepData.status };
 
       const response = await fetch(`${BaseURL}/api/drive/${driveId}/status`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to update drive status");
-      }
-
-      const data = await response.json();
-      console.log("Drive status updated successfully:", data);
-
-      // Refresh drive data
+      if (!response.ok) throw new Error("Update failed");
       await fetchDriveStatus();
-
-      return true;
     } catch (err) {
-      console.error("Error updating drive status:", err);
       setError(err.message);
-      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const nextStep = async () => {
-    if (currentStep < steps.length - 1) {
-      const nextStepIndex = currentStep + 1;
-      const nextStepData = steps[nextStepIndex];
+  const handleUpdateDeadline = async () => {
+    if (!selectedDeadline) return alert("Select a date and time");
+    const currentStepData = steps[currentStep];
 
-      const success = await updateDriveStatus(nextStepData);
-      if (success) {
-        setCurrentStep(nextStepIndex);
-      }
+    try {
+      setLoading(true);
+      const response = await fetch(`${BaseURL}/api/drive/${driveId}/deadlines`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deadlines: [{
+            round_number: currentStepData.roundNumber,
+            deadline: new Date(selectedDeadline).toISOString(),
+          }],
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update deadline");
+      alert("Deadline updated successfully!");
+      fetchDriveStatus();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   const markRoundComplete = async () => {
     const currentStepData = steps[currentStep];
-
-    if (currentStepData.isRound) {
-      try {
-        setLoading(true);
-        const response = await fetch(`${BaseURL}/api/drive/${driveId}/status`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            status: "ROUND_COMPLETED",
-            round_number: currentStepData.roundNumber,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to mark round as complete");
-        }
-
-        await fetchDriveStatus();
-      } catch (err) {
-        console.error("Error marking round complete:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setLoading(true);
+      const response = await fetch(`${BaseURL}/api/drive/${driveId}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "ROUND_COMPLETED",
+          round_number: currentStepData.roundNumber,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to complete round");
+      await fetchDriveStatus();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Show loading when currentStep is null
-  if (loading || currentStep === null || steps.length === 0) {
-    return (
-      <Loader
-        message="Loading drive status..."
-        subMessage={`Drive ID: ${driveId}`}
-        error={error}
-        onRetry={fetchDriveStatus}
-      />
-    );
-  }
+  if (loading && !driveData) return <Loader message="Fetching workflow..." />;
+  if (steps.length === 0) return <Loader message="Initializing stages..." />;
 
-  const totalSteps = steps.length;
-  const isLastStep = currentStep === totalSteps - 1;
   const currentStepData = steps[currentStep];
+  const isLastStep = currentStep === steps.length - 1;
+
+  // Determine if the current round is marked as completed in driveData
+  const activeRoundInfo = currentStepData.isRound 
+    ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber) 
+    : null;
+  const isCurrentRoundCompleted = activeRoundInfo?.completed === "yes";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex justify-center px-8 pb-8">
-      <div className="max-w-6xl w-full">
-        <div className="text-center mb-12 mt-0">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            Recruitment Process
-          </h1>
-          <p className="text-gray-600">
-            Follow the hiring workflow from resume collection to final selection
-          </p>
-          {driveData && (
-            <div className="mt-4 space-y-1">
-              <p className="text-sm text-gray-500">Drive ID: {driveId}</p>
-              <p className="text-sm font-medium text-gray-700">
-                Role: {driveData.role} | Total Rounds:{" "}
-                {driveData.rounds?.length || 0}
-              </p>
-            </div>
-          )}
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center px-6 py-10">
+      <div className="max-w-5xl w-full">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-slate-800">Hiring Pipeline</h1>
+          <p className="text-slate-500 mt-2">Drive ID: {driveId} • {driveData?.role}</p>
         </div>
 
-        {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-            <p className="text-red-700">{error}</p>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
-            >
-              ×
-            </button>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-3">
+            <AlertCircle size={20} /> {error}
           </div>
         )}
 
-        {/* Stepper Container */}
-        <div className="relative mb-12 overflow-x-auto pb-4">
-          <div className="inline-flex items-center justify-start min-w-full px-4">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                {/* Step Circle and Label */}
-                <div
-                  className="flex flex-col items-center"
-                  style={{ width: "120px" }}
-                >
-                  {/* Circle Step */}
-                  <div className="relative mb-3">
-                    <motion.div
-                      className={`w-16 h-16 rounded-full border-4 flex items-center justify-center relative z-10 ${
-                        index <= currentStep
-                          ? "border-black bg-black"
-                          : "border-gray-300 bg-white"
-                      }`}
-                      initial={false}
-                      animate={{
-                        scale: index === currentStep ? 1.1 : 1,
-                        borderColor:
-                          index <= currentStep ? "#000000" : "#d1d5db",
-                        backgroundColor:
-                          index <= currentStep ? "#000000" : "#ffffff",
-                      }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                    >
-                      <AnimatePresence mode="wait">
-                        {index < currentStep ? (
-                          <motion.div
-                            key="check"
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            exit={{ scale: 0, rotate: 180 }}
-                            transition={{ duration: 0.4, ease: "backOut" }}
-                          >
-                            <Check
-                              className="w-8 h-8 text-white"
-                              strokeWidth={3}
-                            />
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="icon"
-                            className={`${
-                              index <= currentStep
-                                ? "text-white"
-                                : "text-gray-500"
-                            }`}
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            {React.createElement(step.icon, {
-                              className: "w-8 h-8",
-                              strokeWidth: 2,
-                            })}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {/* Loading spinner for current step */}
-                      {loading && index === currentStep && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
-                        </div>
-                      )}
-                    </motion.div>
-
-                    {/* Pulse Animation for Current Step */}
-                    {index === currentStep && !loading && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-4 border-black"
-                        animate={{
-                          scale: [1, 1.3, 1],
-                          opacity: [0.7, 0, 0.7],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Step Label - Centered under circle */}
-                  <motion.div
-                    className="text-center px-2"
-                    animate={{
-                      color: index <= currentStep ? "#000000" : "#9ca3af",
-                    }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <p
-                      className={`text-xs font-medium leading-tight ${
-                        index <= currentStep ? "text-black" : "text-gray-400"
-                      }`}
-                    >
-                      {step.shortLabel}
-                    </p>
-                  </motion.div>
+        <div className="flex items-center justify-between mb-16 px-4 overflow-x-auto">
+          {steps.map((step, index) => (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center min-w-[100px]">
+                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${
+                  index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
+                }`}>
+                  {index < currentStep ? <Check size={24} /> : React.createElement(step.icon, { size: 24 })}
                 </div>
-
-                {/* Connecting Line - Between circles at same level */}
-                {index < totalSteps - 1 && (
-                  <div
-                    className="relative self-start"
-                    style={{
-                      width: "80px",
-                      height: "4px",
-                      marginTop: "30px",
-                      marginLeft: "-10px",
-                      marginRight: "-10px",
-                    }}
-                  >
-                    <div className="absolute w-full h-full bg-gray-300 rounded-full" />
-                    <motion.div
-                      className="absolute h-full bg-black rounded-full"
-                      initial={{ width: "0%" }}
-                      animate={{
-                        width: index < currentStep ? "100%" : "0%",
-                      }}
-                      transition={{ duration: 0.5, ease: "easeInOut" }}
-                    />
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+                <p className={`text-[10px] font-bold mt-2 uppercase tracking-tighter ${index <= currentStep ? "text-black" : "text-slate-400"}`}>
+                  {step.shortLabel}
+                </p>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`h-1 flex-1 mx-2 rounded-full ${index < currentStep ? "bg-black" : "bg-slate-200"}`} />
+              )}
+            </React.Fragment>
+          ))}
         </div>
 
-        {/* Step Description */}
-        <div className="text-center mb-12">
-          <motion.div
-            className="inline-block"
-            key={currentStep}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="flex items-center justify-center mb-4">
-              {React.createElement(currentStepData.icon, {
-                className: "w-12 h-12 text-black mr-4",
-                strokeWidth: 2,
-              })}
-              <div className="text-left">
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  {currentStepData.label}
-                </h2>
-                <p className="text-gray-600">{currentStepData.description}</p>
-                {currentStepData.isRound && (
-                  <p className="text-sm text-blue-600 mt-1">
-                    Round Type: {currentStepData.roundType}
-                  </p>
-                )}
+        <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+            <div className="p-5 bg-slate-100 rounded-2xl">
+              {React.createElement(currentStepData.icon, { size: 40, className: "text-black" })}
+            </div>
+            <div className="flex-1 text-center md:text-left">
+              <h2 className="text-2xl font-bold text-slate-800">
+                {currentStepData.label} 
+                {isCurrentRoundCompleted && <span className="ml-3 text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">Completed</span>}
+              </h2>
+              <p className="text-slate-500 mt-1">{currentStepData.description}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {/* If it's a Round, show Mark Complete first. Hide Next Stage until Complete. */}
+              {currentStepData.isRound && !isCurrentRoundCompleted ? (
+                <button
+                  onClick={markRoundComplete}
+                  disabled={loading}
+                  className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg"
+                >
+                  {loading ? "Processing..." : "Mark Round Complete"}
+                </button>
+              ) : (
+                !isLastStep && (
+                  <button
+                    onClick={handleNextStep}
+                    disabled={loading}
+                    className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg disabled:bg-slate-300"
+                  >
+                    {loading ? "Processing..." : "Proceed to Next Stage"}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
+
+          {currentStepData.isRound && (
+            <div className="mt-10 pt-8 border-t border-slate-100">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <Clock size={16} /> Update Round Deadline
+                  </h3>
+                  <div className="flex gap-2">
+                    <input
+                      type="datetime-local"
+                      className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-black"
+                      value={selectedDeadline}
+                      onChange={(e) => setSelectedDeadline(e.target.value)}
+                    />
+                    <button
+                      onClick={handleUpdateDeadline}
+                      className="bg-black text-white px-5 rounded-xl font-bold hover:bg-slate-800"
+                    >
+                      Update
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                  <h3 className="text-sm font-bold text-slate-700 mb-4">Round Statistics</h3>
+                  {roundProgress
+                    .filter((rp) => rp.round_number === currentStepData.roundNumber)
+                    .map((rp) => (
+                      <div key={rp.round_number} className="space-y-3">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500">Candidates Scheduled</span>
+                          <span className="font-bold">{rp.scheduled_count}</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-slate-500">Current Deadline</span>
+                          <span className={`font-bold ${deadline ? "text-green-600" : "text-red-600"}`}>
+  {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
+</span>
+                        </div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                          <div className="bg-black h-full" style={{ width: `${rp.completion_percentage}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             </div>
-          </motion.div>
-        </div>
-
-        {/* Round Progress Info */}
-        {currentStepData.isRound && roundProgress.length > 0 && (
-          <div className="max-w-2xl mx-auto mb-8 p-4 bg-white rounded-lg shadow border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Round Progress
-            </h3>
-            {roundProgress
-              .filter((rp) => rp.round_number === currentStepData.roundNumber)
-              .map((rp) => (
-                <div key={rp.round_number} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Scheduled:</span>
-                    <span className="font-medium">
-                      {rp.scheduled_count} candidates
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Completed:</span>
-                    <span className="font-medium">
-                      {rp.completed_count} candidates
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Passed:</span>
-                    <span className="font-medium text-green-600">
-                      {rp.passed_count} candidates
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                    <div
-                      className="bg-green-600 h-2 rounded-full"
-                      style={{
-                        width: `${rp.completion_percentage || 0}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-
-        {/* Progress Bar */}
-        <div className="w-full max-w-md mx-auto mb-8">
-          <div className="flex justify-between text-sm text-gray-500 mb-2">
-            <span>Overall Progress</span>
-            <span>{Math.round(((currentStep + 1) / totalSteps) * 100)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <motion.div
-              className="bg-gradient-to-r from-black to-gray-800 h-3 rounded-full"
-              initial={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
-              animate={{
-                width: `${((currentStep + 1) / totalSteps) * 100}%`,
-              }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-
-        {/* Control Buttons */}
-        {!isLastStep && (
-          <div className="flex justify-center space-x-4">
-            <motion.button
-              onClick={nextStep}
-              disabled={loading}
-              className={`px-8 py-3 rounded-lg font-medium shadow-lg transition-all ${
-                loading
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-black to-gray-800 text-white hover:shadow-xl hover:from-gray-900 hover:to-black"
-              }`}
-              whileHover={!loading ? { scale: 1.05 } : {}}
-              whileTap={!loading ? { scale: 0.95 } : {}}
-            >
-              {loading ? "Updating..." : "Proceed to Next Step"}
-            </motion.button>
-
-            {currentStepData.isRound && (
-              <motion.button
-                onClick={markRoundComplete}
-                disabled={loading}
-                className={`px-6 py-3 rounded-lg font-medium shadow-lg transition-all ${
-                  loading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-green-600 text-white hover:bg-green-700"
-                }`}
-                whileHover={!loading ? { scale: 1.05 } : {}}
-                whileTap={!loading ? { scale: 0.95 } : {}}
-              >
-                {loading ? "Updating..." : "Mark Round Complete"}
-              </motion.button>
-            )}
-          </div>
-        )}
-
-        {/* Completion Message */}
-        <AnimatePresence>
-          {isLastStep && (
-            <motion.div
-              className="text-center mt-8"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-200 rounded-full mb-4">
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ duration: 0.6, ease: "backOut", delay: 0.3 }}
-                >
-                  <Check className="w-10 h-10 text-black" strokeWidth={3} />
-                </motion.div>
-              </div>
-              <h3 className="text-xl font-semibold text-black mb-2">
-                Recruitment Complete!
-              </h3>
-              <p className="text-gray-600">
-                All candidates have been processed and final selections made.
-              </p>
-            </motion.div>
           )}
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   );

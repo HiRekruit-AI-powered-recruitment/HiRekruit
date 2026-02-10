@@ -1,9 +1,11 @@
 from bson import ObjectId
+import cloudinary.uploader
 from flask import jsonify, request
 from src.Model.Drive import create_drive, JobType, DriveStatus, RoundStatus
 from src.Model.CodingQuestion import create_coding_question
 from src.Model.DriveCandidate import initialize_candidate_rounds
 from src.Utils.Database import db
+from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
 from datetime import datetime
 from src.Orchestrator.HiringOrchestrator import (
     shortlist_candidates,
@@ -21,96 +23,101 @@ from src.Tasks.tasks import (
 )
 
 
+from flask import request, jsonify
+from datetime import datetime
+from src.Model.Drive import create_drive, JobType, DriveStatus
+from src.Model.CodingQuestion import create_coding_question
+from src.Utils.Database import db
+
 def create_drive_controller():
-    print("Create Drive Controller called.")
-    data = request.get_json()
-
-    company_id = data.get("company_id")
-    role = data.get("role")
-    location = data.get("location")
-    start_date = data.get("start_date")
-    end_date = data.get("end_date")
-    job_id = data.get("job_id")
-    candidates_to_hire = data.get("candidates_to_hire")
-
-    rounds = data.get("rounds", [])
-    skills = data.get("skills", [])
-    job_type = data.get("job_type", JobType.FULL_TIME)
-    internship_duration = data.get("internship_duration")
-    coding_questions = data.get("coding_questions", [])
-
-    experience_type = data.get("experience_type")
-    experience_min = data.get("experience_min")
-    experience_max = data.get("experience_max")
-
-    # Required field validation
-    if not company_id:
-        return jsonify({"error": "company_id is required"}), 400
-
-    if not job_id:
-        return jsonify({"error": "job_id is required"}), 400
-
-    if not candidates_to_hire:
-        return jsonify({"error": "candidates_to_hire is required"}), 400
-
+    print("--- Create Drive Controller called (Multipart/Form-Data) ---")
+    
     try:
-        candidates_to_hire = int(candidates_to_hire)
-        if candidates_to_hire < 1:
-            return jsonify({"error": "candidates_to_hire must be >= 1"}), 400
-    except:
-        return jsonify({"error": "candidates_to_hire must be integer"}), 400
+        # 1. Capture data from Form (request.form for text, request.files for PDF)
+        data = request.form.to_dict()
+        files = request.files
 
-    # Unique job_id
-    if db.drives.find_one({"job_id": job_id}):
-        return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
+        company_id = data.get("company_id")
+        job_id = data.get("job_id")
+        role = data.get("role")
+        location = data.get("location")
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        candidates_to_hire = data.get("candidates_to_hire")
+        job_type = data.get("job_type", "full-time")
+        internship_duration = data.get("internship_duration")
+        experience_type = data.get("experience_type", "fresher")
+        experience_min = data.get("experience_min")
+        experience_max = data.get("experience_max")
 
-    # Internship validation
-    if job_type == "internship" and not internship_duration:
-        return jsonify({"error": "internship_duration is required"}), 400
+        # Duration handling
+        duration_hrs = int(data.get("assessment_duration_hours", 1))
+        duration_mins = int(data.get("assessment_duration_minutes", 0))
 
-    # Create coding questions
-    coding_question_ids = []
-    if coding_questions:
-        try:
-            for q in coding_questions:
-                 # Process test cases to ensure 'type' field exists
-                raw_test_cases = q.get("testCases", [])
-                processed_test_cases = [
-                    {
-                        "input": tc.get("input"),
-                        "output": tc.get("output"),
-                        "type": tc.get("type", "public")  # Default to public if not provided
-                    }
-                    for tc in raw_test_cases
-                ]
-                cq = create_coding_question(
-                    title=q.get("title"),
-                    description=q.get("description"),
-                    test_cases=q.get("testCases", []),
-                    constraints=q.get("constraints", ""),
-                    difficulty=q.get("difficulty", "medium"),
-                    tags=q.get("tags", []),
-                    time_limit=q.get("time_limit"),
-                    memory_limit=q.get("memory_limit"),
-                    company_id=company_id
-                )
-                result = db.coding_questions.insert_one(cq)
-                coding_question_ids.append(str(result.inserted_id))
+        # Parse JSON strings from FormData
+        rounds = json.loads(data.get("rounds", "[]"))
+        manual_questions = json.loads(data.get("coding_questions", "[]"))
 
-        except Exception as e:
-            return jsonify({"error": f"Error creating coding questions: {str(e)}"}), 500
+        # Validation
+        if not company_id or not job_id or not candidates_to_hire:
+            return jsonify({"error": "Missing required fields (company_id, job_id, or candidates_to_hire)"}), 400
 
-    # Create drive
-    try:
-        drive = create_drive(
+        if db.drives.find_one({"job_id": job_id}):
+            return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
+
+        # 2. Handle PDF Upload & AI Processing
+        all_extracted_questions = []
+        if 'assessment_file' in files:
+            pdf_file = files['assessment_file']
+            print(f"DEBUG: Processing PDF file: {pdf_file.filename}")
+            
+            # Upload to Cloudinary as 'raw' to preserve PDF structure
+            upload_result = cloudinary.uploader.upload(pdf_file, resource_type="raw")
+            pdf_url = upload_result.get("secure_url")
+
+            # Call AI Question Intake Agent
+            agent = QuestionIntakeAgent()
+            ai_questions = agent.process_question_pdf(pdf_url)
+            all_extracted_questions.extend(ai_questions)
+
+        # 3. Combine AI extracted questions and Manual questions
+        combined_questions = all_extracted_questions + manual_questions
+        coding_question_ids = []
+
+        # 4. Save Questions to coding_questions collection
+        for q in combined_questions:
+            # Normalize test cases (ensure keys match what create_coding_question expects)
+            processed_test_cases = [
+                {
+                    "input": tc.get("input"),
+                    "output": tc.get("output"),
+                    "type": tc.get("type", "public")
+                }
+                for tc in q.get("testCases", [])
+            ]
+            
+            cq_doc = create_coding_question(
+                title=q.get("title", "Untitled Question"),
+                description=q.get("description", ""),
+                test_cases=processed_test_cases,
+                constraints=q.get("constraints", ""),
+                difficulty=q.get("difficulty", "medium"),
+                company_id=company_id
+            )
+            
+            q_res = db.coding_questions.insert_one(cq_doc)
+            coding_question_ids.append(str(q_res.inserted_id))
+
+        # 5. Create the Drive document using Model helper
+        drive_doc = create_drive(
             company_id=company_id,
             role=role,
             location=location,
             start_date=start_date,
             end_date=end_date,
-            candidates_to_hire=candidates_to_hire,
+            candidates_to_hire=int(candidates_to_hire),
             job_type=job_type,
-            skills=skills,
+            skills=json.loads(data.get("skills", "[]")) if "[" in data.get("skills", "") else data.get("skills", []),
             rounds=rounds,
             job_id=job_id,
             internship_duration=internship_duration,
@@ -118,24 +125,30 @@ def create_drive_controller():
             experience_type=experience_type,
             experience_min=experience_min,
             experience_max=experience_max,
+            assessment_duration_hours=duration_hrs,
+            assessment_duration_minutes=duration_mins,
             status=DriveStatus.DRIVE_CREATED
         )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
 
-    # Insert to DB
-    result = db.drives.insert_one(drive)
-    drive["_id"] = str(result.inserted_id)
+        # 6. Insert Drive to DB
+        result = db.drives.insert_one(drive_doc)
+        drive_doc["_id"] = str(result.inserted_id)
 
-    return jsonify({
-        "message": "Drive created successfully",
-        "drive": drive,
-        "coding_questions_count": len(coding_question_ids),
-        "rounds_count": len(rounds)
-    }), 201
+        print(f"SUCCESS: Drive created with ID {drive_doc['_id']}. Questions: {len(coding_question_ids)}")
 
+        return jsonify({
+            "message": "Drive created successfully with AI-processed questions",
+            "drive": drive_doc,
+            "questions_count": len(coding_question_ids)
+        }), 201
 
+    except Exception as e:
+        print(f"❌ Error in create_drive_controller: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
 
+    
 def get_drives_by_company(company_id):
     """
     Get all drives for a specific company with round progress.
@@ -1002,3 +1015,118 @@ def get_selected_candidates_by_job():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Server error"}), 500
+
+
+# Add this to your drive_controller.py
+# Helper Logic (The "Model" part of the logic)
+def get_active_round_deadline(drive_doc):
+    current_round_num = drive_doc.get("current_round")
+    if not current_round_num:
+        return None
+    
+    # Look into round_statuses for the deadline
+    round_statuses = drive_doc.get("round_statuses", [])
+    active_round = next(
+        (rs for rs in round_statuses if rs.get("round_number") == current_round_num), 
+        None
+    )
+    return active_round.get("deadline") if active_round else None
+
+# --- Existing Controllers ---
+
+def get_deadline_controller():
+    drive_id = request.args.get("drive_id")
+    if not drive_id:
+        return jsonify({"error": "drive_id is required"}), 400
+    try:
+        drive = db.drives.find_one({"_id": ObjectId(drive_id)})
+        if not drive:
+            return jsonify({"error": "Drive not found"}), 404
+
+        deadline = get_active_round_deadline(drive)
+        return jsonify({
+            "drive_id": drive_id,
+            "current_round": drive.get("current_round"),
+            "deadline": deadline,
+            "status": "success"
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+def update_round_deadlines(drive_id):
+    """
+    Updates the deadline for specific rounds in a drive and syncs to candidates.
+    """
+    try:
+        data = request.get_json()
+        deadlines_to_update = data.get("deadlines", [])
+
+        if not deadlines_to_update:
+            return jsonify({"error": "No deadline data provided"}), 400
+
+        # Validate ObjectId
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+
+        # This loop must be OUTSIDE the except block and INSIDE the main try
+        for item in deadlines_to_update:
+            round_num = item.get("round_number")
+            new_deadline = item.get("deadline") 
+
+            # All database updates must be indented INSIDE the for loop
+            # 1. Update round config
+            db.drives.update_one(
+                {"_id": object_id, "rounds.number": round_num},
+                {"$set": {"rounds.$.deadline": new_deadline}}
+            )
+            
+            # 2. Update tracking status
+            db.drives.update_one(
+                {"_id": object_id, "round_statuses.round_number": round_num},
+                {"$set": {"round_statuses.$.deadline": new_deadline}}
+            )
+
+            # 3. Update all candidates
+            candidate_round_field = f"rounds_status.{round_num - 1}.deadline"
+            db.drive_candidates.update_many(
+                {"drive_id": drive_id},
+                {"$set": {candidate_round_field: new_deadline}}
+            )
+
+        return jsonify({"message": "Deadlines updated successfully"}), 200
+
+    except Exception as e:
+        # This handles errors for the outer try block
+        print(f"❌ Error in update_round_deadlines: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
+
+
+
+def extract_questions_controller():
+    # Check if the file is in the request
+    if 'assessment_file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    pdf_file = request.files['assessment_file']
+    
+    if pdf_file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # 1. Upload to Cloudinary (resource_type="raw" for PDFs)
+        upload_res = cloudinary.uploader.upload(pdf_file, resource_type="raw")
+        pdf_url = upload_res.get("secure_url")
+
+        # 2. Call your Agent
+        agent = QuestionIntakeAgent()
+        questions = agent.process_question_pdf(pdf_url)
+
+        # 3. Return the questions to the frontend
+        return jsonify({"questions": questions}), 200
+
+    except Exception as e:
+        print(f"Extraction Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
