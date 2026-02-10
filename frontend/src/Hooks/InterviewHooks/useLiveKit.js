@@ -323,21 +323,53 @@ export const useLiveKit = ({
               videoElement.playsInline = true;
               videoElement.muted = true; // Mute own video to prevent echo
 
-              // 🔴 FALLBACK: If attach() didn't set srcObject, manually set it from track
-              if (!videoElement.srcObject && videoTrack.mediaStream) {
-                console.log(
-                  "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
-                );
-                videoElement.srcObject = videoTrack.mediaStream;
-                console.log(
-                  "📹 srcObject set, tracks count:",
-                  videoElement.srcObject.getTracks().length,
-                );
-              } else if (!videoElement.srcObject) {
-                console.error(
-                  "❌ CRITICAL: No srcObject on videoElement and no mediaStream on track!",
-                );
-                console.log("📹 Track mediaStream:", videoTrack.mediaStream);
+              // 🔴 FALLBACK: If attach() didn't set srcObject, try several fallbacks
+              if (!videoElement.srcObject) {
+                // 1) Use track.mediaStream if available
+                if (videoTrack.mediaStream) {
+                  console.log(
+                    "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
+                  );
+                  videoElement.srcObject = videoTrack.mediaStream;
+                  console.log(
+                    "📹 srcObject set, tracks count:",
+                    videoElement.srcObject.getTracks().length,
+                  );
+                } else {
+                  // 2) Try to use underlying MediaStreamTrack (common for local tracks)
+                  const underlying =
+                    videoTrack.mediaStreamTrack ||
+                    videoTrack.track ||
+                    videoTrack._mediaStreamTrack;
+
+                  if (underlying) {
+                    try {
+                      const ms = new MediaStream([underlying]);
+                      videoElement.srcObject = ms;
+                      console.log(
+                        "⚠️ FALLBACK: Set srcObject from underlying MediaStreamTrack",
+                        {
+                          tracks: ms.getTracks().length,
+                        },
+                      );
+                    } catch (e) {
+                      console.error(
+                        "❌ FALLBACK error creating MediaStream from underlying track:",
+                        e,
+                      );
+                    }
+                  } else {
+                    // 3) As a last resort, log detailed track object for debugging
+                    console.error(
+                      "❌ CRITICAL: No srcObject on videoElement and no mediaStream/mediaStreamTrack on track!",
+                    );
+                    try {
+                      console.log("📹 Track object:", videoTrack);
+                    } catch (e) {
+                      console.log("📹 Track (unable to stringify)");
+                    }
+                  }
+                }
               }
 
               // Apply inline styles with !important where needed
