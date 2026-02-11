@@ -106,6 +106,7 @@ const InterviewPage = () => {
     setConnectionError,
     setFullTranscript,
     setRemoteParticipants,
+    onRemoteParticipantJoin: restoreAudioAfterRemoteJoin, // 🔴 NEW: Call audio restore when HR joins
   });
 
   const {
@@ -113,6 +114,7 @@ const InterviewPage = () => {
     initializeVapi,
     handleStartInterview,
     updateMuteState,
+    restoreAudioAfterRemoteJoin, // 🔴 NEW: Get audio restoration function
   } = useVapi({
     resumeText,
     interviewAlreadyCompleted,

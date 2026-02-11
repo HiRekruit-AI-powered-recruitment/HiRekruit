@@ -19,6 +19,62 @@ export const useVapi = ({
 }) => {
   const vapiClientRef = useRef(null);
   const isMutedRef = useRef(false); // ✅ NEW: Track mute state
+  const audioContextRef = useRef(null); // 🔴 NEW: Store audio context reference
+
+  // 🔴 NEW: Ensure audio output is active and routed to speakers
+  const ensureAudioOutput = useCallback(async () => {
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+      }
+
+      const audioContext = audioContextRef.current;
+
+      // Resume suspended audio context
+      if (audioContext.state === "suspended") {
+        console.warn("⚠️ AudioContext suspended, resuming...");
+        await audioContext.resume();
+        console.log("✅ AudioContext resumed, state:", audioContext.state);
+      }
+
+      // Check if speakers/output devices are available
+      if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioOutputDevices = devices.filter(
+          (device) => device.kind === "audiooutput",
+        );
+        console.log(
+          `📊 Available audio output devices: ${audioOutputDevices.length}`,
+          {
+            devices: audioOutputDevices.map((d) => ({
+              deviceId: d.deviceId,
+              label: d.label,
+            })),
+          },
+        );
+
+        if (audioOutputDevices.length === 0) {
+          console.warn("⚠️ No audio output devices found!");
+        }
+      }
+
+      // Also ensure this element's volume is not muted
+      const audioElements = document.querySelectorAll("audio");
+      audioElements.forEach((audio, idx) => {
+        if (audio.muted) {
+          console.warn(`⚠️ Audio element ${idx} is muted, unmuting...`);
+          audio.muted = false;
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error("❌ Error ensuring audio output:", error);
+      return false;
+    }
+  }, []);
 
   const initializeVapi = useCallback(() => {
     if (interviewAlreadyCompleted || isHR) {
@@ -177,6 +233,22 @@ export const useVapi = ({
         setIsSpeaking(false);
       });
 
+      // 🔴 NEW: Listen for audio device changes (e.g., when HR joins or speaker changes)
+      if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener("devicechange", async () => {
+          console.warn(
+            "🔧 Audio device change detected (HR joined or speaker changed)",
+          );
+          // Try to restore audio output
+          const restored = await ensureAudioOutput();
+          if (restored) {
+            console.log("✅ Audio routing restored after device change");
+          } else {
+            console.warn("⚠️ Could not restore audio routing");
+          }
+        });
+      }
+
       vapiClientRef.current = client;
       setIsVapiReady(true);
       setIsConnecting(false);
@@ -218,6 +290,13 @@ export const useVapi = ({
 
     try {
       console.log("🚀 Starting Vapi interview...");
+
+      // 🔴 CRITICAL: Ensure audio output is active before starting
+      const audioOk = await ensureAudioOutput();
+      if (!audioOk) {
+        console.warn("⚠️ Audio output check had issues, but continuing...");
+      }
+
       await client.start({
         model: {
           provider: "openai",
@@ -228,14 +307,40 @@ export const useVapi = ({
           provider: "11labs",
           voiceId: "21m00Tcm4TlvDq8ikWAM",
         },
+        // 🔴 CRITICAL: Explicit audio input/output configuration
+        inputDeviceId: "default", // Use default microphone
+        outputDeviceId: "default", // Use default speakers - ensure audio output
       });
+
       console.log("✅ Vapi interview started");
+
+      // 🔴 DEBUG: Log audio state after start
+      setTimeout(() => {
+        console.log("📊 Audio state check after Vapi start:", {
+          audioContextState: audioContextRef.current?.state,
+          clientState: client.status || "unknown",
+        });
+      }, 1000);
     } catch (error) {
       console.error("❌ Failed to start interview:", error);
-      setConnectionError(`Failed to start: ${error.message}`);
+
+      // 🔴 AUDIO-SPECIFIC ERROR LOGGING
+      if (error.message && error.message.includes("audio")) {
+        console.error("🔊 Audio-specific error:", error.message);
+        setConnectionError(`Audio error: Check speaker/microphone permissions`);
+      } else {
+        setConnectionError(`Failed to start: ${error.message}`);
+      }
+
       setIsConnecting(false);
     }
-  }, [resumeText, prompt, setIsConnecting, setConnectionError]);
+  }, [
+    resumeText,
+    prompt,
+    setIsConnecting,
+    setConnectionError,
+    ensureAudioOutput,
+  ]);
 
   // ✅ NEW: Function to update mute state from InterviewPage
   const updateMuteState = useCallback((muted) => {
@@ -256,10 +361,21 @@ export const useVapi = ({
     }
   }, []);
 
+  // 🔴 NEW: Function to restore audio when remote participant joins
+  const restoreAudioAfterRemoteJoin = useCallback(async () => {
+    console.warn("⏰ HR joined - attempting to restore audio output...");
+    const restored = await ensureAudioOutput();
+    if (restored) {
+      console.log("✅ Audio restored after HR join");
+    }
+    return restored;
+  }, [ensureAudioOutput]);
+
   return {
     vapiClientRef,
     initializeVapi,
     handleStartInterview,
     updateMuteState, // ✅ NEW: Export the mute state updater
+    restoreAudioAfterRemoteJoin, // 🔴 NEW: Export audio restoration function
   };
 };

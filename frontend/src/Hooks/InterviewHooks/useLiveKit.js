@@ -20,6 +20,7 @@ export const useLiveKit = ({
   setConnectionError,
   setFullTranscript,
   setRemoteParticipants,
+  onRemoteParticipantJoin, // 🔴 NEW: Callback when HR joins (participant connects)
 }) => {
   const livekitRoomRef = useRef(null);
   const localVideoRef = useRef(null);
@@ -110,6 +111,12 @@ export const useLiveKit = ({
         console.log(`👤 Participant connected: ${participant.identity}`);
         if (mountedRef.current) {
           setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+          
+          // 🔴 NEW: Restore audio when remote participant joins (e.g., HR joins)
+          if (onRemoteParticipantJoin) {
+            console.log("🔊 Remote participant joined - triggering audio restoration...");
+            onRemoteParticipantJoin();
+          }
         }
       });
 
@@ -648,8 +655,7 @@ export const useLiveKit = ({
     setLocalTracks,
     setCameraPermission,
     setConnectionError,
-    setRemoteParticipants,
-  ]);
+    setRemoteParticipants,    onRemoteParticipantJoin, // 🔴 NEW: Add callback to dependencies  ]);
 
   const stopCamera = useCallback((tracks) => {
     console.log("🛑 Stopping camera and microphone");
