@@ -115,6 +115,7 @@ const InterviewPage = () => {
     handleStartInterview,
     updateMuteState,
     restoreAudioAfterRemoteJoin, // 🔴 NEW: Get audio restoration function
+    captureAndPublishVapiAudio, // 🔴 NEW: Capture Vapi audio and publish to LiveKit
   } = useVapi({
     resumeText,
     interviewAlreadyCompleted,
@@ -130,6 +131,7 @@ const InterviewPage = () => {
     setInterviewStarted,
     setIsRecording,
     vapiListeningRef,
+    livekitRoomRef, // 🔴 NEW: Pass LiveKit room reference to publish audio
   });
 
   // Check if interview is already completed (only for candidates)
@@ -444,6 +446,26 @@ const InterviewPage = () => {
     cameraPermission,
     livekitConnected,
   ]);
+
+  // 🔴 NEW: Capture and publish Vapi audio once interview starts
+  useEffect(() => {
+    if (interviewStarted && !isHR && vapiClientRef.current) {
+      console.log(
+        "📡 Attempting to capture and publish Vapi audio to LiveKit...",
+      );
+
+      // Try immediately
+      captureAndPublishVapiAudio();
+
+      // Also retry after 2 seconds in case audio element hasn't been created yet
+      const retryTimer = setTimeout(() => {
+        console.log("🔄 Retrying Vapi audio capture...");
+        captureAndPublishVapiAudio();
+      }, 2000);
+
+      return () => clearTimeout(retryTimer);
+    }
+  }, [interviewStarted, isHR, captureAndPublishVapiAudio]);
 
   // 🔴 CRITICAL: Determine when fully ready to show UI (wait for ALL initialization)
   useEffect(() => {

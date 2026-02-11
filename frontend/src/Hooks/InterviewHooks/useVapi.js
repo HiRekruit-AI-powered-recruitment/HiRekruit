@@ -16,10 +16,14 @@ export const useVapi = ({
   setInterviewStarted,
   setIsRecording,
   vapiListeningRef,
+  livekitRoomRef, // 🔴 NEW: LiveKit room reference for publishing audio
 }) => {
   const vapiClientRef = useRef(null);
   const isMutedRef = useRef(false); // ✅ NEW: Track mute state
   const audioContextRef = useRef(null); // 🔴 NEW: Store audio context reference
+  const vapiAudioProcessorRef = useRef(null); // 🔴 NEW: Store audio processor for Vapi audio
+  const vapiAudioSourceRef = useRef(null); // 🔴 NEW: Store Vapi audio source
+  const vapiAudioStreamRef = useRef(null); // 🔴 NEW: Store Vapi audio stream
 
   // 🔴 NEW: Ensure audio output is active and routed to speakers
   const ensureAudioOutput = useCallback(async () => {
@@ -371,11 +375,109 @@ export const useVapi = ({
     return restored;
   }, [ensureAudioOutput]);
 
+  // 🔴 NEW: Capture Vapi audio and publish to LiveKit
+  const captureAndPublishVapiAudio = useCallback(async () => {
+    try {
+      console.log(
+        "🎙️ Starting to capture and publish Vapi audio to LiveKit...",
+      );
+
+      if (!livekitRoomRef?.current) {
+        console.warn(
+          "⚠️ LiveKit room not available yet, audio capture will be attempted later",
+        );
+        // Will be retried when call starts
+        return false;
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+      }
+
+      const audioContext = audioContextRef.current;
+      const room = livekitRoomRef.current;
+
+      // 🎙️ CRITICAL: Get the destination audio node (where Vapi outputs audio)
+      // This captures the Vapi voice output
+      const destination = audioContext.createMediaStreamAudioDestination();
+
+      // Get the Vapi audio element (usually created by Vapi SDK)
+      const vapiAudioElements = document.querySelectorAll("audio");
+      let vapiAudioElement = null;
+
+      // Find the Vapi audio element (usually has no src but auto-plays)
+      for (const element of vapiAudioElements) {
+        if (element.autoplay && !element.src) {
+          vapiAudioElement = element;
+          console.log("✅ Found Vapi audio element");
+          break;
+        }
+      }
+
+      if (!vapiAudioElement) {
+        console.warn(
+          "⚠️ Vapi audio element not found, will retry on call start",
+        );
+        return false;
+      }
+
+      // 🎙️ Create audio source from the Vapi audio element
+      try {
+        const source =
+          audioContext.createMediaElementAudioSource(vapiAudioElement);
+        console.log("✅ Created audio source from Vapi element");
+
+        // Store processors and sources
+        vapiAudioSourceRef.current = source;
+        vapiAudioStreamRef.current = destination.stream;
+
+        // Connect Vapi audio to destination
+        source.connect(destination);
+        console.log("✅ Connected Vapi audio source to destination");
+
+        // 🔊 CRITICAL: Publish the Vapi audio stream to LiveKit
+        // This allows HR/panels to hear the AI voice
+        const audioTrack = destination.stream.getAudioTracks()[0];
+        if (audioTrack) {
+          console.log("📡 Publishing Vapi audio track to LiveKit...");
+
+          // Create custom audio track and publish
+          const { LocalAudioTrack } = await import("livekit-client");
+          const customAudioTrack = new LocalAudioTrack(destination.stream, {
+            encodingParameters: {
+              maxBitrate: 64000, // 64 kbps for voice
+              maxFramerate: 24,
+            },
+          });
+
+          // Add track to room
+          await room.localParticipant.publishTrack(customAudioTrack);
+          console.log("✅ Vapi audio track published to LiveKit!");
+          console.log("🎤 HR/Panels can now hear: Candidate voice + AI voice");
+
+          return true;
+        } else {
+          console.warn("⚠️ No audio track found in destination stream");
+          return false;
+        }
+      } catch (error) {
+        console.error("❌ Error creating audio source:", error);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error capturing/publishing Vapi audio:", error);
+      return false;
+    }
+  }, [livekitRoomRef]);
+
   return {
     vapiClientRef,
     initializeVapi,
     handleStartInterview,
     updateMuteState, // ✅ NEW: Export the mute state updater
     restoreAudioAfterRemoteJoin, // 🔴 NEW: Export audio restoration function
+    captureAndPublishVapiAudio, // 🔴 NEW: Export Vapi audio capture/publish function
   };
 };
