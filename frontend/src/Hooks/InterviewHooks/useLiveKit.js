@@ -21,8 +21,13 @@ export const useLiveKit = ({
   setFullTranscript,
   setRemoteParticipants,
   onRemoteParticipantJoin, // 🔴 NEW: Callback when HR joins (participant connects)
+  livekitRoomRef, // 🔴 NEW: Accept livekitRoomRef from parent (InterviewPage)
 }) => {
-  const livekitRoomRef = useRef(null);
+  // 🔴 If no livekitRoomRef provided, create one (fallback for legacy usage)
+  if (!livekitRoomRef) {
+    livekitRoomRef = useRef(null);
+  }
+
   const localVideoRef = useRef(null);
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
@@ -659,6 +664,7 @@ export const useLiveKit = ({
     setConnectionError,
     setRemoteParticipants,
     onRemoteParticipantJoin, // 🔴 NEW: Add callback to dependencies
+    livekitRoomRef, // 🔴 NEW: Add livekitRoomRef to dependencies
   ]);
 
   const stopCamera = useCallback((tracks) => {

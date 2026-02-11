@@ -38,6 +38,7 @@ const InterviewPage = () => {
   const initializingRef = useRef(false);
   const mountedRef = useRef(true);
   const hasInitializedRef = useRef(false);
+  const livekitRoomRef = useRef(null); // 🔴 NEW: Create livekitRoomRef here to pass to both hooks
 
   // Core interview states
   const [resumeText, setResumeText] = useState(userData?.resume_content || "");
@@ -79,9 +80,34 @@ const InterviewPage = () => {
   const [fullTranscript, setFullTranscript] = useState([]);
   const [showTranscript, setShowTranscript] = useState(false);
 
-  // Custom hooks
+  // Custom hooks - REORDERED: useVapi must be called first to get restoreAudioAfterRemoteJoin
   const {
-    livekitRoomRef,
+    vapiClientRef,
+    initializeVapi,
+    handleStartInterview,
+    updateMuteState,
+    restoreAudioAfterRemoteJoin, // 🔴 GET THIS FIRST
+    captureAndPublishVapiAudio, // 🔴 NEW: Capture Vapi audio and publish to LiveKit
+  } = useVapi({
+    resumeText,
+    interviewAlreadyCompleted,
+    isHR,
+    prompt,
+    setIsConnecting,
+    setConnectionError,
+    setIsVapiReady,
+    setConversation,
+    setFullTranscript,
+    setCurrentQuestion,
+    setIsSpeaking,
+    setInterviewStarted,
+    setIsRecording,
+    vapiListeningRef,
+    livekitRoomRef, // 🔴 PASS THIS INSTEAD OF NULL
+  });
+
+  const {
+    // livekitRoomRef, // 🔴 Don't destructure - we already have it from our own ref
     localVideoRef,
     localVideoTrackRef,
     localAudioTrackRef,
@@ -106,32 +132,8 @@ const InterviewPage = () => {
     setConnectionError,
     setFullTranscript,
     setRemoteParticipants,
-    onRemoteParticipantJoin: restoreAudioAfterRemoteJoin, // 🔴 NEW: Call audio restore when HR joins
-  });
-
-  const {
-    vapiClientRef,
-    initializeVapi,
-    handleStartInterview,
-    updateMuteState,
-    restoreAudioAfterRemoteJoin, // 🔴 NEW: Get audio restoration function
-    captureAndPublishVapiAudio, // 🔴 NEW: Capture Vapi audio and publish to LiveKit
-  } = useVapi({
-    resumeText,
-    interviewAlreadyCompleted,
-    isHR,
-    prompt,
-    setIsConnecting,
-    setConnectionError,
-    setIsVapiReady,
-    setConversation,
-    setFullTranscript,
-    setCurrentQuestion,
-    setIsSpeaking,
-    setInterviewStarted,
-    setIsRecording,
-    vapiListeningRef,
-    livekitRoomRef, // 🔴 NEW: Pass LiveKit room reference to publish audio
+    onRemoteParticipantJoin: restoreAudioAfterRemoteJoin, // 🔴 NOW AVAILABLE: Call audio restore when HR joins
+    livekitRoomRef, // 🔴 PASS THIS: The ref we created
   });
 
   // Check if interview is already completed (only for candidates)
