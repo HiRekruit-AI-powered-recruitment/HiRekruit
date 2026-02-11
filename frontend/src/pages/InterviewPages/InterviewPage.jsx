@@ -290,15 +290,15 @@ const InterviewPage = () => {
   // HR Intervention Functions
   const handleHrHandRaise = useCallback(() => {
     if (!interviewStarted) return;
-    console.log("✋ HR raised hand - PAUSING AI");
-    vapiListeningRef.current = false;
-    updateMuteState(false); // HR wants to speak, unmute VAPI
+    console.log("⏸️ AI PAUSED - HR is taking over the conversation");
+    vapiListeningRef.current = false; // Stop AI from listening
+    updateMuteState(false); // Unmute to allow HR to speak
     setHrHandRaised(true);
     setAiPaused(true);
     setIsSpeaking(false);
     const hrInterventionMessage = {
       role: "system",
-      content: `🛑 AI Paused - ${hrName} requested to speak`,
+      content: `⏸️ AI Paused - ${hrName} is now conducting the interview. Real-time conversation with the candidate starts now.`,
       timestamp: new Date().toISOString(),
     };
     setFullTranscript((prev) => [...prev, hrInterventionMessage]);
@@ -317,31 +317,34 @@ const InterviewPage = () => {
   }, [hrName]);
 
   const handleHrStopSpeaking = useCallback(() => {
-    console.log("🎤 HR stopped speaking - RESUMING AI");
-    vapiListeningRef.current = true;
+    console.log("▶️ HR stopped speaking - RESUMING AI to continue interview");
+    vapiListeningRef.current = true; // Resume AI listening
     setHrSpeaking(false);
     setAiPaused(false);
     const resumeMessage = {
       role: "system",
-      content: `▶️ AI Resumed - ${hrName} finished speaking`,
+      content: `▶️ AI Interview Resumed - Continuing with the interview questions`,
       timestamp: new Date().toISOString(),
     };
     setFullTranscript((prev) => [...prev, resumeMessage]);
-    setCurrentQuestion("Thank you. Let me continue with the next question...");
+    setCurrentQuestion(
+      "Thank you for that response. Let me continue with the next question...",
+    );
   }, [hrName]);
 
   const handleResumeAI = useCallback(() => {
-    console.log("▶️ AI resumed manually");
-    vapiListeningRef.current = true;
+    console.log("▶️ AI RESUMED - Returning to automated interview mode");
+    vapiListeningRef.current = true; // Resume AI listening
     setAiPaused(false);
     setHrHandRaised(false);
     setHrSpeaking(false);
     const resumeMessage = {
       role: "system",
-      content: "▶️ AI Resumed",
+      content: `▶️ AI Interview Resumed by HR - Back to automated interview mode`,
       timestamp: new Date().toISOString(),
     };
     setFullTranscript((prev) => [...prev, resumeMessage]);
+    setCurrentQuestion("Let's continue with the interview...");
   }, []);
 
   // STEP 1: Check completion (candidates only) - RUNS IMMEDIATELY & IN PARALLEL
