@@ -1,12 +1,15 @@
+import json
 from bson import ObjectId
+from datetime import datetime
+
 import cloudinary.uploader
-from flask import jsonify, request
+from flask import request, jsonify
+
+from src.Utils.Database import db
 from src.Model.Drive import create_drive, JobType, DriveStatus, RoundStatus
 from src.Model.CodingQuestion import create_coding_question
 from src.Model.DriveCandidate import initialize_candidate_rounds
-from src.Utils.Database import db
 from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
-from datetime import datetime
 from src.Orchestrator.HiringOrchestrator import (
     shortlist_candidates,
     email_candidates,
@@ -14,28 +17,27 @@ from src.Orchestrator.HiringOrchestrator import (
     send_final_selection_emails,
     schedule_coding_assessment
 )
-
 from src.Tasks.tasks import (
-    email_candidates_task, 
-    send_final_selection_emails_task, 
+    email_candidates_task,
+    send_final_selection_emails_task,
     schedule_interviews_task,
     schedule_coding_assessments_task
 )
 
 
-from flask import request, jsonify
-from datetime import datetime
-from src.Model.Drive import create_drive, JobType, DriveStatus
-from src.Model.CodingQuestion import create_coding_question
-from src.Utils.Database import db
-
 def create_drive_controller():
-    print("--- Create Drive Controller called (Multipart/Form-Data) ---")
+    print("--- Create Drive Controller called ---")
     
     try:
-        # 1. Capture data from Form (request.form for text, request.files for PDF)
-        data = request.form.to_dict()
-        files = request.files
+        # 1. Handle both JSON and FormData requests
+        if request.is_json:
+            print("Received JSON payload")
+            data = request.get_json()
+            files = request.files
+        else:
+            print("Received FormData payload")
+            data = request.form.to_dict()
+            files = request.files
 
         company_id = data.get("company_id")
         job_id = data.get("job_id")
@@ -54,16 +56,21 @@ def create_drive_controller():
         duration_hrs = int(data.get("assessment_duration_hours", 1))
         duration_mins = int(data.get("assessment_duration_minutes", 0))
 
-        # Parse JSON strings from FormData
-        rounds = json.loads(data.get("rounds", "[]"))
-        manual_questions = json.loads(data.get("coding_questions", "[]"))
+        # Parse JSON strings (handle both string and already-parsed objects)
+        rounds_data = data.get("rounds", "[]")
+        rounds = json.loads(rounds_data) if isinstance(rounds_data, str) else rounds_data
+        
+        questions_data = data.get("coding_questions", "[]")
+        manual_questions = json.loads(questions_data) if isinstance(questions_data, str) else questions_data
 
         # Validation
         if not company_id or not job_id or not candidates_to_hire:
             return jsonify({"error": "Missing required fields (company_id, job_id, or candidates_to_hire)"}), 400
 
         if db.drives.find_one({"job_id": job_id}):
-            return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
+            return jsonify({"error": f"job_id '{job_id}' already exists"}), 409
+        
+        print("All drive details are ready now.")
 
         # 2. Handle PDF Upload & AI Processing
         all_extracted_questions = []
@@ -109,6 +116,16 @@ def create_drive_controller():
             coding_question_ids.append(str(q_res.inserted_id))
 
         # 5. Create the Drive document using Model helper
+        # Handle skills - support both string and array formats
+        skills_data = data.get("skills", "[]")
+        if isinstance(skills_data, str):
+            try:
+                skills = json.loads(skills_data) if "[" in skills_data else data.get("skills", [])
+            except:
+                skills = data.get("skills", [])
+        else:
+            skills = skills_data if isinstance(skills_data, list) else []
+
         drive_doc = create_drive(
             company_id=company_id,
             role=role,
@@ -117,7 +134,7 @@ def create_drive_controller():
             end_date=end_date,
             candidates_to_hire=int(candidates_to_hire),
             job_type=job_type,
-            skills=json.loads(data.get("skills", "[]")) if "[" in data.get("skills", "") else data.get("skills", []),
+            skills=skills,
             rounds=rounds,
             job_id=job_id,
             internship_duration=internship_duration,
@@ -142,6 +159,11 @@ def create_drive_controller():
             "questions_count": len(coding_question_ids)
         }), 201
 
+    except ValueError as ve:
+        print(f"❌ Validation Error in create_drive_controller: {str(ve)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Validation Error: {str(ve)}"}), 400
     except Exception as e:
         print(f"❌ Error in create_drive_controller: {str(e)}")
         import traceback
