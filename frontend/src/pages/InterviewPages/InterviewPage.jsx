@@ -184,9 +184,9 @@ const InterviewPage = () => {
   }, [driveCandidateId, interviewType, isHR]);
 
   // ✅ FIXED: Toggle video wrapper
-  const toggleVideo = useCallback(() => {
+  const toggleVideo = useCallback(async () => {
     console.log("📹 toggleVideo called, current isVideoOff:", isVideoOff);
-    toggleVideoFn(isVideoOff, setIsVideoOff);
+    await toggleVideoFn(isVideoOff, setIsVideoOff);
   }, [isVideoOff, toggleVideoFn]);
 
   // ✅ FIXED: Toggle audio wrapper that ALSO updates VAPI

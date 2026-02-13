@@ -826,7 +826,7 @@ export const useLiveKit = ({
     }
   }, []);
 
-  const toggleVideo = useCallback((isVideoOff, setIsVideoOff) => {
+  const toggleVideo = useCallback(async (isVideoOff, setIsVideoOff) => {
     console.log("🎥 Toggle video called. Current state (off):", isVideoOff);
 
     const videoTrack = localVideoTrackRef.current;
@@ -840,14 +840,63 @@ export const useLiveKit = ({
     try {
       if (isVideoOff) {
         // Currently off, turn it ON
+        console.log("🎥 Turning video ON...");
+
+        // 🔴 CRITICAL: Unmute the track first
         videoTrack.unmute();
+        console.log("✅ Video track unmuted");
+
+        // 🔴 CRITICAL: Focus on video element visibility
         if (videoElement) {
+          // Make existing video element visible
           videoElement.style.display = "block";
+          videoElement.style.visibility = "visible";
+          videoElement.style.opacity = "1";
+          console.log("✅ Existing video element made visible");
+        } else {
+          // 🔴 NEW: If no video element exists, try to re-attach
+          console.warn("⚠️ No video element found, attempting to re-attach...");
+          if (localVideoRef.current && videoTrack.mediaStream) {
+            // Clear container first
+            localVideoRef.current.innerHTML = "";
+
+            // Create new video element
+            const newVideoElement = document.createElement("video");
+            newVideoElement.autoplay = true;
+            newVideoElement.muted = true;
+            newVideoElement.playsInline = true;
+            newVideoElement.style.cssText = `
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              transform: scaleX(-1) !important;
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              position: relative !important;
+              background-color: #000000 !important;
+            `;
+
+            // Set the stream and attach
+            newVideoElement.srcObject = videoTrack.mediaStream;
+            localVideoRef.current.appendChild(newVideoElement);
+
+            // Play the video
+            newVideoElement
+              .play()
+              .catch((e) => console.error("❌ Video play failed:", e));
+
+            // Store reference
+            videoElementRef.current = newVideoElement;
+            console.log("✅ Created and attached new video element");
+          }
         }
+
         setIsVideoOff(false);
         console.log("✅ Video ENABLED (unmuted)");
       } else {
         // Currently on, turn it OFF
+        console.log("🎥 Turning video OFF...");
         videoTrack.mute();
         if (videoElement) {
           videoElement.style.display = "none";
