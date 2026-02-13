@@ -1,5 +1,6 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import Vapi from "@vapi-ai/web";
+import { Track } from "livekit-client";
 
 export const useVapi = ({
   resumeText,
@@ -15,6 +16,7 @@ export const useVapi = ({
   setIsSpeaking,
   setInterviewStarted,
   setIsRecording,
+  interviewStarted, // 🔴 NEW: Add interviewStarted state to hook parameters
   vapiListeningRef,
   livekitRoomRef, // 🔴 NEW: LiveKit room reference for publishing audio
 }) => {
@@ -311,9 +313,7 @@ export const useVapi = ({
           provider: "11labs",
           voiceId: "21m00Tcm4TlvDq8ikWAM",
         },
-        // 🔴 CRITICAL: Explicit audio input/output configuration
-        inputDeviceId: "default", // Use default microphone
-        outputDeviceId: "default", // Use default speakers - ensure audio output
+        // 🔴 REMOVED: Remove invalid audio device parameters that cause 400 error
       });
 
       console.log("✅ Vapi interview started");
@@ -375,7 +375,6 @@ export const useVapi = ({
     return restored;
   }, [ensureAudioOutput]);
 
-  // 🔴 NEW: Capture Vapi audio and publish to LiveKit
   const captureAndPublishVapiAudio = useCallback(async () => {
     try {
       console.log(
@@ -416,6 +415,18 @@ export const useVapi = ({
         }
       }
 
+      // 🔴 IMPROVED: Also check for audio elements with specific VAPI characteristics
+      if (!vapiAudioElement) {
+        for (const element of vapiAudioElements) {
+          // Check if element might be VAPI audio based on other properties
+          if (element.paused === false && element.volume > 0) {
+            vapiAudioElement = element;
+            console.log("✅ Found likely Vapi audio element (playing)");
+            break;
+          }
+        }
+      }
+
       if (!vapiAudioElement) {
         console.warn(
           "⚠️ Vapi audio element not found, will retry on call start",
@@ -446,6 +457,8 @@ export const useVapi = ({
           // Create custom audio track and publish
           const { LocalAudioTrack } = await import("livekit-client");
           const customAudioTrack = new LocalAudioTrack(destination.stream, {
+            name: "vapi-ai-voice", // 🔴 NEW: Give it a descriptive name
+            source: Track.Source.Microphone, // 🔴 NEW: Mark as microphone source
             encodingParameters: {
               maxBitrate: 64000, // 64 kbps for voice
               maxFramerate: 24,
@@ -456,6 +469,9 @@ export const useVapi = ({
           await room.localParticipant.publishTrack(customAudioTrack);
           console.log("✅ Vapi audio track published to LiveKit!");
           console.log("🎤 HR/Panels can now hear: Candidate voice + AI voice");
+
+          // 🔴 NEW: Store reference for cleanup
+          vapiAudioProcessorRef.current = customAudioTrack;
 
           return true;
         } else {
@@ -471,6 +487,32 @@ export const useVapi = ({
       return false;
     }
   }, [livekitRoomRef]);
+
+  // 🔴 NEW: Capture Vapi audio and publish to LiveKit
+  useEffect(() => {
+    if (interviewStarted && !isHR && vapiClientRef.current) {
+      console.log(
+        "📡 Attempting to capture and publish Vapi audio to LiveKit...",
+      );
+
+      // Try immediately
+      captureAndPublishVapiAudio();
+
+      // 🔴 IMPROVED: Try multiple times with different intervals
+      const retryIntervals = [1000, 2000, 3000, 5000]; // Multiple retry attempts
+
+      const timers = retryIntervals.map((interval) =>
+        setTimeout(() => {
+          console.log(`🔄 Retrying Vapi audio capture (${interval}ms)...`);
+          captureAndPublishVapiAudio();
+        }, interval),
+      );
+
+      return () => {
+        timers.forEach((timer) => clearTimeout(timer));
+      };
+    }
+  }, [interviewStarted, isHR, captureAndPublishVapiAudio]);
 
   return {
     vapiClientRef,

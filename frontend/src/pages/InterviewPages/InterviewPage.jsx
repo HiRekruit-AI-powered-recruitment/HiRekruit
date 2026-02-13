@@ -102,6 +102,7 @@ const InterviewPage = () => {
     setIsSpeaking,
     setInterviewStarted,
     setIsRecording,
+    interviewStarted, // 🔴 NEW: Pass interviewStarted state
     vapiListeningRef,
     livekitRoomRef, // 🔴 PASS THIS INSTEAD OF NULL
   });
