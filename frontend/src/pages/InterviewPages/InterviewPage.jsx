@@ -1,8 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useParams, useNavigate } from "react-router-dom";
-import { Pause, Shield } from "lucide-react";
-import Loader from "../../components/Loader";
-import { useLiveKit } from "../../Hooks/InterviewHooks/useLiveKit";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { AlertCircle, Shield } from "lucide-react";
+import { useAuth } from "../../Context/AuthContext";
+import useLiveKit from "../../Hooks/InterviewHooks/useLiveKit";
 import { useVapi } from "../../Hooks/InterviewHooks/useVapi";
 import InterviewHeader from "../../components/Interview/InterviewHeader";
 import AIInterviewerPanel from "../../components/Interview/AIInterviewerPanel";
@@ -11,7 +17,7 @@ import RemoteParticipantPanel from "../../components/Interview/RemoteParticipant
 import HRControls from "../../components/Interview/HRControls";
 import TranscriptPanel from "../../components/Interview/TranscriptPanel";
 import InterviewControls from "../../components/Interview/InterviewControls";
-import { AlertCircle } from "lucide-react";
+import DependencyPipeline from "../../components/Interview/DependencyPipeline";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -923,148 +929,175 @@ const InterviewPage = () => {
   if (!isRenderBufferComplete || connectionError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full border border-gray-100">
-          {/* Enhanced Loading Spinner */}
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="w-16 h-16 bg-blue-100 rounded-full animate-pulse"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 bg-blue-600 rounded-full animate-ping"></div>
-              </div>
-            </div>
-          </div>
+        <div className="w-full max-w-4xl">
+          {/* Enhanced Dependency Pipeline - Now as the main focus */}
+          <DependencyPipeline
+            dependencyStates={dependencyStates}
+            loadingStage={loadingStage}
+            loadingProgress={loadingProgress}
+            loadingMessage={loadingMessage}
+            loadingSubtext={loadingSubtext}
+            isHR={isHR}
+            errors={
+              connectionError
+                ? { [loadingStage]: { message: connectionError } }
+                : {}
+            }
+            onRetry={() => window.location.reload()}
+            estimatedTimeRemaining={
+              loadingProgress < 100
+                ? `${Math.ceil((100 - loadingProgress) / 10)}s`
+                : null
+            }
+          />
 
-          {/* Enhanced Loading Messages with Progress */}
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">
-              {loadingMessage}
-            </h2>
-            <p className="text-gray-600 text-sm">{loadingSubtext}</p>
-          </div>
+          {/* Error Display - Only if there's a connection error */}
+          {connectionError && (
+            <div className="mt-6 animate-slide-in">
+              <div className="bg-white rounded-xl shadow-lg border-2 border-red-300 overflow-hidden">
+                {/* Red accent bar */}
+                <div className="h-1 bg-gradient-to-r from-red-500 to-red-600"></div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${loadingProgress}%` }}
-            ></div>
-          </div>
+                <div className="p-6">
+                  <div className="flex items-start gap-4">
+                    {/* Error Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <svg
+                          className="h-6 w-6 text-red-600"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </div>
+                    </div>
 
-          {/* Stage-specific Messages */}
-          <div className="text-center text-xs text-gray-500 space-y-1">
-            {loadingStage === "initializing" && (
-              <>
-                <div>✓ Validating session</div>
-                <div>⏳ Preparing components</div>
-              </>
-            )}
-            {loadingStage === "permission" && (
-              <>
-                <div>✓ Session validated</div>
-                <div>⏳ Checking camera permissions</div>
-              </>
-            )}
-            {loadingStage === "completion" && (
-              <>
-                <div>✓ Permissions checked</div>
-                <div>⏳ Verifying interview access</div>
-              </>
-            )}
-            {loadingStage === "livekit" && (
-              <>
-                <div>✓ Interview access verified</div>
-                <div>⏳ Connecting to video conference</div>
-              </>
-            )}
-            {loadingStage === "video" && (
-              <>
-                <div>✓ Video conference connected</div>
-                <div>⏳ Setting up video display</div>
-              </>
-            )}
-            {loadingStage === "vapi" && (
-              <>
-                <div>✓ Video display ready</div>
-                <div>⏳ Initializing AI interviewer</div>
-              </>
-            )}
-            {loadingStage === "audio" && (
-              <>
-                <div>✓ AI interviewer ready</div>
-                <div>⏳ Configuring audio system</div>
-              </>
-            )}
-            {loadingStage === "finalizing" && (
-              <>
-                <div>✓ All systems configured</div>
-                <div>⏳ Finalizing setup</div>
-              </>
-            )}
-            {loadingStage === "rendering" && (
-              <>
-                <div>✓ Setup finalized</div>
-                <div>⏳ Preparing interface</div>
-              </>
-            )}
-            {loadingProgress === 100 && (
-              <>
-                <div>✓ Everything ready!</div>
-                <div>🎉 Starting interview...</div>
-              </>
-            )}
-          </div>
+                    {/* Error Content */}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-red-900 mb-1">
+                        Connection Error
+                      </h3>
+                      <p className="text-sm text-red-700 mb-4">
+                        {connectionError}
+                      </p>
 
-          {/* Debug Information */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="mt-6 p-3 bg-gray-50 rounded-lg text-xs">
-              <div className="font-mono text-gray-600">
-                <div className="mb-1">Debug Info:</div>
-                <div>Stage: {loadingStage}</div>
-                <div>Progress: {loadingProgress}%</div>
-                <div>Ready: {isFullyReady ? "✅" : "⏳"}</div>
-                <div>Buffer: {isRenderBufferComplete ? "✅" : "⏳"}</div>
-                <div className="mt-2">Dependencies:</div>
-                <div>
-                  Completion: {dependencyStates.completionCheck ? "✅" : "⏳"}
+                      {/* Action Buttons */}
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-md hover:shadow-lg font-medium text-sm"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                            />
+                          </svg>
+                          Retry Connection
+                        </button>
+                        <button
+                          onClick={() => {
+                            /* Add support contact logic */
+                          }}
+                          className="inline-flex items-center px-4 py-2 bg-white text-red-700 border-2 border-red-300 rounded-lg hover:bg-red-50 transition-colors font-medium text-sm"
+                        >
+                          Get Help
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Troubleshooting Tips */}
+                  <div className="mt-6 pt-6 border-t border-red-200">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                      Troubleshooting Tips:
+                    </h4>
+                    <ul className="space-y-2 text-sm text-gray-700">
+                      <li className="flex items-start">
+                        <span className="text-red-500 mr-2">•</span>
+                        <span>Check your internet connection</span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="text-red-500 mr-2">•</span>
+                        <span>
+                          Disable browser extensions that might block media
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="text-red-500 mr-2">•</span>
+                        <span>
+                          Allow camera and microphone permissions when prompted
+                        </span>
+                      </li>
+                      <li className="flex items-start">
+                        <span className="text-red-500 mr-2">•</span>
+                        <span>
+                          Try using a different browser (Chrome or Firefox
+                          recommended)
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
                 </div>
-                <div>LiveKit: {dependencyStates.livekit ? "✅" : "⏳"}</div>
-                <div>VAPI: {dependencyStates.vapi ? "✅" : "⏳"}</div>
-                <div>
-                  Permissions: {dependencyStates.permissions ? "✅" : "⏳"}
-                </div>
-                <div>Video: {dependencyStates.videoElement ? "✅" : "⏳"}</div>
-                <div>Audio: {dependencyStates.audioContext ? "✅" : "⏳"}</div>
               </div>
             </div>
           )}
 
-          {/* Error Display */}
-          {connectionError && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-red-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">
-                    Connection Error
-                  </h3>
-                  <p className="mt-1 text-sm text-red-700">{connectionError}</p>
-                </div>
+          {/* Helpful Info Footer */}
+          {!connectionError && loadingProgress < 100 && (
+            <div className="mt-6 text-center animate-fade-in">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm border border-gray-200">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-gray-600">
+                  Setting up your interview environment...
+                </span>
               </div>
             </div>
           )}
         </div>
+
+        {/* CSS Animations */}
+        <style jsx>{`
+          @keyframes slide-in {
+            from {
+              opacity: 0;
+              transform: translateY(20px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+
+          .animate-slide-in {
+            animation: slide-in 0.4s ease-out;
+          }
+
+          .animate-fade-in {
+            animation: fade-in 0.5s ease-out;
+          }
+        `}</style>
       </div>
     );
   }
