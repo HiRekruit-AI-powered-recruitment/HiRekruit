@@ -62,6 +62,15 @@ const DependencyPipeline = ({
         "Requesting access to your camera and microphone for the video interview.",
     },
     {
+      id: "audioContext",
+      name: "Audio System",
+      description: "Configuring audio context",
+      icon: Volume2,
+      color: "pink",
+      gradient: "from-pink-500 to-pink-600",
+      details: "Setting up audio processing and voice detection.",
+    },
+    {
       id: "livekit",
       name: "Video Connection",
       description: "Connecting to interview room",
@@ -82,21 +91,12 @@ const DependencyPipeline = ({
     {
       id: "vapi",
       name: "AI Interviewer",
-      description: "Initializing conversational AI",
+      description: "AI Interviewer joining the interview room",
       icon: Zap,
       color: "amber",
       gradient: "from-amber-500 to-amber-600",
       skip: isHR,
       details: "Loading the AI interviewer and natural language processing.",
-    },
-    {
-      id: "audioContext",
-      name: "Audio System",
-      description: "Configuring audio context",
-      icon: Volume2,
-      color: "pink",
-      gradient: "from-pink-500 to-pink-600",
-      details: "Setting up audio processing and voice detection.",
     },
   ];
 
