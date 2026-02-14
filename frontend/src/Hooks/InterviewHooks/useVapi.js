@@ -19,6 +19,7 @@ export const useVapi = ({
   interviewStarted, // 🔴 NEW: Add interviewStarted state to hook parameters
   vapiListeningRef,
   livekitRoomRef, // 🔴 NEW: LiveKit room reference for publishing audio
+  localVideoRef, // 🔴 NEW: Add localVideoRef parameter
 }) => {
   const vapiClientRef = useRef(null);
   const isMutedRef = useRef(false); // ✅ NEW: Track mute state
@@ -381,11 +382,19 @@ export const useVapi = ({
         "🎙️ Starting to capture and publish Vapi audio to LiveKit...",
       );
 
+      // 🔴 CRITICAL: Wait for LiveKit video element to be ready
       if (!livekitRoomRef?.current) {
         console.warn(
           "⚠️ LiveKit room not available yet, audio capture will be attempted later",
         );
-        // Will be retried when call starts
+        return false;
+      }
+
+      // 🔴 NEW: Wait for video element to be mounted
+      if (!localVideoRef?.current) {
+        console.warn(
+          "⚠️ Video element not ready yet, waiting for LocalVideoPanel to mount...",
+        );
         return false;
       }
 
@@ -400,7 +409,21 @@ export const useVapi = ({
 
       // 🎙️ CRITICAL: Get the destination audio node (where Vapi outputs audio)
       // This captures the Vapi voice output
-      const destination = audioContext.createMediaStreamAudioDestination();
+      let destination;
+      try {
+        destination = audioContext.createMediaStreamAudioDestination();
+        console.log(
+          "✅ Using MediaStreamAudioDestination for VAPI audio capture",
+        );
+      } catch (error) {
+        console.warn(
+          "⚠️ MediaStreamAudioDestination not supported, using fallback:",
+          error,
+        );
+        // 🔴 FALLBACK: Create a gain node and capture audio directly
+        destination = audioContext.createGain();
+        console.log("✅ Using GainNode as fallback destination");
+      }
 
       // Get the Vapi audio element (usually created by Vapi SDK)
       const vapiAudioElements = document.querySelectorAll("audio");
@@ -428,62 +451,11 @@ export const useVapi = ({
       }
 
       if (!vapiAudioElement) {
-        console.warn(
-          "⚠️ Vapi audio element not found, will retry on call start",
-        );
-        return false;
-      }
-
-      // 🎙️ Create audio source from the Vapi audio element
-      try {
-        const source =
-          audioContext.createMediaElementAudioSource(vapiAudioElement);
-        console.log("✅ Created audio source from Vapi element");
-
-        // Store processors and sources
-        vapiAudioSourceRef.current = source;
-        vapiAudioStreamRef.current = destination.stream;
-
-        // Connect Vapi audio to destination
-        source.connect(destination);
-        console.log("✅ Connected Vapi audio source to destination");
-
-        // 🔊 CRITICAL: Publish the Vapi audio stream to LiveKit
-        // This allows HR/panels to hear the AI voice
-        const audioTrack = destination.stream.getAudioTracks()[0];
-        if (audioTrack) {
-          console.log("📡 Publishing Vapi audio track to LiveKit...");
-
-          // Create custom audio track and publish
-          const { LocalAudioTrack } = await import("livekit-client");
-          const customAudioTrack = new LocalAudioTrack(destination.stream, {
-            name: "vapi-ai-voice", // 🔴 NEW: Give it a descriptive name
-            source: Track.Source.Microphone, // 🔴 NEW: Mark as microphone source
-            encodingParameters: {
-              maxBitrate: 64000, // 64 kbps for voice
-              maxFramerate: 24,
-            },
-          });
-
-          // Add track to room
-          await room.localParticipant.publishTrack(customAudioTrack);
-          console.log("✅ Vapi audio track published to LiveKit!");
-          console.log("🎤 HR/Panels can now hear: Candidate voice + AI voice");
-
-          // 🔴 NEW: Store reference for cleanup
-          vapiAudioProcessorRef.current = customAudioTrack;
-
-          return true;
-        } else {
-          console.warn("⚠️ No audio track found in destination stream");
-          return false;
-        }
-      } catch (error) {
-        console.error("❌ Error creating audio source:", error);
+        console.warn("⚠️ No VAPI audio element found - cannot capture audio");
         return false;
       }
     } catch (error) {
-      console.error("❌ Error capturing/publishing Vapi audio:", error);
+      console.error("❌ Error creating audio source:", error);
       return false;
     }
   }, [livekitRoomRef]);
@@ -495,24 +467,49 @@ export const useVapi = ({
         "📡 Attempting to capture and publish Vapi audio to LiveKit...",
       );
 
-      // Try immediately
-      captureAndPublishVapiAudio();
+      // Try immediately with better error handling
+      const success = captureAndPublishVapiAudio();
 
-      // 🔴 IMPROVED: Try multiple times with different intervals
-      const retryIntervals = [1000, 2000, 3000, 5000]; // Multiple retry attempts
+      // 🔴 CRITICAL: Only retry if initial attempt failed AND video element is ready
+      if (!success && localVideoRef?.current) {
+        console.log(
+          "🔄 Initial capture failed but video is ready, scheduling retries...",
+        );
 
-      const timers = retryIntervals.map((interval) =>
-        setTimeout(() => {
-          console.log(`🔄 Retrying Vapi audio capture (${interval}ms)...`);
-          captureAndPublishVapiAudio();
-        }, interval),
-      );
+        // 🔴 IMPROVED: Limited retries with exponential backoff
+        const retryDelays = [2000, 4000, 8000]; // Reduced retries with longer delays
+        const timers = retryDelays.map((delay, index) => {
+          const timerId = `vapi-retry-${index}`;
+          return setTimeout(() => {
+            console.log(`🔄 Vapi audio retry ${index + 1} (${delay}ms)...`);
+            const retrySuccess = captureAndPublishVapiAudio();
+            if (retrySuccess) {
+              console.log("✅ Vapi audio capture succeeded on retry");
+              // Clear remaining timers
+              const remainingTimers = document.querySelectorAll(
+                '[id^="vapi-retry-"]',
+              );
+              remainingTimers.forEach((timer) => {
+                if (timer.id !== timerId) {
+                  clearTimeout(timer);
+                }
+              });
+            }
+          }, delay);
+        });
 
-      return () => {
-        timers.forEach((timer) => clearTimeout(timer));
-      };
+        // Cleanup function
+        return () => {
+          timers.forEach((timer) => clearTimeout(timer));
+        };
+      } else if (!success && !localVideoRef?.current) {
+        console.log(
+          "⏳ Video element not ready, will retry when video mounts...",
+        );
+        // Don't schedule retries - let the video mounting trigger the retry
+      }
     }
-  }, [interviewStarted, isHR, captureAndPublishVapiAudio]);
+  }, [interviewStarted, isHR, captureAndPublishVapiAudio, localVideoRef]);
 
   return {
     vapiClientRef,
