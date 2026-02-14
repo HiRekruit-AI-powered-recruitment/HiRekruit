@@ -1,154 +1,79 @@
-from bson import ObjectId
+import json
+import traceback
 import cloudinary.uploader
 from flask import jsonify, request
-from src.Model.Drive import create_drive, JobType, DriveStatus, RoundStatus
+from bson import ObjectId
+from datetime import datetime
+
+from src.Model.Drive import create_drive, DriveStatus
 from src.Model.CodingQuestion import create_coding_question
-from src.Model.DriveCandidate import initialize_candidate_rounds
-from src.Utils.Database import db
 from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
-from datetime import datetime
-from src.Orchestrator.HiringOrchestrator import (
-    shortlist_candidates,
-    email_candidates,
-    schedule_interviews,
-    send_final_selection_emails,
-    schedule_coding_assessment
-)
+from src.Utils.Database import db
 
-from src.Tasks.tasks import (
-    email_candidates_task, 
-    send_final_selection_emails_task, 
-    schedule_interviews_task,
-    schedule_coding_assessments_task
-)
-
-
+import json
+import cloudinary.uploader
 from flask import request, jsonify
-from datetime import datetime
-from src.Model.Drive import create_drive, JobType, DriveStatus
+from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
 from src.Model.CodingQuestion import create_coding_question
+from src.Model.Drive import create_drive
 from src.Utils.Database import db
 
 def create_drive_controller():
-    print("--- Create Drive Controller called (Multipart/Form-Data) ---")
-    
     try:
-        # 1. Capture data from Form (request.form for text, request.files for PDF)
-        data = request.form.to_dict()
+        # 1. Capture Multipart Data
+        form_data = request.form.to_dict()
         files = request.files
 
-        company_id = data.get("company_id")
-        job_id = data.get("job_id")
-        role = data.get("role")
-        location = data.get("location")
-        start_date = data.get("start_date")
-        end_date = data.get("end_date")
-        candidates_to_hire = data.get("candidates_to_hire")
-        job_type = data.get("job_type", "full-time")
-        internship_duration = data.get("internship_duration")
-        experience_type = data.get("experience_type", "fresher")
-        experience_min = data.get("experience_min")
-        experience_max = data.get("experience_max")
+        # 2. Parse JSON strings back to Python Lists
+        rounds = json.loads(form_data.get("rounds", "[]"))
+        # These are the questions populated by AI or Manual Entry on the frontend
+        final_questions = json.loads(form_data.get("coding_questions", "[]"))
+        skills = json.loads(form_data.get("skills", "[]"))
 
-        # Duration handling
-        duration_hrs = int(data.get("assessment_duration_hours", 1))
-        duration_mins = int(data.get("assessment_duration_minutes", 0))
-
-        # Parse JSON strings from FormData
-        rounds = json.loads(data.get("rounds", "[]"))
-        manual_questions = json.loads(data.get("coding_questions", "[]"))
-
-        # Validation
-        if not company_id or not job_id or not candidates_to_hire:
-            return jsonify({"error": "Missing required fields (company_id, job_id, or candidates_to_hire)"}), 400
-
-        if db.drives.find_one({"job_id": job_id}):
-            return jsonify({"error": f"job_id '{job_id}' already exists"}), 400
-
-        # 2. Handle PDF Upload & AI Processing
-        all_extracted_questions = []
+        company_id = form_data.get("company_id")
+        
+        # 3. Handle physical PDF storage (Cloudinary)
+        assessment_pdf_url = None
         if 'assessment_file' in files:
-            pdf_file = files['assessment_file']
-            print(f"DEBUG: Processing PDF file: {pdf_file.filename}")
-            
-            # Upload to Cloudinary as 'raw' to preserve PDF structure
-            upload_result = cloudinary.uploader.upload(pdf_file, resource_type="raw")
-            pdf_url = upload_result.get("secure_url")
+            upload_res = cloudinary.uploader.upload(files['assessment_file'], resource_type="raw")
+            assessment_pdf_url = upload_res.get("secure_url")
 
-            # Call AI Question Intake Agent
-            agent = QuestionIntakeAgent()
-            ai_questions = agent.process_question_pdf(pdf_url)
-            all_extracted_questions.extend(ai_questions)
-
-        # 3. Combine AI extracted questions and Manual questions
-        combined_questions = all_extracted_questions + manual_questions
+        # 4. Save Coding Questions to their own collection
         coding_question_ids = []
-
-        # 4. Save Questions to coding_questions collection
-        for q in combined_questions:
-            # Normalize test cases (ensure keys match what create_coding_question expects)
-            processed_test_cases = [
+        for q in final_questions:
+            processed_tc = [
                 {
-                    "input": tc.get("input"),
-                    "output": tc.get("output"),
+                    "input": tc.get("input"), 
+                    "output": tc.get("output"), 
                     "type": tc.get("type", "public")
-                }
-                for tc in q.get("testCases", [])
+                } for tc in q.get("testCases", [])
             ]
             
-            cq_doc = create_coding_question(
-                title=q.get("title", "Untitled Question"),
-                description=q.get("description", ""),
-                test_cases=processed_test_cases,
+            cq = create_coding_question(
+                title=q.get("title"),
+                description=q.get("description"),
+                test_cases=processed_tc,
                 constraints=q.get("constraints", ""),
-                difficulty=q.get("difficulty", "medium"),
                 company_id=company_id
             )
-            
-            q_res = db.coding_questions.insert_one(cq_doc)
+            q_res = db.coding_questions.insert_one(cq)
             coding_question_ids.append(str(q_res.inserted_id))
 
-        # 5. Create the Drive document using Model helper
+        # 5. Create Drive Document
         drive_doc = create_drive(
             company_id=company_id,
-            role=role,
-            location=location,
-            start_date=start_date,
-            end_date=end_date,
-            candidates_to_hire=int(candidates_to_hire),
-            job_type=job_type,
-            skills=json.loads(data.get("skills", "[]")) if "[" in data.get("skills", "") else data.get("skills", []),
-            rounds=rounds,
-            job_id=job_id,
-            internship_duration=internship_duration,
+            role=form_data.get("role"),
+            location=form_data.get("location"),
+            # ... pass other fields ...
             coding_question_ids=coding_question_ids,
-            experience_type=experience_type,
-            experience_min=experience_min,
-            experience_max=experience_max,
-            assessment_duration_hours=duration_hrs,
-            assessment_duration_minutes=duration_mins,
-            status=DriveStatus.DRIVE_CREATED
+            assessment_pdf_url=assessment_pdf_url # Save the link to the uploaded doc
         )
-
-        # 6. Insert Drive to DB
+        
         result = db.drives.insert_one(drive_doc)
-        drive_doc["_id"] = str(result.inserted_id)
-
-        print(f"SUCCESS: Drive created with ID {drive_doc['_id']}. Questions: {len(coding_question_ids)}")
-
-        return jsonify({
-            "message": "Drive created successfully with AI-processed questions",
-            "drive": drive_doc,
-            "questions_count": len(coding_question_ids)
-        }), 201
+        return jsonify({"message": "Drive created", "drive": {"_id": str(result.inserted_id)}}), 201
 
     except Exception as e:
-        print(f"❌ Error in create_drive_controller: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
-
-    
+        return jsonify({"error": str(e)}), 500
 def get_drives_by_company(company_id):
     """
     Get all drives for a specific company with round progress.

@@ -469,40 +469,58 @@ const removeFile = () => {
   const confirmSubmit = async () => {
     setShowConfirmModal(false);
     setLoading(true);
+
     try {
+      const formData = new FormData();
+
+      // 1. Append all standard fields
+      formData.append("company_id", jobData.company_id);
+      formData.append("job_id", jobData.job_id);
+      formData.append("role", jobData.role);
+      formData.append("location", jobData.location);
+      formData.append("start_date", jobData.start_date);
+      formData.append("end_date", jobData.end_date);
+      formData.append("candidates_to_hire", jobData.candidates_to_hire);
+      formData.append("job_type", jobData.job_type);
+      formData.append("internship_duration", jobData.internship_duration);
+      formData.append("experience_type", jobData.experience_type);
+      formData.append("experience_min", jobData.experience_min);
+      formData.append("experience_max", jobData.experience_max);
+      formData.append("assessment_duration_hours", jobData.assessment_duration_hours);
+      formData.append("assessment_duration_minutes", jobData.assessment_duration_minutes);
+
+      // 2. Append the File (if HR uploaded one)
+      // Key must match backend: request.files['assessment_file']
+      if (jobData.assessment_pdf) {
+        formData.append("assessment_file", jobData.assessment_pdf);
+      }
+
+      // 3. Stringify Arrays/Objects for FormData
+      formData.append("rounds", JSON.stringify(jobData.rounds));
+      formData.append("coding_questions", JSON.stringify(jobData.coding_questions));
+      formData.append("skills", JSON.stringify(jobData.skills));
+
       const response = await fetch(`${BASE_URL}/api/drive/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(jobData),
+        // IMPORTANT: Do NOT set headers: { 'Content-Type': 'multipart/form-data' }
+        // The browser sets the correct boundary automatically when body is FormData
+        body: formData, 
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create a drive");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create a drive");
       }
 
       const data = await response.json();
-      console.log("Drive created successfully!", data);
-
-      // Save job data to localStorage before navigating
-      localStorage.setItem("currentJobData", JSON.stringify(jobData));
-
-      toast.success("Drive created successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      toast.success("Drive created successfully!");
 
       setTimeout(() => {
         navigate(`/dashboard/creating-drive/${data.drive._id}`);
       }, 1000);
     } catch (err) {
       console.error("Error creating drive:", err.message);
-      toast.error(
-        "Something went wrong while creating the drive. Please try again.",
-        {
-          position: "top-right",
-          autoClose: 3000,
-        }
-      );
+      toast.error(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
