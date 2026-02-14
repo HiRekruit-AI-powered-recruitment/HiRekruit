@@ -454,6 +454,42 @@ export const useVapi = ({
         console.warn("⚠️ No VAPI audio element found - cannot capture audio");
         return false;
       }
+
+      // 🎙️ CRITICAL: Create audio source from VAPI element and connect to destination
+      const vapiAudioSource =
+        audioContext.createMediaElementSource(vapiAudioElement);
+      vapiAudioSource.connect(destination);
+
+      // Get the audio stream from the destination
+      const audioStream = destination.stream;
+      if (!audioStream || audioStream.getAudioTracks().length === 0) {
+        console.warn("⚠️ No audio tracks found in captured stream");
+        return false;
+      }
+
+      // 🎙️ CRITICAL: Publish the captured VAPI audio to LiveKit
+      const audioTrack = audioStream.getAudioTracks()[0];
+      if (!audioTrack) {
+        console.warn("⚠️ No audio track found in stream");
+        return false;
+      }
+
+      try {
+        // Publish the VAPI audio track to LiveKit room
+        await room.localParticipant.publishTrack(audioTrack, {
+          name: "vapi-audio",
+          source: "microphone",
+          simulcast: false,
+        });
+        console.log("✅ VAPI audio successfully published to LiveKit");
+        return true;
+      } catch (publishError) {
+        console.error(
+          "❌ Failed to publish VAPI audio to LiveKit:",
+          publishError,
+        );
+        return false;
+      }
     } catch (error) {
       console.error("❌ Error creating audio source:", error);
       return false;
