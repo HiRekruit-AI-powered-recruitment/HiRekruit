@@ -3,7 +3,7 @@ import { Room, RoomEvent, Track } from "livekit-client";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
-export const useLiveKit = ({
+export default function useLiveKit({
   driveCandidateId,
   interviewType,
   isHR,
@@ -22,7 +22,7 @@ export const useLiveKit = ({
   setRemoteParticipants,
   onRemoteParticipantJoin, // 🔴 NEW: Callback when HR joins (participant connects)
   livekitRoomRef, // 🔴 NEW: Accept livekitRoomRef from parent (InterviewPage)
-}) => {
+}) {
   // 🔴 If no livekitRoomRef provided, create one (fallback for legacy usage)
   if (!livekitRoomRef) {
     livekitRoomRef = useRef(null);
@@ -946,4 +946,4 @@ export const useLiveKit = ({
     toggleVideo,
     toggleAudio,
   };
-};
+}
