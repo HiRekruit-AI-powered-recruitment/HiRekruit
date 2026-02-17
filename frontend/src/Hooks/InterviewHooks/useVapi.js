@@ -7,6 +7,7 @@ export const useVapi = ({
   interviewAlreadyCompleted,
   isHR,
   prompt,
+  initialConversation,
   setIsConnecting,
   setConnectionError,
   setIsVapiReady,
@@ -27,6 +28,39 @@ export const useVapi = ({
   const vapiAudioProcessorRef = useRef(null); // 🔴 NEW: Store audio processor for Vapi audio
   const vapiAudioSourceRef = useRef(null); // 🔴 NEW: Store Vapi audio source
   const vapiAudioStreamRef = useRef(null); // 🔴 NEW: Store Vapi audio stream
+
+  // Seed UI state from a previously saved conversation (resume flow)
+  useEffect(() => {
+    if (!initialConversation || !Array.isArray(initialConversation)) return;
+    if (initialConversation.length === 0) return;
+    if (isHR) return;
+
+    setConversation(initialConversation);
+
+    const transcript = initialConversation
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role,
+        content: m.message || m.content,
+        timestamp: m.time || m.timestamp || new Date().toISOString(),
+      }));
+    setFullTranscript(transcript);
+
+    const lastAssistantMessage = initialConversation
+      .filter((m) => m.role === "assistant")
+      .pop();
+    if (lastAssistantMessage) {
+      const questionText =
+        lastAssistantMessage.message || lastAssistantMessage.content;
+      if (questionText) setCurrentQuestion(questionText);
+    }
+  }, [
+    initialConversation,
+    isHR,
+    setConversation,
+    setCurrentQuestion,
+    setFullTranscript,
+  ]);
 
   // 🔴 NEW: Ensure audio output is active and routed to speakers
   const ensureAudioOutput = useCallback(async () => {
@@ -283,6 +317,7 @@ export const useVapi = ({
     setInterviewStarted,
     setIsRecording,
     vapiListeningRef,
+    ensureAudioOutput,
   ]);
 
   const handleStartInterview = useCallback(async () => {
@@ -304,11 +339,32 @@ export const useVapi = ({
         console.warn("⚠️ Audio output check had issues, but continuing...");
       }
 
+      const hasResumeContext =
+        initialConversation &&
+        Array.isArray(initialConversation) &&
+        initialConversation.length > 0;
+
+      const normalizedHistory = hasResumeContext
+        ? initialConversation
+            .filter((m) => m.role === "user" || m.role === "assistant")
+            .slice(-12)
+            .map((m) => ({
+              role: m.role,
+              content: m.message || m.content,
+            }))
+        : [];
+
+      const systemPrompt = hasResumeContext
+        ? `${prompt}\n\nIMPORTANT: The user reloaded the page due to a network issue.\n\nRESUME PROTOCOL (follow strictly):\n1) First ask: "I can reconnect now. Are you audible? Please reply with only YES or NO."\n2) If the user says NO or indicates they can't hear you, provide 1-2 short troubleshooting steps and ask them to reply YES when they can hear. Do not continue the interview until they reply YES.\n3) Once they reply YES, continue the interview from the existing conversation context below. Do not restart from the beginning. Ask the next appropriate question based on the conversation.\n\nCONVERSATION CONTEXT:\n${normalizedHistory
+            .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+            .join("\n")}`
+        : prompt;
+
       await client.start({
         model: {
           provider: "openai",
           model: "gpt-4o-mini",
-          messages: [{ role: "system", content: prompt }],
+          messages: [{ role: "system", content: systemPrompt }],
         },
         voice: {
           provider: "11labs",
@@ -342,6 +398,7 @@ export const useVapi = ({
   }, [
     resumeText,
     prompt,
+    initialConversation,
     setIsConnecting,
     setConnectionError,
     ensureAudioOutput,
