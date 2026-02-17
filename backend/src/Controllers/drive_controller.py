@@ -1152,3 +1152,69 @@ def extract_questions_controller():
     except Exception as e:
         print(f"Extraction Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+def delete_drive(drive_id):
+    """
+    Delete a drive by ID.
+    """
+    try:
+        print(f"Deleting drive with ID: {drive_id}")
+        
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+            
+        # Delete the drive
+        result = db.drives.delete_one({"_id": object_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({"error": "Drive not found"}), 404
+            
+        # Optional: Delete associated candidates if needed
+        # db.drive_candidates.delete_many({"drive_id": drive_id})
+        
+        print(f"Drive {drive_id} deleted successfully")
+        return jsonify({"message": "Drive deleted successfully", "drive_id": drive_id}), 200
+        
+    except Exception as e:
+        print(f"Error in delete_drive: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
+def update_drive(drive_id):
+    """
+    Update drive details.
+    """
+    try:
+        print(f"Updating drive with ID: {drive_id}")
+        
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+            
+        if not request.is_json:
+             return jsonify({"error": "Request must be JSON"}), 400
+             
+        data = request.get_json()
+        
+        # Exclude immutable fields if any
+        update_data = {k: v for k, v in data.items() if k != "_id"}
+        update_data["updated_at"] = datetime.utcnow()
+            
+        result = db.drives.update_one(
+            {"_id": object_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({"error": "Drive not found"}), 404
+            
+        print(f"Drive {drive_id} updated successfully")
+        return jsonify({"message": "Drive updated successfully", "drive_id": drive_id}), 200
+        
+    except Exception as e:
+        print(f"Error in update_drive: {str(e)}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500

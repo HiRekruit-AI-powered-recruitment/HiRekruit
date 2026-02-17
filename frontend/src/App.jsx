@@ -123,6 +123,7 @@ function AppContent() {
 
           {/* Dashboard pages */}
           <Route path="drive-creation" element={<JobCreation />} />
+          <Route path="drives/edit/:driveId" element={<JobCreation />} />
           <Route path="drives" element={<Drives />} />
           <Route path="process/:driveId" element={<Process />} />
           <Route path="resumes" element={<ResumeLibrary />} />
@@ -161,7 +162,7 @@ function AppContent() {
           path="/assessment/:driveId/:candidateId"
           element={<Assessment />}
         />
-        
+
         <Route path="/assessment/:driveId" element={<Assessment />} />
         <Route path="/assessment" element={<Assessment />} />
         <Route path="/start-assessment" element={<Instructions />} />

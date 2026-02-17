@@ -10,9 +10,13 @@ import {
   PlayCircle,
   Copy,
   Check,
+  Edit,
+  Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const DriveCard = ({ drive, onView }) => {
+const DriveCard = ({ drive, onView, onDelete }) => {
+  const navigate = useNavigate();
   const {
     _id,
     job_id,
@@ -32,6 +36,34 @@ const DriveCard = ({ drive, onView }) => {
   } = drive;
 
   const [copied, setCopied] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Toggle menu
+  const toggleMenu = (e) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
+
+  // Close menu when clicking outside (simple implementation using onBlur could work efficiently if button is focused, but here we just handle click)
+  // Or better, use a backdrop or just rely on manual toggle for MVP.
+  // Adding a simple click listener to window is better but requires useEffect. 
+  // Let's stick to simple toggle for now, maybe add onBlur to the button wrapper.
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    // Team Note: Edit page reuses existing form with prefilled drive data
+    navigate(`/dashboard/drives/edit/${_id}`);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    setShowMenu(false);
+    if (window.confirm("Are you sure you want to delete this drive?")) {
+      // Team Note: Added Drive actions menu (Edit/Delete) via three-dot dropdown
+      if (onDelete) onDelete(_id);
+    }
+  };
 
   // Copy job_id to clipboard
   const handleCopyJobId = async () => {
@@ -122,17 +154,17 @@ const DriveCard = ({ drive, onView }) => {
 
   const statusConfig = isCompleted
     ? {
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
-        icon: CheckCircle,
-        label: "Completed",
-      }
+      color: "text-gray-600",
+      bgColor: "bg-gray-100",
+      icon: CheckCircle,
+      label: "Completed",
+    }
     : {
-        color: "text-black",
-        bgColor: "bg-gray-200",
-        icon: Clock,
-        label: "Ongoing",
-      };
+      color: "text-black",
+      bgColor: "bg-gray-200",
+      icon: Clock,
+      label: "Ongoing",
+    };
 
   const StatusIcon = statusConfig.icon;
 
@@ -168,7 +200,7 @@ const DriveCard = ({ drive, onView }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-300 hover:shadow-xl transition-shadow duration-200">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-300 hover:shadow-xl transition-shadow duration-200 relative">
       {/* Header */}
       <div className="p-4 border-b border-gray-300">
         <div className="flex items-start justify-between">
@@ -231,9 +263,39 @@ const DriveCard = ({ drive, onView }) => {
               </div>
             )}
           </div>
-          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-            <MoreVertical size={16} className="text-gray-400" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={toggleMenu}
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+            >
+              <MoreVertical size={16} className="text-gray-400" />
+            </button>
+
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-20">
+                  <button
+                    onClick={handleEdit}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left"
+                  >
+                    <Edit size={14} />
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 text-left"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -261,9 +323,8 @@ const DriveCard = ({ drive, onView }) => {
               <Clock size={12} />
               <span>
                 {daysRemaining > 0
-                  ? `${daysRemaining} day${
-                      daysRemaining > 1 ? "s" : ""
-                    } remaining`
+                  ? `${daysRemaining} day${daysRemaining > 1 ? "s" : ""
+                  } remaining`
                   : "Drive ends today"}
               </span>
             </div>

@@ -16,7 +16,7 @@ import {
   Bell,
   Settings,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
 
 const items = [
@@ -50,7 +50,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     >
       {/* Desktop header */}
       <div className="flex justify-between items-center px-4 py-4 h-16 border-b border-gray-200">
-        {isOpen && <img src={logo} alt="HiRekruit" className="h-[20px]" />}
+        {isOpen && (
+          /* Team Note: Sidebar logo now redirects to homepage for better navigation UX */
+          <Link to="/" className="flex items-center">
+            <img src={logo} alt="HiRekruit" className="h-[20px]" />
+          </Link>
+        )}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-1 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
@@ -69,18 +74,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               onClick={() => navigate(item.path)}
               key={item.label}
               className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200
-                ${
-                  isActive
-                    ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
-                    : "text-gray-600 hover:bg-gray-50"
+                ${isActive
+                  ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
+                  : "text-gray-600 hover:bg-gray-50"
                 }`}
               title={!isOpen ? item.label : ""}
             >
               <IconComponent size={20} className="flex-shrink-0" />
               <span
-                className={`transition-all duration-200 overflow-hidden ${
-                  isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
-                }`}
+                className={`transition-all duration-200 overflow-hidden ${isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+                  }`}
               >
                 {item.label}
               </span>

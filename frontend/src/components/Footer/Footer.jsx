@@ -216,8 +216,8 @@ const Footer = () => {
                 const Icon = contact.icon;
                 return (
                   <a
-                    // key={contact.label}
-                    // href={contact.href}
+                    key={contact.label}
+                    href={contact.href}
                     className="flex items-center gap-2.5 text-gray-400 hover:text-white text-sm transition-colors duration-200 group"
                   >
                     <div className="w-8 h-8 border border-gray-700 group-hover:border-white flex items-center justify-center transition-colors">
