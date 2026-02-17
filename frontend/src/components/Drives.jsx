@@ -18,6 +18,10 @@ const Drives = () => {
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState(null);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const drivesPerPage = 6;
+
   // Fetch HR info when component mounts
   useEffect(() => {
     const fetchHRInfo = async () => {
@@ -143,6 +147,19 @@ const Drives = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Team Note: Added pagination for Drives list to improve UX when many drives exist
+  // Reset to first page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
+
+  const totalPages = Math.ceil(filteredDrives.length / drivesPerPage);
+  const startIndex = (currentPage - 1) * drivesPerPage;
+  const currentDrives = filteredDrives.slice(
+    startIndex,
+    startIndex + drivesPerPage
+  );
+
   const handleCreateNewDrive = () => {
     navigate("/dashboard/drive-creation");
   };
@@ -155,6 +172,25 @@ const Drives = () => {
   // Calculate stats
   const ongoingDrives = drives.filter((drive) => isDriveOngoing(drive));
   const completedDrives = drives.filter((drive) => isDriveCompleted(drive));
+
+  // Handle drive deletion
+  const handleDeleteDrive = async (driveId) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/drive/${driveId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete drive");
+      }
+
+      setDrives((prev) => prev.filter((d) => d._id !== driveId));
+      toast.success("Drive deleted successfully");
+    } catch (err) {
+      console.error("Error deleting drive:", err);
+      toast.error("Failed to delete drive. Please try again.");
+    }
+  };
 
   if (loading) {
     return <Loader />;
@@ -278,15 +314,52 @@ const Drives = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredDrives.map((drive) => (
-            <DriveCard
-              key={drive._id}
-              drive={drive}
-              onView={() => handleViewDrive(drive._id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {currentDrives.map((drive) => (
+              <DriveCard
+                key={drive._id}
+                drive={drive}
+                onView={() => handleViewDrive(drive._id)}
+                onDelete={handleDeleteDrive}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          {filteredDrives.length > 0 && (
+            <div className="flex justify-center items-center gap-2 mt-8 mb-8">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${currentPage === i + 1
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors text-sm font-medium"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
