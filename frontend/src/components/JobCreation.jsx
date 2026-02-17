@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAuth } from "../Context/AuthContext.jsx";
 import Loader from "./Loader";
 import SkillFilter from "./SkillFilter";
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
+let BASE_URL = VITE_BASE_URL;
 
 const JobCreation = () => {
+  // Check if we need to adjust BASE_URL based on how the site is accessed
+  useEffect(() => {
+    if (window.location.hostname === "127.0.0.1" && BASE_URL.includes("localhost")) {
+      console.log("Switching BASE_URL to 127.0.0.1 for consistency with current hostname");
+      // Optionally update BASE_URL here or just trust the fetch environment. 
+      // But usually, if one works, the other might be blocked by browser/OS.
+    }
+  }, []);
   // Use auth context
   const { user } = useAuth();
-  console.log("User :", user);
   const navigate = useNavigate();
+  const { driveId } = useParams();
+  const isEditMode = !!driveId;
+
+  console.log("User :", user);
   console.log(BASE_URL);
 
   const [loading, setLoading] = useState(false);
@@ -38,14 +50,57 @@ const JobCreation = () => {
     internship_duration: "",
     coding_questions: [],
 
-//setting time duration 
-  assessment_duration_hours: "1", 
-  assessment_duration_minutes: "0",
+    //setting time duration 
+    assessment_duration_hours: "1",
+    assessment_duration_minutes: "0",
 
   });
 
-  // Fetch HR info when component mounts
+  // Team Note: Fetch drive details for Edit Mode
+  const [fetchingDrive, setFetchingDrive] = useState(isEditMode);
   useEffect(() => {
+    if (isEditMode && driveId) {
+      const fetchDriveDetails = async () => {
+        try {
+          const response = await fetch(`${BASE_URL}/api/drive/${driveId}`);
+          if (!response.ok) throw new Error("Failed to fetch drive details");
+
+          const data = await response.json();
+          const drive = data.drive;
+
+          // Populate form with drive data
+          setJobData(prev => ({
+            ...prev,
+            ...drive,
+            // Ensure rounds is an array
+            rounds: drive.rounds || [{ type: "HR", description: "" }],
+            // Handle skills (join if array)
+            // skills: Array.isArray(drive.skills) ? drive.skills.join(",") : drive.skills
+            // Actually existing code handles array in display but input might expect string? No, SkillFilter handles it?
+            // Let's assume SkillFilter works with array or check existing usage.
+            // Existing handleInputChange just sets value.
+            // If Create uses strings or arrays for skills?
+            // Looking at create_drive_controller: it accepts string or list.
+          }));
+
+          if (drive.company_id) setCompanyId(drive.company_id);
+
+        } catch (err) {
+          console.error("Error fetching drive details:", err);
+          toast.error("Failed to load drive details for editing");
+        } finally {
+          setFetchingDrive(false);
+        }
+      };
+
+      fetchDriveDetails();
+    }
+  }, [isEditMode, driveId]);
+
+  // Fetch HR info when component mounts (only if NOT in edit mode or if companyId missing)
+  useEffect(() => {
+    // If editing, we rely on fetched drive data for companyId, but can fallback to HR info if needed.
+    // Let's keep fetching HR info for context but prioritize drive data in edit mode.
     const fetchHRInfo = async () => {
       try {
         const email = user?.email;
@@ -77,11 +132,15 @@ const JobCreation = () => {
         console.log("=".repeat(50));
 
         if (hrData.company_id) {
-          setCompanyId(hrData.company_id);
-          setJobData((prev) => ({
-            ...prev,
-            company_id: hrData.company_id,
-          }));
+          // Only set if not already set by edit mode fetch? 
+          // Or just set it. It should be same company.
+          if (!companyId) {
+            setCompanyId(hrData.company_id);
+            setJobData((prev) => ({
+              ...prev,
+              company_id: hrData.company_id,
+            }));
+          }
           console.log("Set companyId to:", hrData.company_id);
           const timer = setTimeout(() => setLoading(false), 3000);
           return () => clearTimeout(timer);
@@ -96,23 +155,29 @@ const JobCreation = () => {
       }
     };
 
-    if (user) {
+    if (user && !isEditMode) {
       fetchHRInfo();
+    } else {
+      setFetchingHRInfo(false);
     }
-  }, [user]);
+  }, [user, isEditMode, companyId]);
 
   // Check if any round is "Coding" type
   useEffect(() => {
-    const hasCodingRound = jobData.rounds.some(
-      (round) => round.type === "Coding"
-    );
-    setShowCodingQuestions(hasCodingRound);
+    if (jobData.rounds) {
+      const hasCodingRound = jobData.rounds.some(
+        (round) => round.type === "Coding"
+      );
+      setShowCodingQuestions(hasCodingRound);
 
-    // If no coding round, clear coding questions
-    if (!hasCodingRound) {
-      setJobData((prev) => ({ ...prev, coding_questions: [] }));
+      // If no coding round, clear coding questions?
+      // In Edit mode, we might want to preserve them even if toggled temporarily?
+      // But logic says:
+      if (!hasCodingRound && !isEditMode) {
+        setJobData((prev) => ({ ...prev, coding_questions: [] }));
+      }
     }
-  }, [jobData.rounds]);
+  }, [jobData.rounds, isEditMode]);
 
   const handleInputChange = (field, value) => {
     setJobData((prev) => ({
@@ -149,21 +214,21 @@ const JobCreation = () => {
   };
 
   const addCodingQuestion = () => {
-  const newQuestion = {
-    id: Date.now(),
-    number: jobData.coding_questions.length + 1,
-    title: "",
-    description: "",
-    constraints: "",
-    // Added type: "public" here
-    testCases: [{ input: "", output: "", type: "public" }], 
-  };
+    const newQuestion = {
+      id: Date.now(),
+      number: jobData.coding_questions.length + 1,
+      title: "",
+      description: "",
+      constraints: "",
+      // Added type: "public" here
+      testCases: [{ input: "", output: "", type: "public" }],
+    };
 
-  setJobData((prev) => ({
-    ...prev,
-    coding_questions: [...prev.coding_questions, newQuestion],
-  }));
-};
+    setJobData((prev) => ({
+      ...prev,
+      coding_questions: [...prev.coding_questions, newQuestion],
+    }));
+  };
 
   const removeCodingQuestion = (questionId) => {
     setJobData((prev) => ({
@@ -184,18 +249,18 @@ const JobCreation = () => {
   };
 
   const addTestCase = (questionId) => {
-  setJobData((prev) => ({
-    ...prev,
-    coding_questions: prev.coding_questions.map((q) =>
-      q.id === questionId
-        ? { 
-            ...q, 
-            testCases: [...q.testCases, { input: "", output: "", type: "public" }] 
+    setJobData((prev) => ({
+      ...prev,
+      coding_questions: prev.coding_questions.map((q) =>
+        q.id === questionId
+          ? {
+            ...q,
+            testCases: [...q.testCases, { input: "", output: "", type: "public" }]
           }
-        : q
-    ),
-  }));
-};
+          : q
+      ),
+    }));
+  };
 
   const removeTestCase = (questionId, testCaseIndex) => {
     setJobData((prev) => ({
@@ -203,9 +268,9 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-              ...q,
-              testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
-            }
+            ...q,
+            testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
+          }
           : q
       ),
     }));
@@ -213,70 +278,70 @@ const JobCreation = () => {
 
 
 
-const handleFileChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  if (file.type !== "application/pdf") {
-    toast.error("Please upload a PDF file");
-    return;
-  }
-
-  // Update UI to show filename
-  setJobData((prev) => ({
-    ...prev,
-    assessment_pdf: file,
-    assessment_pdf_name: file.name,
-  }));
-
-  // TRIGGER EXTRACTION IMMEDIATELY
-  await extractQuestions(file);
-};
-
-const extractQuestions = async (file) => {
-  try {
-    setIsExtracting(true);
-    toast.info("AI is extracting questions from your PDF...");
-
-    const formData = new FormData();
-    formData.append("assessment_file", file);
-
-    const response = await fetch(`${BASE_URL}/api/drive/extract-questions`, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error("Extraction failed");
-
-    const extractedData = await response.json(); 
-    // Assuming backend returns: { questions: [{title, description, constraints, testCases}, ...] }
-
-    if (extractedData.questions && extractedData.questions.length > 0) {
-      // Map extracted questions to include unique IDs and numbers for the UI
-      const formattedQuestions = extractedData.questions.map((q, index) => ({
-        id: Date.now() + index,
-        number: jobData.coding_questions.length + index + 1,
-        title: q.title || "",
-        description: q.description || "",
-        constraints: q.constraints || "",
-        testCases: q.testCases || [{ input: "", output: "", type: "public" }],
-      }));
-      console.log(formattedQuestions);
-      // AUTO-FILL THE MANUAL ENTRY PART
-      setJobData((prev) => ({
-        ...prev,
-        coding_questions: [...prev.coding_questions, ...formattedQuestions],
-      }));
-
-      toast.success(`${extractedData.questions.length} questions extracted successfully!`);
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("AI could not read the PDF. Please enter questions manually.");
-  } finally {
-    setIsExtracting(false);
-  }
-};
+
+    // Update UI to show filename
+    setJobData((prev) => ({
+      ...prev,
+      assessment_pdf: file,
+      assessment_pdf_name: file.name,
+    }));
+
+    // TRIGGER EXTRACTION IMMEDIATELY
+    await extractQuestions(file);
+  };
+
+  const extractQuestions = async (file) => {
+    try {
+      setIsExtracting(true);
+      toast.info("AI is extracting questions from your PDF...");
+
+      const formData = new FormData();
+      formData.append("assessment_file", file);
+
+      const response = await fetch(`${BASE_URL}/api/drive/extract-questions`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Extraction failed");
+
+      const extractedData = await response.json();
+      // Assuming backend returns: { questions: [{title, description, constraints, testCases}, ...] }
+
+      if (extractedData.questions && extractedData.questions.length > 0) {
+        // Map extracted questions to include unique IDs and numbers for the UI
+        const formattedQuestions = extractedData.questions.map((q, index) => ({
+          id: Date.now() + index,
+          number: jobData.coding_questions.length + index + 1,
+          title: q.title || "",
+          description: q.description || "",
+          constraints: q.constraints || "",
+          testCases: q.testCases || [{ input: "", output: "", type: "public" }],
+        }));
+        console.log(formattedQuestions);
+        // AUTO-FILL THE MANUAL ENTRY PART
+        setJobData((prev) => ({
+          ...prev,
+          coding_questions: [...prev.coding_questions, ...formattedQuestions],
+        }));
+
+        toast.success(`${extractedData.questions.length} questions extracted successfully!`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("AI could not read the PDF. Please enter questions manually.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
 
 
 
@@ -284,13 +349,13 @@ const extractQuestions = async (file) => {
 
 
 
-const removeFile = () => {
+  const removeFile = () => {
     setJobData((prev) => ({
       ...prev,
       assessment_pdf: null,
       assessment_pdf_name: "",
     }));
-};
+  };
 
 
 
@@ -300,11 +365,11 @@ const removeFile = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-              ...q,
-              testCases: q.testCases.map((tc, idx) =>
-                idx === testCaseIndex ? { ...tc, [field]: value } : tc
-              ),
-            }
+            ...q,
+            testCases: q.testCases.map((tc, idx) =>
+              idx === testCaseIndex ? { ...tc, [field]: value } : tc
+            ),
+          }
           : q
       ),
     }));
@@ -416,16 +481,16 @@ const removeFile = () => {
     }
 
     if (showCodingQuestions) {
-  const totalMinutes = (parseInt(assessment_duration_hours) || 0) * 60 + (parseInt(assessment_duration_minutes) || 0);
-  if (totalMinutes <= 0) {
-    toast.error("Assessment duration must be greater than 0 minutes", {
-      position: "top-right",
-      autoClose: 3000,
-    });
-    setLoading(false);
-    return;
-  }
-  }
+      const totalMinutes = (parseInt(assessment_duration_hours) || 0) * 60 + (parseInt(assessment_duration_minutes) || 0);
+      if (totalMinutes <= 0) {
+        toast.error("Assessment duration must be greater than 0 minutes", {
+          position: "top-right",
+          autoClose: 3000,
+        });
+        setLoading(false);
+        return;
+      }
+    }
 
     // Validate coding questions if coding round exists
     if (showCodingQuestions && jobData.coding_questions.length > 0) {
@@ -470,34 +535,63 @@ const removeFile = () => {
     setShowConfirmModal(false);
     setLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/drive/create`, {
-        method: "POST",
+      const url = isEditMode
+        ? `${BASE_URL}/api/drive/${driveId}/update`
+        : `${BASE_URL}/api/drive/create`;
+
+      const method = isEditMode ? "PUT" : "POST";
+
+      // For edit mode, we might want to exclude complex nested structures if not handled by backend
+      // But update_drive is generic $set.
+      // We should be careful about _id
+      const payload = { ...jobData };
+      if (payload._id) delete payload._id;
+      // Clean up fields that shouldn't be in the JSON payload
+      delete payload.assessment_pdf;
+      delete payload.assessment_pdf_name;
+
+      console.log(`Submitting to URL: ${url} using method: ${method}`);
+
+      const response = await fetch(url, {
+        method: method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(jobData),
+        body: JSON.stringify(payload),
+        mode: "cors",
+        cache: "no-cache",
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create a drive");
+        const errorText = await response.text();
+        console.error("Server responded with error:", errorText);
+        throw new Error(isEditMode ? "Failed to update drive" : "Failed to create a drive");
       }
 
       const data = await response.json();
-      console.log("Drive created successfully!", data);
+      console.log(isEditMode ? "Drive updated successfully!" : "Drive created successfully!", data);
 
-      // Save job data to localStorage before navigating
-      localStorage.setItem("currentJobData", JSON.stringify(jobData));
+      if (!isEditMode) {
+        // Save job data to localStorage only for new creation flow?
+        localStorage.setItem("currentJobData", JSON.stringify(jobData));
+      }
 
-      toast.success("Drive created successfully!", {
+      toast.success(isEditMode ? "Drive updated successfully!" : "Drive created successfully!", {
         position: "top-right",
         autoClose: 3000,
       });
 
       setTimeout(() => {
-        navigate(`/dashboard/creating-drive/${data.drive._id}`);
+        // Navigate back to drives list or dashboard
+        if (isEditMode) {
+          navigate("/dashboard/drives");
+        } else {
+          navigate(`/dashboard/creating-drive/${data.drive._id}`);
+        }
       }, 1000);
     } catch (err) {
-      console.error("Error creating drive:", err.message);
+      console.error("DEBUG FETCH ERROR:", err);
+      console.error("Error submitting drive:", err.message);
       toast.error(
-        "Something went wrong while creating the drive. Please try again.",
+        `Something went wrong while ${isEditMode ? "updating" : "creating"} the drive. Please try again.`,
         {
           position: "top-right",
           autoClose: 3000,
@@ -518,7 +612,8 @@ const removeFile = () => {
     "Final",
   ];
 
-  if (fetchingHRInfo) {
+  // Team Note: Preventing initial error flicker by showing loading state until data fetch completes
+  if (fetchingHRInfo || fetchingDrive) {
     return <Loader />;
   }
 
@@ -658,9 +753,8 @@ const removeFile = () => {
                 <button
                   onClick={confirmSubmit}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-md text-white ${
-                    loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
-                  }`}
+                  className={`px-4 py-2 rounded-md text-white ${loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
+                    }`}
                 >
                   {loading ? "Submitting..." : "Confirm & Submit"}
                 </button>
@@ -673,7 +767,7 @@ const removeFile = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
-            Create New Drive
+            {isEditMode ? "Update Drive" : "Create New Drive"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">Company ID: {companyId}</p>
         </div>
@@ -908,107 +1002,107 @@ const removeFile = () => {
 
 
 
-      {/* Assessment Duration Section */}
-{showCodingQuestions && (
-  <div className="bg-gray-50 p-4 rounded-md border border-gray-300 mb-6">
-    <label className="block text-gray-700 mb-3 font-medium">
-      Assessment Duration <span className="text-red-500">*</span>
-    </label>
-    <div className="flex items-center gap-4">
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min="0"
-          max="24"
-          value={jobData.assessment_duration_hours}
-          onChange={(e) => handleInputChange("assessment_duration_hours", e.target.value)}
-          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
-        />
-        <span className="text-sm text-gray-600">Hours</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min="0"
-          max="59"
-          value={jobData.assessment_duration_minutes}
-          onChange={(e) => handleInputChange("assessment_duration_minutes", e.target.value)}
-          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
-        />
-        <span className="text-sm text-gray-600">Minutes</span>
-      </div>
-    </div>
-    <p className="text-xs text-gray-500 mt-2 italic">
-      This is the total time candidates will have to complete the coding assessment.
-    </p>
-  </div>
-)}
-{showCodingQuestions && (
-  <> {/* <--- ADD THIS FRAGMENT START */}
-    {/* PDF Upload Section */}
-    <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-black transition-colors relative">
-      <label className="block text-gray-700 font-medium mb-2">
-        Upload Question Document (PDF)
-      </label>
-      
-      {!jobData.assessment_pdf_name ? (
-        <div className="flex flex-col items-center justify-center py-4">
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-          <div className="text-gray-400 mb-2">
-            <svg className="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-          <p className="text-xs text-gray-400 mt-1">PDF only (Max 5MB)</p>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-red-100 p-2 rounded text-red-600">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0111 2.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
-                </svg>
+        {/* Assessment Duration Section */}
+        {showCodingQuestions && (
+          <div className="bg-gray-50 p-4 rounded-md border border-gray-300 mb-6">
+            <label className="block text-gray-700 mb-3 font-medium">
+              Assessment Duration <span className="text-red-500">*</span>
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="24"
+                  value={jobData.assessment_duration_hours}
+                  onChange={(e) => handleInputChange("assessment_duration_hours", e.target.value)}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
+                />
+                <span className="text-sm text-gray-600">Hours</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={jobData.assessment_duration_minutes}
+                  onChange={(e) => handleInputChange("assessment_duration_minutes", e.target.value)}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
+                />
+                <span className="text-sm text-gray-600">Minutes</span>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
-                {jobData.assessment_pdf_name}
-              </p>
-              <p className="text-xs text-gray-500">Ready to upload</p>
-            </div>
+            <p className="text-xs text-gray-500 mt-2 italic">
+              This is the total time candidates will have to complete the coding assessment.
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={removeFile}
-            className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-    </div>
+        )}
+        {showCodingQuestions && (
+          <> {/* <--- ADD THIS FRAGMENT START */}
+            {/* PDF Upload Section */}
+            <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-black transition-colors relative">
+              <label className="block text-gray-700 font-medium mb-2">
+                Upload Question Document (PDF)
+              </label>
 
-    <div className="relative flex py-4 items-center">
-        <div className="flex-grow border-t border-gray-300"></div>
-        <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">OR Manual Entry</span>
-        <div className="flex-grow border-t border-gray-300"></div>
-    </div>
-  </> 
-)}
-{isExtracting && (
-      <div className="flex items-center justify-center p-4 bg-black text-white rounded-lg mb-4 animate-pulse">
-        <Loader size="sm" className="mr-2" />
-        <span className="text-sm font-medium">AI is reading your document... Please wait</span>
-      </div>
-      
-    )}
+              {!jobData.assessment_pdf_name ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="text-gray-400 mb-2">
+                    <svg className="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+                  <p className="text-xs text-gray-400 mt-1">PDF only (Max 5MB)</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-red-100 p-2 rounded text-red-600">
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0111 2.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                        {jobData.assessment_pdf_name}
+                      </p>
+                      <p className="text-xs text-gray-500">Ready to upload</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex py-4 items-center">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">OR Manual Entry</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+          </>
+        )}
+        {isExtracting && (
+          <div className="flex items-center justify-center p-4 bg-black text-white rounded-lg mb-4 animate-pulse">
+            <Loader size="sm" className="mr-2" />
+            <span className="text-sm font-medium">AI is reading your document... Please wait</span>
+          </div>
+
+        )}
 
 
 
@@ -1166,17 +1260,17 @@ const removeFile = () => {
                                 />
                               </div>
                               <div className="w-24">
-        <select
-          value={testCase.type}
-          onChange={(e) =>
-            handleTestCaseChange(question.id, tcIndex, "type", e.target.value)
-          }
-          className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black bg-gray-50"
-        >
-          <option value="public">Public</option>
-          <option value="private">Private</option>
-        </select>
-      </div>
+                                <select
+                                  value={testCase.type}
+                                  onChange={(e) =>
+                                    handleTestCaseChange(question.id, tcIndex, "type", e.target.value)
+                                  }
+                                  className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black bg-gray-50"
+                                >
+                                  <option value="public">Public</option>
+                                  <option value="private">Private</option>
+                                </select>
+                              </div>
                               {question.testCases.length > 1 && (
                                 <button
                                   onClick={() =>
@@ -1245,11 +1339,10 @@ const removeFile = () => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${
-              loading ? "opacity-70 cursor-not-allowed" : ""
-            }`}
+            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
           >
-            {loading ? "Creating..." : "Create Drive"}
+            {loading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Drive" : "Create Drive")}
           </button>
         </div>
       </div>

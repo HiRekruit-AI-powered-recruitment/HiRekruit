@@ -268,9 +268,8 @@ const Home = () => {
                 <span className="min-w-44">
                   {typewriterText}
                   <span
-                    className={`${
-                      showCursor ? "opacity-100" : "opacity-0"
-                    } transition-opacity`}
+                    className={`${showCursor ? "opacity-100" : "opacity-0"
+                      } transition-opacity`}
                   >
                     |
                   </span>
@@ -693,9 +692,8 @@ const Home = () => {
             <div className="relative group">
               <div className="absolute inset-0 bg-gray-900 rounded-3xl blur-xl opacity-5 group-hover:opacity-10 transition-opacity duration-500"></div>
               <div
-                className="relative bg-gradient-to-r from-gray-200 to-white
-
- p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
+                // Ensuring all feature cards have equal height for consistent UI
+                className="relative bg-gradient-to-r from-gray-200 to-white h-full p-8 rounded-3xl border-2 border-gray-200 hover:border-gray-900 transition-all duration-500 hover:shadow-xl text-center"
               >
                 <div className="w-16 h-16 bg-gray-900 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">1</span>

@@ -15,13 +15,15 @@ import {
   Computer,
   Clock,
 } from "lucide-react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Loader from "../components/Loader";
 
 const BaseURL = import.meta.env.VITE_BASE_URL;
 
 const Process = () => {
   const { driveId } = useParams();
+  // Team Note: Added for Back button navigation only
+  const navigate = useNavigate();
 
   // State Management
   const [currentStep, setCurrentStep] = useState(null);
@@ -229,8 +231,8 @@ const Process = () => {
   const isLastStep = currentStep === steps.length - 1;
 
   // Determine if the current round is marked as completed in driveData
-  const activeRoundInfo = currentStepData.isRound 
-    ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber) 
+  const activeRoundInfo = currentStepData.isRound
+    ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber)
     : null;
   const isCurrentRoundCompleted = activeRoundInfo?.completed === "yes";
 
@@ -238,6 +240,13 @@ const Process = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-6 py-10">
       <div className="max-w-5xl w-full">
         <div className="text-center mb-10">
+          {/* Team Note: Back button added so user can return without going to Drives manually */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black mb-4"
+          >
+            ← Back
+          </button>
           <h1 className="text-3xl font-bold text-slate-800">Hiring Pipeline</h1>
           <p className="text-slate-500 mt-2">Drive ID: {driveId} • {driveData?.role}</p>
         </div>
@@ -252,9 +261,8 @@ const Process = () => {
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
               <div className="flex flex-col items-center min-w-[100px]">
-                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${
-                  index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
-                }`}>
+                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
+                  }`}>
                   {index < currentStep ? <Check size={24} /> : React.createElement(step.icon, { size: 24 })}
                 </div>
                 <p className={`text-[10px] font-bold mt-2 uppercase tracking-tighter ${index <= currentStep ? "text-black" : "text-slate-400"}`}>
@@ -275,7 +283,7 @@ const Process = () => {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h2 className="text-2xl font-bold text-slate-800">
-                {currentStepData.label} 
+                {currentStepData.label}
                 {isCurrentRoundCompleted && <span className="ml-3 text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">Completed</span>}
               </h2>
               <p className="text-slate-500 mt-1">{currentStepData.description}</p>
@@ -341,8 +349,8 @@ const Process = () => {
                         <div className="flex justify-between text-xs">
                           <span className="text-slate-500">Current Deadline</span>
                           <span className={`font-bold ${deadline ? "text-green-600" : "text-red-600"}`}>
-  {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
-</span>
+                            {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
+                          </span>
                         </div>
                         <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                           <div className="bg-black h-full" style={{ width: `${rp.completion_percentage}%` }} />

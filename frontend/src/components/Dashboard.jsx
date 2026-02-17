@@ -44,7 +44,11 @@ const Dashboard = () => {
       const toAdd = newFiles.filter(
         (f) => !existing.has(`${f.webkitRelativePath || f.name}|${f.size}`)
       );
-      if (toAdd.length) setFiles((prev) => [...prev, ...toAdd]);
+      if (toAdd.length) {
+        setFiles((prev) => [...prev, ...toAdd]);
+        // Team Note: Showing notification when resume is selected
+        toast.success("Resume selected successfully");
+      }
     },
     [files]
   );
@@ -77,7 +81,8 @@ const Dashboard = () => {
 
       const result = await response.json();
       if (response.ok) {
-        toast.success("Resumes processed successfully!");
+        // Team Note: Showing notification after resume processing completes
+        toast.success("Resume processed successfully");
         console.log("Result:", result);
         navigate("/dashboard/drives");
       } else {
@@ -113,11 +118,10 @@ const Dashboard = () => {
                 disabled={
                   !jobData?.role?.trim() || files.length === 0 || processing
                 }
-                className={`px-4 py-2 text-sm rounded-md ${
-                  !jobData?.role?.trim() || files.length === 0 || processing
+                className={`px-4 py-2 text-sm rounded-md ${!jobData?.role?.trim() || files.length === 0 || processing
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : "bg-gray-900 text-white hover:bg-black"
-                }`}
+                  }`}
               >
                 {processing ? "Processing..." : "Process Resumes"}
               </button>
