@@ -62,6 +62,11 @@ const InterviewPage = () => {
     useState(false);
   const [cameraPermission, setCameraPermission] = useState("prompt");
 
+  // Resume support (localStorage)
+  const [initialConversation, setInitialConversation] = useState(null);
+  const [resumePending, setResumePending] = useState(false);
+  const resumeAutoStartRef = useRef(false);
+
   // AI Avatar states
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -161,6 +166,7 @@ const InterviewPage = () => {
     interviewAlreadyCompleted,
     isHR,
     prompt,
+    initialConversation,
     setIsConnecting,
     setConnectionError,
     setIsVapiReady,
@@ -175,6 +181,151 @@ const InterviewPage = () => {
     livekitRoomRef, // 🔴 PASS THIS INSTEAD OF NULL
     localVideoRef, // 🔴 NEW: Pass localVideoRef for synchronization
   });
+
+  const interviewStorageKey = useMemo(() => {
+    if (!driveCandidateId || !interviewType) return null;
+    return `interview_state:${driveCandidateId}:${String(interviewType).toLowerCase()}`;
+  }, [driveCandidateId, interviewType]);
+
+  // Load saved state (candidate only). This lets VAPI start with prior context after reload.
+  useEffect(() => {
+    if (isHR) return;
+    if (!interviewStorageKey) return;
+
+    try {
+      const raw = localStorage.getItem(interviewStorageKey);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw);
+      if (!parsed) return;
+
+      const ts = parsed.savedAt;
+      const isFresh =
+        typeof ts === "number" && Date.now() - ts < 6 * 60 * 60 * 1000;
+      if (!isFresh) {
+        localStorage.removeItem(interviewStorageKey);
+        return;
+      }
+
+      if (
+        Array.isArray(parsed.conversation) &&
+        parsed.conversation.length > 0
+      ) {
+        setInitialConversation(parsed.conversation);
+        setConversation(parsed.conversation);
+        setResumePending(true);
+      }
+
+      if (
+        Array.isArray(parsed.fullTranscript) &&
+        parsed.fullTranscript.length > 0
+      ) {
+        setFullTranscript(parsed.fullTranscript);
+      }
+
+      if (
+        typeof parsed.currentQuestion === "string" &&
+        parsed.currentQuestion
+      ) {
+        setCurrentQuestion(parsed.currentQuestion);
+      }
+
+      console.log("♻️ Restored interview state from localStorage", {
+        key: interviewStorageKey,
+        conversationLength: parsed.conversation?.length || 0,
+        transcriptLength: parsed.fullTranscript?.length || 0,
+      });
+    } catch (e) {
+      console.warn("⚠️ Failed to restore interview state", e);
+    }
+  }, [
+    isHR,
+    interviewStorageKey,
+    setConversation,
+    setCurrentQuestion,
+    setFullTranscript,
+  ]);
+
+  // Auto-resume: once core dependencies + VAPI are ready, start a new VAPI call seeded with previous context.
+  useEffect(() => {
+    if (isHR) return;
+    if (!resumePending) return;
+    if (resumeAutoStartRef.current) return;
+    if (interviewAlreadyCompleted) return;
+    if (connectionError) return;
+
+    const depsOk =
+      dependencyStates.completionCheck &&
+      dependencyStates.permissions &&
+      dependencyStates.livekit;
+
+    if (!depsOk) return;
+    if (!isVapiReady) return;
+    if (interviewStarted) return;
+    if (isConnecting) return;
+
+    resumeAutoStartRef.current = true;
+    console.log(
+      "♻️ Auto-resuming interview: starting VAPI with previous context",
+    );
+    handleStartInterview();
+  }, [
+    isHR,
+    resumePending,
+    interviewAlreadyCompleted,
+    connectionError,
+    dependencyStates.completionCheck,
+    dependencyStates.permissions,
+    dependencyStates.livekit,
+    isVapiReady,
+    interviewStarted,
+    isConnecting,
+    handleStartInterview,
+  ]);
+
+  // Persist state (candidate only)
+  useEffect(() => {
+    if (isHR) return;
+    if (!interviewStorageKey) return;
+
+    // Save once interview has started OR we have some conversation
+    if (!interviewStarted && (!conversation || conversation.length === 0))
+      return;
+
+    try {
+      const payload = {
+        savedAt: Date.now(),
+        driveCandidateId,
+        interviewType,
+        interviewStarted,
+        currentQuestion,
+        conversation,
+        fullTranscript,
+      };
+      localStorage.setItem(interviewStorageKey, JSON.stringify(payload));
+    } catch (e) {
+      console.warn("⚠️ Failed to persist interview state", e);
+    }
+  }, [
+    isHR,
+    interviewStorageKey,
+    driveCandidateId,
+    interviewType,
+    interviewStarted,
+    currentQuestion,
+    conversation,
+    fullTranscript,
+  ]);
+
+  const clearSavedInterviewState = useCallback(() => {
+    if (isHR) return;
+    if (!interviewStorageKey) return;
+    try {
+      localStorage.removeItem(interviewStorageKey);
+    } catch (e) {
+      console.warn("⚠️ Failed to clear interview state", e);
+    }
+  }, [isHR, interviewStorageKey]);
 
   // Check if interview is already completed (only for candidates)
   const checkInterviewCompletion = useCallback(async () => {
@@ -459,6 +610,9 @@ const InterviewPage = () => {
     setIsRecording(false);
     setIsConnecting(false);
 
+    // Clear persisted state once the interview ends (candidate)
+    clearSavedInterviewState();
+
     if (!isHR) {
       console.log("✅ Navigating to completion page");
       navigate("/interview-completion", {
@@ -485,6 +639,7 @@ const InterviewPage = () => {
     localTracks,
     isHR,
     vapiClientRef,
+    clearSavedInterviewState,
   ]);
 
   // HR Intervention Functions
