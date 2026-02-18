@@ -16,6 +16,9 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const DriveCard = ({ drive, onView, onDelete }) => {
+  // Guard: Prevent rendering stale/deleted drive objects
+  if (!drive) return null;
+
   const navigate = useNavigate();
   const {
     _id,

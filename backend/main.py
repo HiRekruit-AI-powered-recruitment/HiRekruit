@@ -27,8 +27,6 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True
 )
 
-
-
 # Enable CORS
 CORS(
     app,
