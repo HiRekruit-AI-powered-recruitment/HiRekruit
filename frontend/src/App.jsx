@@ -39,6 +39,7 @@ import SignUp from "./pages/SignUp";
 import ForgotPassword from "./pages/ForgotPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
+import CandidateDetails from "./pages/CandidateDetails";
 import DashboardHome from "./components/DashboardHome";
 import AccessibilityPage from "./components/Footer/Accessibility";
 import CookiePolicy from "./components/Footer/CookiePolicy";
@@ -128,6 +129,7 @@ function AppContent() {
           <Route path="process/:driveId" element={<Process />} />
           <Route path="resumes" element={<ResumeLibrary />} />
           <Route path="shortlisted" element={<Shortlisted />} />
+          <Route path="candidate/:candidateId" element={<CandidateDetails />} />
           <Route path="selected-candidates" element={<SelectedCandidates />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="calendar" element={<Calendar />} />

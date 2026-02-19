@@ -80,7 +80,12 @@ const Drives = () => {
 
         const data = await response.json();
         console.log("All drives : ", data.drives);
-        setDrives(data.drives);
+
+        // Fix: Latest created drive should appear on top
+        const sortedDrives = (data.drives || []).sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+        setDrives(sortedDrives);
       } catch (err) {
         console.error("Error fetching drives:", err.message);
         toast.error("Could not load drives. Please try again.");
@@ -184,6 +189,8 @@ const Drives = () => {
         throw new Error("Failed to delete drive");
       }
 
+      // Fix: Prevent delete flicker + stale render issue for all users
+      // Immediately update the drives state by filtering out the deleted drive
       setDrives((prev) => prev.filter((d) => d._id !== driveId));
       toast.success("Drive deleted successfully");
     } catch (err) {
@@ -342,8 +349,8 @@ const Drives = () => {
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${currentPage === i + 1
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "border-gray-300 hover:bg-gray-50"
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "border-gray-300 hover:bg-gray-50"
                     }`}
                 >
                   {i + 1}

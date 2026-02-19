@@ -70,28 +70,39 @@ const Dashboard = () => {
         formData.append("resumes", file);
       });
 
+      // Ensure BASE_URL is valid
+      const apiBaseUrl = BASE_URL || "";
+      if (!apiBaseUrl) {
+        console.warn("VITE_BASE_URL is not defined in environment variables. Falling back to relative path.");
+      }
+
       // Add job data and driveid to formData
-      formData.append("jobData", JSON.stringify(jobData));
+      // Backend expects 'skills' and 'job_role' individually as per resume_controllers.py
+      formData.append("skills", jobData.skills || "");
+      formData.append("job_role", jobData.role || "");
       formData.append("drive_id", drive_id);
 
-      const response = await fetch(`${BASE_URL}/api/resume/upload-resumes`, {
+      console.log("Uploading resumes to:", `${apiBaseUrl}/api/resume/upload-resumes`);
+
+      const response = await fetch(`${apiBaseUrl}/api/resume/upload-resumes`, {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
-      if (response.ok) {
-        // Team Note: Showing notification after resume processing completes
-        toast.success("Resume processed successfully");
-        console.log("Result:", result);
-        navigate("/dashboard/drives");
-      } else {
-        toast.error("Failed to process resumes");
-        console.error("Error:", result);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server Error Response:", errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText.substring(0, 100)}`);
       }
+
+      const result = await response.json();
+      // Team Note: Showing notification after resume processing completes
+      toast.success("Resume processed successfully");
+      console.log("Result:", result);
+      navigate("/dashboard/drives");
     } catch (error) {
       console.error("Error uploading resumes:", error);
-      toast.error("Error uploading resumes");
+      toast.error(`Error uploading resumes: ${error.message}`);
     } finally {
       setProcessing(false);
     }
@@ -119,8 +130,8 @@ const Dashboard = () => {
                   !jobData?.role?.trim() || files.length === 0 || processing
                 }
                 className={`px-4 py-2 text-sm rounded-md ${!jobData?.role?.trim() || files.length === 0 || processing
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-gray-900 text-white hover:bg-black"
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-900 text-white hover:bg-black"
                   }`}
               >
                 {processing ? "Processing..." : "Process Resumes"}
