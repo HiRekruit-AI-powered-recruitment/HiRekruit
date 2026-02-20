@@ -43,6 +43,8 @@ import CandidateDetails from "./pages/CandidateDetails";
 import DashboardHome from "./components/DashboardHome";
 import AccessibilityPage from "./components/Footer/Accessibility";
 import CookiePolicy from "./components/Footer/CookiePolicy";
+import Notifications from "./pages/Notifications";
+import Settings from "./pages/Settings";
 
 // assessment pages
 import Assessment from "./pages/Assessment";
@@ -72,7 +74,7 @@ function AppContent() {
 
   // Check if current route starts with any of the hidden paths
   const showChatbot = !hideChatbotRoutes.some((path) =>
-    location.pathname.startsWith(path)
+    location.pathname.startsWith(path),
   );
 
   useGTMPageView();
@@ -133,6 +135,8 @@ function AppContent() {
           <Route path="selected-candidates" element={<SelectedCandidates />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="calendar" element={<Calendar />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="creating-drive/:drive_id" element={<Dashboard />} />
           {/* Single drive dashboard */}
           {/* <Route path=":drive_id" element={<Dashboard />} /> */}
