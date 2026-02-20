@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   X,
@@ -42,6 +42,21 @@ const items = [
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(3); // Mock unread count
+
+  // Mock notification count update (in real app, this would come from context/API)
+  useEffect(() => {
+    // Simulate notification updates
+    const interval = setInterval(() => {
+      setUnreadCount((prev) => {
+        // Randomly increase or decrease for demo
+        const change = Math.random() > 0.7 ? 1 : Math.random() > 0.9 ? -1 : 0;
+        return Math.max(0, Math.min(9, prev + change));
+      });
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside
@@ -69,24 +84,45 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {items.map((item) => {
           const IconComponent = item.icon;
           const isActive = location.pathname === item.path;
+          const showBadge = item.label === "Notifications" && unreadCount > 0;
+
           return (
             <button
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                // Clear unread count when clicking notifications
+                if (item.label === "Notifications") {
+                  setUnreadCount(0);
+                }
+              }}
               key={item.label}
-              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200
-                ${isActive
-                  ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
-                  : "text-gray-600 hover:bg-gray-50"
+              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200 relative
+                ${
+                  isActive
+                    ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
               title={!isOpen ? item.label : ""}
             >
               <IconComponent size={20} className="flex-shrink-0" />
               <span
-                className={`transition-all duration-200 overflow-hidden ${isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
-                  }`}
+                className={`transition-all duration-200 overflow-hidden ${
+                  isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+                }`}
               >
                 {item.label}
               </span>
+
+              {/* Notification Badge */}
+              {showBadge && (
+                <span
+                  className={`absolute top-3 right-3 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-all duration-200 ${
+                    isOpen ? "scale-100" : "scale-90"
+                  }`}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
           );
         })}
