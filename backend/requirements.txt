@@ -31,4 +31,5 @@ livekit-api==1.1.0
 tavily-python==0.7.17
 certifi>=2023.7.22
 sentence-transformers>=2.2.2
-setuptools
+setuptools>=65.0.0
+wheel
