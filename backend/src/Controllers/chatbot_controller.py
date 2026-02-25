@@ -1,7 +1,12 @@
 from src.Agents.ChatBotAgnet import ChatBotAgent
 
 # Create a single instance of ChatBotAgent
-chatbot_agent = ChatBotAgent()
+
+# for implemeting rag 
+# chatbot_agent = ChatBotAgent()
+
+# for implemeting without rag 
+chatbot_agent = ChatBotAgent(fallback=True)
 
 def handle_chatbot_query(user_message: str) -> str:
     """
