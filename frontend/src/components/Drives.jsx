@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Filter, Briefcase } from "lucide-react";
 import DriveCard from "./DriveCard";
+import DeadlineNotifications from "./DeadlineNotifications";
 import Loader from "./Loader";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -178,6 +179,9 @@ const Drives = () => {
           Create New Drive
         </button>
       </div>
+
+      {/* Deadline Notifications */}
+      {companyId && <DeadlineNotifications companyId={companyId} />}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

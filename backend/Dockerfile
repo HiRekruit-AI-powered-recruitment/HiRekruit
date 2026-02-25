@@ -25,6 +25,13 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# ---------- Pre-download SentenceTransformer model ----------
+# Bake the all-MiniLM-L6-v2 model (~80MB) into the Docker image
+# so it doesn't re-download from HuggingFace on every container start.
+# This eliminates the 30-60s delay on first chatbot query.
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2', cache_folder='/app/models')"
+
 # ---------- Copy project files ----------
 COPY . .
 

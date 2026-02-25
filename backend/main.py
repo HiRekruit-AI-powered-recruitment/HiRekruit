@@ -10,6 +10,8 @@ from src.Routes.InterviewFeedback_routes import feedback_bp
 from src.Routes.livekit_routes import livekit_bp
 from src.Config.auth_config import AuthConfig
 from src.Routes.companyinfo_routes import companyinfo_bp
+from src.Routes.notification_routes import notification_bp
+from src.Utils.model_warmup import preload_embedding_model
 
 # for coding-assessment
 from src.CodingAssessment.Routes.problem_routes import problem_bp
@@ -64,10 +66,15 @@ app.register_blueprint(submission_bp, url_prefix="/api/coding-assessment/submiss
 # for feedback
 app.register_blueprint(feedback_bp, url_prefix="/api/interview-feedback")
 
+# for deadline notifications
+app.register_blueprint(notification_bp, url_prefix="/api/notifications")
+
 
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_ENV") == "development"
+    print("Starting backend...")
+    preload_embedding_model()
     print(f"Flask server started on port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug)

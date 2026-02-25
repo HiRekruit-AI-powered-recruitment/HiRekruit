@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   Computer,
   Clock,
+  AlertTriangle,
+  CalendarPlus,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
 import Loader from "../components/Loader";
@@ -32,6 +34,8 @@ const Process = () => {
   const [roundProgress, setRoundProgress] = useState([]);
   const [selectedDeadline, setSelectedDeadline] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [extendDate, setExtendDate] = useState("");
+  const [isExtending, setIsExtending] = useState(false);
 
   const roundTypeIcons = {
     Technical: Settings,
@@ -222,6 +226,47 @@ const Process = () => {
     }
   };
 
+  // --- Deadline helpers ---
+  const getDriveDeadlineInfo = () => {
+    if (!driveData?.end_date) return null;
+    const end = new Date(driveData.end_date);
+    const now = new Date();
+    const diffDays = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+    return {
+      endDate: end,
+      daysRemaining: diffDays,
+      isOverdue: diffDays < 0,
+      isToday: diffDays === 0,
+      isSoon: diffDays > 0 && diffDays <= 3,
+    };
+  };
+
+  const handleExtendDriveDeadline = async () => {
+    if (!extendDate) return alert("Please select a new end date");
+    setIsExtending(true);
+    try {
+      const response = await fetch(`${BaseURL}/api/drive/${driveId}/extend-deadline`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_end_date: extendDate }),
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        alert(err.error || "Failed to extend deadline");
+        return;
+      }
+      setExtendDate("");
+      alert("Deadline extended successfully!");
+      fetchDriveStatus();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsExtending(false);
+    }
+  };
+
+  const deadlineInfo = driveData ? getDriveDeadlineInfo() : null;
+
   if (loading && !driveData) return <Loader message="Fetching workflow..." />;
   if (steps.length === 0) return <Loader message="Initializing stages..." />;
 
@@ -229,8 +274,8 @@ const Process = () => {
   const isLastStep = currentStep === steps.length - 1;
 
   // Determine if the current round is marked as completed in driveData
-  const activeRoundInfo = currentStepData.isRound 
-    ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber) 
+  const activeRoundInfo = currentStepData.isRound
+    ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber)
     : null;
   const isCurrentRoundCompleted = activeRoundInfo?.completed === "yes";
 
@@ -248,13 +293,56 @@ const Process = () => {
           </div>
         )}
 
+        {/* Deadline Warning Banner */}
+        {deadlineInfo && (deadlineInfo.isOverdue || deadlineInfo.isToday || deadlineInfo.isSoon) && (
+          <div className={`mb-6 p-4 rounded-lg border flex flex-col gap-3 ${deadlineInfo.isOverdue
+              ? "bg-red-50 border-red-200"
+              : deadlineInfo.isToday
+                ? "bg-red-50 border-red-200"
+                : "bg-amber-50 border-amber-200"
+            }`}>
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={20} className={deadlineInfo.isOverdue || deadlineInfo.isToday ? "text-red-500" : "text-amber-500"} />
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${deadlineInfo.isOverdue || deadlineInfo.isToday ? "text-red-800" : "text-amber-800"
+                  }`}>
+                  {deadlineInfo.isOverdue
+                    ? `This drive's deadline passed ${Math.abs(deadlineInfo.daysRemaining)} day${Math.abs(deadlineInfo.daysRemaining) !== 1 ? "s" : ""} ago. You can extend it to continue working.`
+                    : deadlineInfo.isToday
+                      ? "This drive's deadline is today! Wrap up or extend if you need more time."
+                      : `Only ${deadlineInfo.daysRemaining} day${deadlineInfo.daysRemaining !== 1 ? "s" : ""} remaining for this drive. Make sure to complete pending steps on time.`
+                  }
+                </p>
+              </div>
+            </div>
+            {(deadlineInfo.isOverdue || deadlineInfo.isToday) && (
+              <div className="flex items-center gap-3 flex-wrap ml-8">
+                <CalendarPlus size={16} className="text-gray-500" />
+                <input
+                  type="date"
+                  className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  value={extendDate}
+                  onChange={(e) => setExtendDate(e.target.value)}
+                  min={new Date().toISOString().split("T")[0]}
+                />
+                <button
+                  onClick={handleExtendDriveDeadline}
+                  disabled={isExtending || !extendDate}
+                  className="px-4 py-1.5 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-black transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  {isExtending ? "Extending..." : "Extend Deadline"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-16 px-4 overflow-x-auto">
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
               <div className="flex flex-col items-center min-w-[100px]">
-                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${
-                  index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
-                }`}>
+                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
+                  }`}>
                   {index < currentStep ? <Check size={24} /> : React.createElement(step.icon, { size: 24 })}
                 </div>
                 <p className={`text-[10px] font-bold mt-2 uppercase tracking-tighter ${index <= currentStep ? "text-black" : "text-slate-400"}`}>
@@ -275,7 +363,7 @@ const Process = () => {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h2 className="text-2xl font-bold text-slate-800">
-                {currentStepData.label} 
+                {currentStepData.label}
                 {isCurrentRoundCompleted && <span className="ml-3 text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">Completed</span>}
               </h2>
               <p className="text-slate-500 mt-1">{currentStepData.description}</p>
@@ -341,8 +429,8 @@ const Process = () => {
                         <div className="flex justify-between text-xs">
                           <span className="text-slate-500">Current Deadline</span>
                           <span className={`font-bold ${deadline ? "text-green-600" : "text-red-600"}`}>
-  {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
-</span>
+                            {deadline ? new Date(deadline).toLocaleString() : "Not Set"}
+                          </span>
                         </div>
                         <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
                           <div className="bg-black h-full" style={{ width: `${rp.completion_percentage}%` }} />

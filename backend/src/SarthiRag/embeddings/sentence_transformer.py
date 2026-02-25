@@ -1,5 +1,6 @@
 import os
 from typing import List
+from src.Utils.model_warmup import preload_embedding_model
 
 class SentenceTransformerEmbeddings:
     """
@@ -10,23 +11,8 @@ class SentenceTransformerEmbeddings:
 
     def __init__(self, model_name='all-MiniLM-L6-v2'):
         # Model name stored but not loaded until needed
-        self.model_name = model_name
-        
-    def _lazy_load_model(self):
-        """Load model only when first embed is called"""
-        if self._model is None:
-            # Use try-except to gracefully fall back if model load fails
-            try:
-                from sentence_transformers import SentenceTransformer
-                self._model = SentenceTransformer(
-                    self.model_name,
-                    cache_folder=".cache",
-                    device="cpu"
-                )
-            except Exception as e:
-                print(f"Warning: Could not load sentence-transformers: {e}")
-                print("Using fallback mock embeddings")
-                self._model = "fallback"
+        self._model = preload_embedding_model(model_name)
+
         
     def embed_documents(self, texts: List[str]):
         """Embed multiple texts with fallback support"""
@@ -35,7 +21,6 @@ class SentenceTransformerEmbeddings:
         
         # Try to use real embeddings
         try:
-            self._lazy_load_model()
             if self._model != "fallback":
                 return self._model.encode(texts, convert_to_tensor=False).tolist()
         except Exception as e:
@@ -50,7 +35,6 @@ class SentenceTransformerEmbeddings:
             return []
         
         try:
-            self._lazy_load_model()
             if self._model != "fallback":
                 return self._model.encode(text, convert_to_tensor=False).tolist()
         except Exception as e:

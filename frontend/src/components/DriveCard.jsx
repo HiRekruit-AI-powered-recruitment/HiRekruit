@@ -10,6 +10,7 @@ import {
   PlayCircle,
   Copy,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 
 const DriveCard = ({ drive, onView }) => {
@@ -122,17 +123,17 @@ const DriveCard = ({ drive, onView }) => {
 
   const statusConfig = isCompleted
     ? {
-        color: "text-gray-600",
-        bgColor: "bg-gray-100",
-        icon: CheckCircle,
-        label: "Completed",
-      }
+      color: "text-gray-600",
+      bgColor: "bg-gray-100",
+      icon: CheckCircle,
+      label: "Completed",
+    }
     : {
-        color: "text-black",
-        bgColor: "bg-gray-200",
-        icon: Clock,
-        label: "Ongoing",
-      };
+      color: "text-black",
+      bgColor: "bg-gray-200",
+      icon: Clock,
+      label: "Ongoing",
+    };
 
   const StatusIcon = statusConfig.icon;
 
@@ -145,7 +146,7 @@ const DriveCard = ({ drive, onView }) => {
     });
   };
 
-  // Days remaining
+  // Days remaining (negative = overdue)
   const getDaysRemaining = () => {
     if (isCompleted) return null;
 
@@ -154,10 +155,21 @@ const DriveCard = ({ drive, onView }) => {
     const diffTime = end - now;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays > 0 ? diffDays : 0;
+    return diffDays;
   };
 
   const daysRemaining = getDaysRemaining();
+
+  // Deadline urgency helper
+  const getDeadlineUrgency = () => {
+    if (daysRemaining === null) return null;
+    if (daysRemaining < 0) return "overdue";
+    if (daysRemaining === 0) return "today";
+    if (daysRemaining <= 3) return "soon";
+    return null;
+  };
+
+  const deadlineUrgency = getDeadlineUrgency();
 
   // Get progress color
   const getProgressColor = () => {
@@ -168,7 +180,11 @@ const DriveCard = ({ drive, onView }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg border border-gray-300 hover:shadow-xl transition-shadow duration-200">
+    <div className={`bg-white rounded-lg shadow-lg border hover:shadow-xl transition-shadow duration-200 ${deadlineUrgency === "overdue" ? "border-red-300 border-l-4 border-l-red-500" :
+        deadlineUrgency === "today" ? "border-red-200" :
+          deadlineUrgency === "soon" ? "border-amber-200" :
+            "border-gray-300"
+      }`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-300">
         <div className="flex items-start justify-between">
@@ -257,15 +273,36 @@ const DriveCard = ({ drive, onView }) => {
             ></div>
           </div>
           {daysRemaining !== null && (
-            <div className="flex items-center gap-1 text-xs text-gray-600 mt-2">
-              <Clock size={12} />
-              <span>
-                {daysRemaining > 0
-                  ? `${daysRemaining} day${
-                      daysRemaining > 1 ? "s" : ""
-                    } remaining`
-                  : "Drive ends today"}
-              </span>
+            <div className="flex items-center gap-1 text-xs mt-2">
+              {deadlineUrgency === "overdue" ? (
+                <>
+                  <AlertTriangle size={12} className="text-red-500" />
+                  <span className="text-red-600 font-semibold">
+                    Overdue by {Math.abs(daysRemaining)} day{Math.abs(daysRemaining) !== 1 ? "s" : ""}
+                  </span>
+                </>
+              ) : deadlineUrgency === "today" ? (
+                <>
+                  <AlertTriangle size={12} className="text-red-500 animate-pulse" />
+                  <span className="text-red-600 font-semibold animate-pulse">
+                    Deadline Today!
+                  </span>
+                </>
+              ) : deadlineUrgency === "soon" ? (
+                <>
+                  <Clock size={12} className="text-amber-500" />
+                  <span className="text-amber-600 font-semibold">
+                    ⚠️ {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} remaining
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Clock size={12} className="text-gray-500" />
+                  <span className="text-gray-600">
+                    {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} remaining
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>

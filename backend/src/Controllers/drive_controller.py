@@ -1127,6 +1127,96 @@ def update_round_deadlines(drive_id):
 
 
 
+def extend_drive_deadline(drive_id):
+    """
+    Extend a drive's end_date. HR can use this when a deadline has passed
+    (or is approaching) and they need more time to complete the process.
+    This is a gentle extension — no penalties, just updating the date.
+    
+    Expects JSON: { "new_end_date": "2026-03-15" or "2026-03-15T23:59:59" }
+    """
+    try:
+        try:
+            object_id = ObjectId(drive_id)
+        except Exception:
+            return jsonify({"error": "Invalid drive ID format"}), 400
+
+        data = request.get_json()
+        new_end_date_raw = data.get("new_end_date")
+
+        if not new_end_date_raw:
+            return jsonify({"error": "new_end_date is required"}), 400
+
+        drive = db.drives.find_one({"_id": object_id})
+        if not drive:
+            return jsonify({"error": "Drive not found"}), 404
+
+        # Parse new end date
+        try:
+            if "T" in str(new_end_date_raw):
+                new_end_date = datetime.fromisoformat(new_end_date_raw.replace("Z", "+00:00")).replace(tzinfo=None)
+            else:
+                new_end_date = datetime.strptime(new_end_date_raw, "%Y-%m-%d")
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Use YYYY-MM-DD or ISO format."}), 400
+
+        # Parse current end date for comparison
+        current_end_raw = drive.get("end_date")
+        if isinstance(current_end_raw, str):
+            try:
+                current_end = datetime.fromisoformat(current_end_raw.replace("Z", "+00:00")).replace(tzinfo=None)
+            except ValueError:
+                current_end = datetime.strptime(current_end_raw, "%Y-%m-%d")
+        elif isinstance(current_end_raw, datetime):
+            current_end = current_end_raw.replace(tzinfo=None)
+        else:
+            current_end = datetime.utcnow()
+
+        # Validate: new date must be after current end date
+        if new_end_date <= current_end:
+            return jsonify({
+                "error": "New end date must be after the current end date",
+                "current_end_date": current_end.isoformat(),
+            }), 400
+
+        # Update the drive
+        old_end_date = current_end.isoformat()
+        
+        # Store in the same format as the original
+        if isinstance(current_end_raw, str):
+            new_end_value = new_end_date.strftime("%Y-%m-%d") if "T" not in str(current_end_raw) else new_end_date.isoformat()
+        else:
+            new_end_value = new_end_date
+
+        result = db.drives.update_one(
+            {"_id": object_id},
+            {
+                "$set": {
+                    "end_date": new_end_value,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        if result.modified_count == 0:
+            return jsonify({"error": "Failed to update deadline"}), 500
+
+        print(f"✓ Drive {drive_id} deadline extended: {old_end_date} → {new_end_date.isoformat()}")
+
+        return jsonify({
+            "message": "Deadline extended successfully",
+            "drive_id": drive_id,
+            "old_end_date": old_end_date,
+            "new_end_date": new_end_date.isoformat(),
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error in extend_drive_deadline: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+
 def extract_questions_controller():
     # Check if the file is in the request
     if 'assessment_file' not in request.files:

@@ -13,7 +13,8 @@ from src.Controllers.drive_controller import (
     remove_application_by_job,
     get_drive_id_by_job,
     get_shortlisted_candidates_by_job,
-    get_selected_candidates_by_job
+    get_selected_candidates_by_job,
+    extend_drive_deadline
 )
 
 drive_bp = Blueprint("drive_bp", __name__, url_prefix="/api/drive")
@@ -87,6 +88,10 @@ def get_deadline():
 @drive_bp.route("/<drive_id>/deadlines", methods=["PUT"])
 def update_deadlines(drive_id):
     return update_round_deadlines(drive_id)
+
+@drive_bp.route("/<drive_id>/extend-deadline", methods=["PUT"])
+def extend_deadline(drive_id):
+    return extend_drive_deadline(drive_id)
 
 
 # Get HR info by email
