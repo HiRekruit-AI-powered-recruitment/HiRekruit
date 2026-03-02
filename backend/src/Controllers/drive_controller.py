@@ -1218,3 +1218,29 @@ def update_drive(drive_id):
     except Exception as e:
         print(f"Error in update_drive: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+def extract_questions_controller():
+    # Check if the file is in the request
+    if 'assessment_file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    pdf_file = request.files['assessment_file']
+    
+    if pdf_file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # 1. Upload to Cloudinary (resource_type="raw" for PDFs)
+        upload_res = cloudinary.uploader.upload(pdf_file, resource_type="raw")
+        pdf_url = upload_res.get("secure_url")
+
+        # 2. Call your Agent
+        agent = QuestionIntakeAgent()
+        questions = agent.process_question_pdf(pdf_url)
+
+        # 3. Return the questions to the frontend
+        return jsonify({"questions": questions}), 200
+
+    except Exception as e:
+        print(f"Extraction Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500

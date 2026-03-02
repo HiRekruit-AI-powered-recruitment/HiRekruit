@@ -2,13 +2,14 @@ import React, { useCallback, useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import UploadDropzone from "./UploadDropzone";
 import FileList from "./FileList";
-import SkillFilter from "./SkillFilter";
-import StatsCards from "./StatsCards";
 import Sidebar from "./Sidebar";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+// Icons
+import { Share2, Globe, Lock, Calendar, Save, CheckCircle } from "lucide-react"; 
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
+const CAREER_PORTAL_URL = import.meta.env.VITE_CAREER_PORTAL_URL || "http://localhost:5173/careers";
 
 const Dashboard = () => {
   const { drive_id } = useParams();
@@ -17,22 +18,31 @@ const Dashboard = () => {
   const [processing, setProcessing] = useState(false);
   const [jobData, setJobData] = useState(null);
 
-  // Load job data from localStorage when component mounts
+  // New State for Posting Configuration
+  const [postingConfig, setPostingConfig] = useState({
+    visibility: "public",
+    deadline: "",
+    isPosted: false
+  });
+  const [isPosting, setIsPosting] = useState(false);
+
   useEffect(() => {
     const savedJobData = localStorage.getItem("currentJobData");
-    console.log("Raw localStorage data:", savedJobData);
-
     if (savedJobData) {
       try {
-        const parsedJobData = JSON.parse(savedJobData);
-        console.log("Parsed job data:", parsedJobData);
-        setJobData(parsedJobData);
+        const parsedData = JSON.parse(savedJobData);
+        setJobData(parsedData);
+
+        // Pre-fill configuration if data exists
+        setPostingConfig(prev => ({
+          ...prev,
+          deadline: parsedData.end_date || "", // Pre-fill deadline
+          visibility: parsedData.visibility || "public" // Default to public or existing
+        }));
       } catch (error) {
         console.error("Error parsing job data:", error);
         toast.error("Error loading job data");
       }
-    } else {
-      console.log("No job data found in localStorage");
     }
   }, []);
 
@@ -59,7 +69,7 @@ const Dashboard = () => {
 
   const handleProcessResumes = async () => {
     if (!jobData?.role?.trim() || files.length === 0) {
-      toast.warn("Please add job details and upload resumes first");
+      toast.warn("Please upload resumes first");
       return;
     }
 
@@ -89,10 +99,11 @@ const Dashboard = () => {
         body: formData,
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Server Error Response:", errorText);
-        throw new Error(`Server responded with ${response.status}: ${errorText.substring(0, 100)}`);
+      if (response.ok) {
+        toast.success("Resumes processed successfully!");
+        navigate("/dashboard/drives");
+      } else {
+        toast.error("Failed to process resumes");
       }
 
       const result = await response.json();
@@ -101,8 +112,7 @@ const Dashboard = () => {
       console.log("Result:", result);
       navigate("/dashboard/drives");
     } catch (error) {
-      console.error("Error uploading resumes:", error);
-      toast.error(`Error uploading resumes: ${error.message}`);
+      toast.error("Error uploading resumes");
     } finally {
       setProcessing(false);
     }
@@ -113,14 +123,56 @@ const Dashboard = () => {
     navigate("/drive-creation");
   };
 
+  // --- Handle Posting Job to Portal ---
+  const handlePostJob = async () => {
+    setIsPosting(true);
+    try {
+      // API call to update drive status/visibility
+      const response = await fetch(`${BASE_URL}/api/drive/${drive_id}/publish`, {
+        method: "PUT", // or POST depending on your backend
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          visibility: postingConfig.visibility,
+          deadline: postingConfig.deadline,
+          status: "published" 
+        })
+      });
+
+      if (response.ok) {
+        toast.success(
+          postingConfig.visibility === "public" 
+            ? "Job successfully posted to Career Portal!" 
+            : "Job updated to Private mode."
+        );
+        setPostingConfig(prev => ({ ...prev, isPosted: true }));
+        
+        // Optional: Update local jobData context if needed
+      } else {
+        throw new Error("Failed to publish job");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update job posting settings");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    const jobUrl = `${CAREER_PORTAL_URL}/job/${jobData.job_id}`;
+    navigator.clipboard.writeText(jobUrl);
+    toast.success("Job Link copied to clipboard!");
+  };
+
   return (
-    <div className="flex-1 w-full">
+    <div className="flex-1 w-full pb-10">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">
             {jobData ? "Resume Processing Dashboard" : "Dashboard"}
           </h1>
         </div>
+        
         <div className="flex gap-3">
           {jobData ? (
             <>
@@ -148,189 +200,160 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Show job details if job data exists */}
+      {/* Job Details Card */}
       {jobData && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-4 mb-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-3">
-            Job Details
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-300 p-5 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Active Drive: {jobData.role}</h2>
+            <span className="px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded capitalize">
+              {jobData.job_type}
+            </span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-sm border-b pb-5 border-gray-100">
             <div>
-              <span className="text-gray-600">Job ID:</span>
-              <p className="font-medium">{jobData.job_id || "N/A"}</p>
+              <span className="text-gray-500 block">Job ID</span>
+              <p className="font-semibold text-gray-800">{jobData.job_id || "N/A"}</p>
             </div>
             <div>
-              <span className="text-gray-600">Role:</span>
-              <p className="font-medium">{jobData.role || "N/A"}</p>
+              <span className="text-gray-500 block">Location</span>
+              <p className="font-semibold text-gray-800">{jobData.location || "N/A"}</p>
             </div>
             <div>
-              <span className="text-gray-600">Location:</span>
-              <p className="font-medium">{jobData.location || "N/A"}</p>
+              <span className="text-gray-500 block">Candidates Needed</span>
+              <p className="font-semibold text-gray-800">{jobData.candidates_to_hire || "N/A"}</p>
             </div>
             <div>
-              <span className="text-gray-600">Start Date:</span>
-              <p className="font-medium">{jobData.start_date || "N/A"}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">End Date:</span>
-              <p className="font-medium">{jobData.end_date || "N/A"}</p>
-            </div>
-            <div>
-              <span className="text-gray-600">Job Type:</span>
-              <p className="font-medium capitalize">
-                {jobData.job_type || "N/A"}
-              </p>
-            </div>
-            <div>
-              <span className="text-gray-600">Hiring Type:</span>
-              <p className="font-medium">
-                {jobData.experience_type
-                  ? jobData.experience_type === "experienced"
-                    ? "Experienced"
-                    : "Fresher"
-                  : "N/A"}
-              </p>
-            </div>
-            {jobData.experience_type === "experienced" && (
-              <div>
-                <span className="text-gray-600">Experience Range:</span>
-                <p className="font-medium">
-                  {jobData.experience_min || "N/A"} -{" "}
-                  {jobData.experience_max || "N/A"} years
-                </p>
-              </div>
-            )}
-            <div>
-              <span className="text-gray-600">Candidates to Hire:</span>
-              <p className="font-medium">
-                {jobData.candidates_to_hire || "N/A"}
-              </p>
-            </div>
-            {jobData.job_type === "internship" &&
-              jobData.internship_duration && (
-                <div>
-                  <span className="text-gray-600">Duration:</span>
-                  <p className="font-medium">{jobData.internship_duration}</p>
-                </div>
-              )}
-            <div>
-              <span className="text-gray-600">Interview Rounds:</span>
-              <p className="font-medium">
-                {jobData.rounds?.length || 0} rounds
+              <span className="text-gray-500 block">Experience</span>
+              <p className="font-semibold text-gray-800">
+                {jobData.experience_type === "experienced" 
+                  ? `${jobData.experience_min}-${jobData.experience_max} Yrs` 
+                  : "Fresher"}
               </p>
             </div>
           </div>
 
-          {/* Skills Section */}
-          {jobData.skills &&
-            (Array.isArray(jobData.skills)
-              ? jobData.skills.length > 0
-              : jobData.skills.trim()) && (
-              <div className="mt-4">
-                <span className="text-gray-600 font-medium block mb-2">
-                  Skills Required:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {(Array.isArray(jobData.skills)
-                    ? jobData.skills
-                    : jobData.skills.split(",").map((s) => s.trim())
-                  ).map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 text-sm rounded-full bg-blue-100 text-blue-700 font-light shadow-sm hover:bg-blue-200 transition"
-                    >
-                      {skill}
-                    </span>
-                  ))}
+          <div className="mt-4 flex flex-wrap gap-6 text-sm">
+             <div className="flex items-center gap-2">
+                <span className="text-gray-500">Interview Rounds:</span>
+                <span className="font-bold text-blue-600">{jobData.rounds?.length || 0}</span>
+             </div>
+             {jobData.coding_questions?.length > 0 && (
+                <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Coding Questions:</span>
+                    <span className="font-bold text-orange-600">{jobData.coding_questions.length}</span>
                 </div>
-              </div>
-            )}
-
-          {/* Rounds Section */}
-          {jobData.rounds && jobData.rounds.length > 0 && (
-            <div className="mt-4">
-              <span className="text-gray-600 font-medium block mb-2">
-                Rounds:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {jobData.rounds.map((round, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                  >
-                    {index + 1}. {round.type}
-                    {round.description && ` - ${round.description}`}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Coding Questions Section */}
-          {jobData.coding_questions && jobData.coding_questions.length > 0 && (
-            <div className="mt-4">
-              <span className="text-gray-600 font-medium block mb-2">
-                Coding Questions: {jobData.coding_questions.length}
-              </span>
-              <div className="space-y-2">
-                {jobData.coding_questions.map((question, index) => (
-                  <div
-                    key={question.id || index}
-                    className="p-3 bg-gray-50 rounded-md border border-gray-200"
-                  >
-                    <p className="font-medium text-sm text-gray-900">
-                      {index + 1}. {question.title}
-                    </p>
-                    {question.constraints && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        Constraints: {question.constraints}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      Test Cases: {question.testCases?.length || 0}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+             )}
+          </div>
         </div>
       )}
 
-      {/* Show message if no job data */}
-      {!jobData && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-yellow-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
+      {/* --- Job Posting Configuration Section --- */}
+      {jobData && (
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-white rounded-lg shadow-sm">
+              <Globe className="text-indigo-600" size={24} />
+            </div>
+            <h3 className="text-lg font-bold text-indigo-900">Career Portal Settings</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            {/* Visibility Toggle */}
+            <div>
+              <label className="block text-xs font-bold text-indigo-800 uppercase tracking-wide mb-2">
+                Visibility
+              </label>
+              <div className="relative">
+                <select
+                  value={postingConfig.visibility}
+                  onChange={(e) => setPostingConfig({ ...postingConfig, visibility: e.target.value })}
+                  className="w-full appearance-none bg-white border border-indigo-200 text-gray-700 py-2.5 px-4 pr-8 rounded-lg leading-tight focus:outline-none focus:bg-white focus:border-indigo-500"
+                >
+                  <option value="public">Public (Visible to All)</option>
+                  <option value="private">Private (Invite Only)</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-indigo-600">
+                  {postingConfig.visibility === 'public' ? <Globe size={16} /> : <Lock size={16} />}
+                </div>
+              </div>
+            </div>
+
+            {/* Deadline Input */}
+            <div>
+              <label className="block text-xs font-bold text-indigo-800 uppercase tracking-wide mb-2">
+                Application Deadline
+              </label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={postingConfig.deadline}
+                  onChange={(e) => setPostingConfig({ ...postingConfig, deadline: e.target.value })}
+                  className="w-full bg-white border border-indigo-200 text-gray-700 py-2 px-4 rounded-lg focus:outline-none focus:border-indigo-500"
                 />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                No Job Created Yet
-              </h3>
-              <div className="mt-2 text-sm text-yellow-700">
-                <p>Please create a job first before processing resumes.</p>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-indigo-400">
+                  <Calendar size={16} />
+                </div>
               </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handlePostJob}
+                disabled={!postingConfig.deadline || isPosting}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-semibold text-white transition-all ${
+                  !postingConfig.deadline || isPosting
+                    ? "bg-indigo-300 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg transform active:scale-95"
+                }`}
+              >
+                {isPosting ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save size={18} />
+                    {postingConfig.isPosted ? "Update Settings" : "Post this Job"}
+                  </>
+                )}
+              </button>
+
+              {postingConfig.isPosted && postingConfig.visibility === "public" && (
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-indigo-200 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition-colors"
+                  title="Copy Link"
+                >
+                  <Share2 size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Helper Text */}
+          <div className="mt-3 flex items-start gap-2 text-xs text-indigo-500">
+            {!postingConfig.deadline ? (
+              <span>* Please set a deadline to enable posting.</span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <CheckCircle size={12} /> Ready to publish. Candidates will be able to apply until {postingConfig.deadline}.
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* Rest of your dashboard components */}
-      <UploadDropzone onAddFiles={onAddFiles} />
-      <FileList files={files} onRemove={onRemove} />
+      {/* Manual Upload Section */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700">Manual Resume Upload</h3>
+        </div>
+        <div className="p-4">
+            <UploadDropzone onAddFiles={onAddFiles} />
+            <FileList files={files} onRemove={onRemove} />
+        </div>
+      </div>
 
-      {/* Toast Container */}
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
     </div>
   );

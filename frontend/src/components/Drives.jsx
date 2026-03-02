@@ -349,8 +349,8 @@ const Drives = () => {
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${currentPage === i + 1
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "border-gray-300 hover:bg-gray-50"
+                      ? "bg-gray-900 text-white border-gray-900"
+                      : "border-gray-300 hover:bg-gray-50"
                     }`}
                 >
                   {i + 1}
