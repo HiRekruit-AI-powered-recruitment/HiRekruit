@@ -64,7 +64,7 @@ class ResumeIntakeAgent:
 
 
 
-    def process_resumes(self, resume_urls, drive_id):
+    def process_resumes(self, resume_data, drive_id):
         candidates = []
 
         system_prompt = """
@@ -96,11 +96,17 @@ class ResumeIntakeAgent:
             - If the output is not valid JSON, regenerate until it is valid JSON.
         """
 
-        for resume_url in resume_urls:
-            print(f"Processing resume from Cloudinary URL: {resume_url}")
-
-            pdf_bytes = self.download_pdf(resume_url)
-            raw_text = self.extract_text(pdf_bytes)
+        for item in resume_data:
+            # Handle both dictionary (new) and string (old) inputs
+            if isinstance(item, dict):
+                resume_url = item.get("url")
+                raw_text = item.get("text")
+                print(f"Processing resume from provided text: {resume_url}")
+            else:
+                resume_url = item
+                print(f"Processing resume from Cloudinary URL (legacy mode): {resume_url}")
+                pdf_bytes = self.download_pdf(resume_url)
+                raw_text = self.extract_text(pdf_bytes)
 
             human_prompt = f"Extract candidate information:\n\n{raw_text}"
             messages = self.prompt_builder.build(system_prompt, human_prompt)

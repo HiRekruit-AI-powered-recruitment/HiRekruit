@@ -3,7 +3,7 @@ import { Room, RoomEvent, Track } from "livekit-client";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
-export const useLiveKit = ({
+export default function useLiveKit({
   driveCandidateId,
   interviewType,
   isHR,
@@ -20,8 +20,14 @@ export const useLiveKit = ({
   setConnectionError,
   setFullTranscript,
   setRemoteParticipants,
-}) => {
-  const livekitRoomRef = useRef(null);
+  onRemoteParticipantJoin, // 🔴 NEW: Callback when HR joins (participant connects)
+  livekitRoomRef, // 🔴 NEW: Accept livekitRoomRef from parent (InterviewPage)
+}) {
+  // 🔴 If no livekitRoomRef provided, create one (fallback for legacy usage)
+  if (!livekitRoomRef) {
+    livekitRoomRef = useRef(null);
+  }
+
   const localVideoRef = useRef(null);
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
@@ -110,6 +116,14 @@ export const useLiveKit = ({
         console.log(`👤 Participant connected: ${participant.identity}`);
         if (mountedRef.current) {
           setRemoteParticipants(Array.from(room.remoteParticipants.values()));
+
+          // 🔴 NEW: Restore audio when remote participant joins (e.g., HR joins)
+          if (onRemoteParticipantJoin) {
+            console.log(
+              "🔊 Remote participant joined - triggering audio restoration...",
+            );
+            onRemoteParticipantJoin();
+          }
         }
       });
 
@@ -203,7 +217,7 @@ export const useLiveKit = ({
         // 🔴 ADD RETRY LOGIC: localVideoRef might not be set yet, try multiple times
         const attachVideoWithRetry = async () => {
           let retryCount = 0;
-          const maxRetries = 20; // Try for up to 10 seconds (20 * 500ms)
+          const maxRetries = 30; // Increased retries for better reliability
 
           while (
             retryCount < maxRetries &&
@@ -221,7 +235,7 @@ export const useLiveKit = ({
                 retryCount,
               );
             }
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            await new Promise((resolve) => setTimeout(resolve, 300)); // Reduced wait time
             retryCount++;
           }
 
@@ -323,21 +337,73 @@ export const useLiveKit = ({
               videoElement.playsInline = true;
               videoElement.muted = true; // Mute own video to prevent echo
 
-              // 🔴 FALLBACK: If attach() didn't set srcObject, manually set it from track
-              if (!videoElement.srcObject && videoTrack.mediaStream) {
-                console.log(
-                  "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
-                );
-                videoElement.srcObject = videoTrack.mediaStream;
-                console.log(
-                  "📹 srcObject set, tracks count:",
-                  videoElement.srcObject.getTracks().length,
-                );
-              } else if (!videoElement.srcObject) {
-                console.error(
-                  "❌ CRITICAL: No srcObject on videoElement and no mediaStream on track!",
-                );
-                console.log("📹 Track mediaStream:", videoTrack.mediaStream);
+              // 🔴 CRITICAL: Ensure video track is enabled and not muted
+              if (videoTrack.isMuted) {
+                console.warn("⚠️ Video track is muted, unmuting...");
+                videoTrack.unmute();
+              }
+
+              // 🔴 CRITICAL: Check if video track has actual video content
+              if (videoTrack.mediaStream) {
+                const videoTracks = videoTrack.mediaStream.getVideoTracks();
+                console.log("📹 Video tracks in stream:", videoTracks.length);
+                videoTracks.forEach((track, index) => {
+                  console.log(`📹 Track ${index}:`, {
+                    enabled: track.enabled,
+                    muted: track.muted,
+                    readyState: track.readyState,
+                    label: track.label,
+                  });
+                });
+              }
+
+              // 🔴 FALLBACK: If attach() didn't set srcObject, try several fallbacks
+              if (!videoElement.srcObject) {
+                // 1) Use track.mediaStream if available
+                if (videoTrack.mediaStream) {
+                  console.log(
+                    "⚠️ FALLBACK: Setting srcObject from track.mediaStream",
+                  );
+                  videoElement.srcObject = videoTrack.mediaStream;
+                  console.log(
+                    "📹 srcObject set, tracks count:",
+                    videoElement.srcObject.getTracks().length,
+                  );
+                } else {
+                  // 2) Try to use underlying MediaStreamTrack (common for local tracks)
+                  const underlying =
+                    videoTrack.mediaStreamTrack ||
+                    videoTrack.track ||
+                    videoTrack._mediaStreamTrack;
+
+                  if (underlying) {
+                    try {
+                      const ms = new MediaStream([underlying]);
+                      videoElement.srcObject = ms;
+                      console.log(
+                        "⚠️ FALLBACK: Set srcObject from underlying MediaStreamTrack",
+                        {
+                          tracks: ms.getTracks().length,
+                        },
+                      );
+                    } catch (e) {
+                      console.error(
+                        "❌ FALLBACK error creating MediaStream from underlying track:",
+                        e,
+                      );
+                    }
+                  } else {
+                    // 3) As a last resort, log detailed track object for debugging
+                    console.error(
+                      "❌ CRITICAL: No srcObject on videoElement and no mediaStream/mediaStreamTrack on track!",
+                    );
+                    try {
+                      console.log("📹 Track object:", videoTrack);
+                    } catch (e) {
+                      console.log("📹 Track (unable to stringify)");
+                    }
+                  }
+                }
               }
 
               // Apply inline styles with !important where needed
@@ -355,7 +421,7 @@ export const useLiveKit = ({
                 opacity: "1",
                 pointerEvents: "auto",
                 position: "relative",
-                backgroundColor: "transparent",
+                backgroundColor: "#000000",
               });
 
               // 🔴 CRITICAL: Use setProperty with !important to override any CSS rules
@@ -371,6 +437,11 @@ export const useLiveKit = ({
               videoElement.style.setProperty(
                 "position",
                 "relative",
+                "important",
+              );
+              videoElement.style.setProperty(
+                "background-color",
+                "#000000",
                 "important",
               );
 
@@ -449,6 +520,26 @@ export const useLiveKit = ({
                 "1",
                 "important",
               );
+              localVideoRef.current.style.setProperty(
+                "position",
+                "relative",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "width",
+                "100%",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "height",
+                "100%",
+                "important",
+              );
+              localVideoRef.current.style.setProperty(
+                "background-color",
+                "#000000",
+                "important",
+              );
 
               // 🔴 If parent still has zero size, log it and investigate the page structure
               const parentRect = localVideoRef.current.getBoundingClientRect();
@@ -491,6 +582,19 @@ export const useLiveKit = ({
 
               // Attempt to play
               console.log("📹 Attempting to play video...");
+
+              // 🔴 CRITICAL: Ensure video element has proper dimensions before playing
+              if (
+                videoElement.videoWidth === 0 ||
+                videoElement.videoHeight === 0
+              ) {
+                console.warn(
+                  "⚠️ Video has zero dimensions, waiting for metadata...",
+                );
+                // Wait a bit for metadata to load
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
+
               const playPromise = videoElement.play();
               if (playPromise !== undefined) {
                 playPromise
@@ -510,6 +614,31 @@ export const useLiveKit = ({
                         videoWidth: videoElement.videoWidth,
                         videoHeight: videoElement.videoHeight,
                       });
+
+                      // 🔴 CRITICAL: If video still has no dimensions after playing, try to force it
+                      if (
+                        videoElement.videoWidth === 0 ||
+                        videoElement.videoHeight === 0
+                      ) {
+                        console.warn(
+                          "⚠️ Video still has zero dimensions after play, attempting force...",
+                        );
+                        // Try to reload the video
+                        if (videoElement.srcObject) {
+                          const tracks = videoElement.srcObject.getTracks();
+                          console.log(
+                            "📹 Reloading video with tracks:",
+                            tracks.length,
+                          );
+                          // Force video element to recognize the stream
+                          videoElement.load();
+                          videoElement
+                            .play()
+                            .catch((e) =>
+                              console.error("❌ Retry play failed:", e),
+                            );
+                        }
+                      }
                     }, 1000);
 
                     // 🔴 CONTINUOUS MONITORING: Check video state every 2 seconds
@@ -565,6 +694,64 @@ export const useLiveKit = ({
         // 🔴 CALL THE RETRY FUNCTION
         await attachVideoWithRetry();
 
+        // 🔴 NEW: Additional fallback - if video still not showing, try alternative approach
+        setTimeout(async () => {
+          if (mountedRef.current && videoTrack && localVideoRef.current) {
+            const hasVideoContent =
+              localVideoRef.current.querySelector("video");
+            if (!hasVideoContent) {
+              console.warn(
+                "⚠️ No video element found in container, trying fallback attachment...",
+              );
+
+              try {
+                // Clear container and try manual attachment
+                localVideoRef.current.innerHTML = "";
+
+                // Create video element manually
+                const manualVideoElement = document.createElement("video");
+                manualVideoElement.autoplay = true;
+                manualVideoElement.muted = true;
+                manualVideoElement.playsInline = true;
+                manualVideoElement.style.cssText = `
+                  width: 100% !important;
+                  height: 100% !important;
+                  object-fit: cover !important;
+                  transform: scaleX(-1) !important;
+                  display: block !important;
+                  visibility: visible !important;
+                  opacity: 1 !important;
+                  position: relative !important;
+                  background-color: #000000 !important;
+                `;
+
+                // Set srcObject directly from track
+                if (videoTrack.mediaStream) {
+                  manualVideoElement.srcObject = videoTrack.mediaStream;
+                } else if (videoTrack.mediaStreamTrack) {
+                  manualVideoElement.srcObject = new MediaStream([
+                    videoTrack.mediaStreamTrack,
+                  ]);
+                }
+
+                // Append and play
+                localVideoRef.current.appendChild(manualVideoElement);
+
+                const playResult = await manualVideoElement.play();
+                console.log("✅ Fallback video attachment successful");
+
+                // Store reference
+                videoElementRef.current = manualVideoElement;
+              } catch (fallbackError) {
+                console.error(
+                  "❌ Fallback video attachment failed:",
+                  fallbackError,
+                );
+              }
+            }
+          }
+        }, 3000); // Try fallback after 3 seconds
+
         if (mountedRef.current) {
           setLocalTracks(tracks);
           setCameraPermission("granted");
@@ -617,6 +804,8 @@ export const useLiveKit = ({
     setCameraPermission,
     setConnectionError,
     setRemoteParticipants,
+    onRemoteParticipantJoin, // 🔴 NEW: Add callback to dependencies
+    livekitRoomRef, // 🔴 NEW: Add livekitRoomRef to dependencies
   ]);
 
   const stopCamera = useCallback((tracks) => {
@@ -637,7 +826,7 @@ export const useLiveKit = ({
     }
   }, []);
 
-  const toggleVideo = useCallback((isVideoOff, setIsVideoOff) => {
+  const toggleVideo = useCallback(async (isVideoOff, setIsVideoOff) => {
     console.log("🎥 Toggle video called. Current state (off):", isVideoOff);
 
     const videoTrack = localVideoTrackRef.current;
@@ -651,14 +840,63 @@ export const useLiveKit = ({
     try {
       if (isVideoOff) {
         // Currently off, turn it ON
+        console.log("🎥 Turning video ON...");
+
+        // 🔴 CRITICAL: Unmute the track first
         videoTrack.unmute();
+        console.log("✅ Video track unmuted");
+
+        // 🔴 CRITICAL: Focus on video element visibility
         if (videoElement) {
+          // Make existing video element visible
           videoElement.style.display = "block";
+          videoElement.style.visibility = "visible";
+          videoElement.style.opacity = "1";
+          console.log("✅ Existing video element made visible");
+        } else {
+          // 🔴 NEW: If no video element exists, try to re-attach
+          console.warn("⚠️ No video element found, attempting to re-attach...");
+          if (localVideoRef.current && videoTrack.mediaStream) {
+            // Clear container first
+            localVideoRef.current.innerHTML = "";
+
+            // Create new video element
+            const newVideoElement = document.createElement("video");
+            newVideoElement.autoplay = true;
+            newVideoElement.muted = true;
+            newVideoElement.playsInline = true;
+            newVideoElement.style.cssText = `
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              transform: scaleX(-1) !important;
+              display: block !important;
+              visibility: visible !important;
+              opacity: 1 !important;
+              position: relative !important;
+              background-color: #000000 !important;
+            `;
+
+            // Set the stream and attach
+            newVideoElement.srcObject = videoTrack.mediaStream;
+            localVideoRef.current.appendChild(newVideoElement);
+
+            // Play the video
+            newVideoElement
+              .play()
+              .catch((e) => console.error("❌ Video play failed:", e));
+
+            // Store reference
+            videoElementRef.current = newVideoElement;
+            console.log("✅ Created and attached new video element");
+          }
         }
+
         setIsVideoOff(false);
         console.log("✅ Video ENABLED (unmuted)");
       } else {
         // Currently on, turn it OFF
+        console.log("🎥 Turning video OFF...");
         videoTrack.mute();
         if (videoElement) {
           videoElement.style.display = "none";
@@ -708,4 +946,4 @@ export const useLiveKit = ({
     toggleVideo,
     toggleAudio,
   };
-};
+}

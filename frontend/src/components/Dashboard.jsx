@@ -46,11 +46,22 @@ const Dashboard = () => {
     }
   }, []);
 
-  const onAddFiles = useCallback((newFiles) => {
-    const existing = new Set(files.map((f) => `${f.name}|${f.size}`));
-    const toAdd = newFiles.filter((f) => !existing.has(`${f.name}|${f.size}`));
-    if (toAdd.length) setFiles((prev) => [...prev, ...toAdd]);
-  }, [files]);
+  const onAddFiles = useCallback(
+    (newFiles) => {
+      const existing = new Set(
+        files.map((f) => `${f.webkitRelativePath || f.name}|${f.size}`)
+      );
+      const toAdd = newFiles.filter(
+        (f) => !existing.has(`${f.webkitRelativePath || f.name}|${f.size}`)
+      );
+      if (toAdd.length) {
+        setFiles((prev) => [...prev, ...toAdd]);
+        // Team Note: Showing notification when resume is selected
+        toast.success("Resume selected successfully");
+      }
+    },
+    [files]
+  );
 
   const onRemove = useCallback((idx) => {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
@@ -65,11 +76,25 @@ const Dashboard = () => {
     setProcessing(true);
     try {
       const formData = new FormData();
-      files.forEach((file) => formData.append("resumes", file));
-      formData.append("jobData", JSON.stringify(jobData));
+      files.forEach((file) => {
+        formData.append("resumes", file);
+      });
+
+      // Ensure BASE_URL is valid
+      const apiBaseUrl = BASE_URL || "";
+      if (!apiBaseUrl) {
+        console.warn("VITE_BASE_URL is not defined in environment variables. Falling back to relative path.");
+      }
+
+      // Add job data and driveid to formData
+      // Backend expects 'skills' and 'job_role' individually as per resume_controllers.py
+      formData.append("skills", jobData.skills || "");
+      formData.append("job_role", jobData.role || "");
       formData.append("drive_id", drive_id);
 
-      const response = await fetch(`${BASE_URL}/api/resume/upload-resumes`, {
+      console.log("Uploading resumes to:", `${apiBaseUrl}/api/resume/upload-resumes`);
+
+      const response = await fetch(`${apiBaseUrl}/api/resume/upload-resumes`, {
         method: "POST",
         body: formData,
       });
@@ -80,6 +105,12 @@ const Dashboard = () => {
       } else {
         toast.error("Failed to process resumes");
       }
+
+      const result = await response.json();
+      // Team Note: Showing notification after resume processing completes
+      toast.success("Resume processed successfully");
+      console.log("Result:", result);
+      navigate("/dashboard/drives");
     } catch (error) {
       toast.error("Error uploading resumes");
     } finally {
@@ -144,17 +175,20 @@ const Dashboard = () => {
         
         <div className="flex gap-3">
           {jobData ? (
-            <button
-              onClick={handleProcessResumes}
-              disabled={!jobData?.role?.trim() || files.length === 0 || processing}
-              className={`px-4 py-2 text-sm rounded-md font-medium shadow-sm transition-all ${
-                !jobData?.role?.trim() || files.length === 0 || processing
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+            <>
+              <button
+                onClick={handleProcessResumes}
+                disabled={
+                  !jobData?.role?.trim() || files.length === 0 || processing
+                }
+                className={`px-4 py-2 text-sm rounded-md ${!jobData?.role?.trim() || files.length === 0 || processing
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-gray-900 text-white hover:bg-black"
-              }`}
-            >
-              {processing ? "Processing..." : "Process Uploaded Resumes"}
-            </button>
+                  }`}
+              >
+                {processing ? "Processing..." : "Process Resumes"}
+              </button>
+            </>
           ) : (
             <button
               onClick={handleCreateNewJob}

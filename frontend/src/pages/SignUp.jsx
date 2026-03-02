@@ -361,7 +361,8 @@ function PasswordField({
       <input
         type={showPassword ? "text" : "password"}
         placeholder="Password (min. 8 characters)"
-        className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        // Prevents duplicate password toggle icons by hiding browser default
+        className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed [&::-ms-reveal]:hidden [&::-ms-clear]:hidden"
         value={value}
         onChange={onChange}
         onKeyPress={onKeyPress}

@@ -18,7 +18,17 @@ import Loader from "../components/Loader";
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, companyData, isAuthenticated, isLoading } = useAuth();
+
+  // Local state for company name
+  const [companyName, setCompanyName] = useState("");
+
+  // Team Note: Fetching company name dynamically using the existing company_id via AuthContext
+  useEffect(() => {
+    if (companyData && companyData.name) {
+      setCompanyName(companyData.name);
+    }
+  }, [companyData]);
 
   // Modal state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -180,11 +190,11 @@ const Profile = () => {
                 capitalize
               />
 
-              {user.company_id && (
+              {companyName && (
                 <ProfileCard
                   icon={<Building2 />}
-                  label="Company ID"
-                  value={user.company_id}
+                  label="Company Name"
+                  value={companyName}
                 />
               )}
 
@@ -194,12 +204,12 @@ const Profile = () => {
                 value={
                   user.last_login
                     ? new Date(user.last_login).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : "Never"
                 }
               />
@@ -270,21 +280,19 @@ const Profile = () => {
                 {/* Step Indicator */}
                 <div className="flex items-center justify-center gap-2 mb-6">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                      resetStep === 1
-                        ? "bg-black text-white"
-                        : "bg-green-500 text-white"
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${resetStep === 1
+                      ? "bg-black text-white"
+                      : "bg-green-500 text-white"
+                      }`}
                   >
                     {resetStep === 1 ? "1" : "✓"}
                   </div>
                   <div className="w-12 h-0.5 bg-gray-300"></div>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                      resetStep === 2
-                        ? "bg-black text-white"
-                        : "bg-gray-200 text-gray-500"
-                    }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${resetStep === 2
+                      ? "bg-black text-white"
+                      : "bg-gray-200 text-gray-500"
+                      }`}
                   >
                     2
                   </div>
@@ -476,9 +484,8 @@ const ProfileCard = ({ icon, label, value, capitalize }) => (
           {label}
         </p>
         <p
-          className={`font-semibold text-gray-900 truncate ${
-            capitalize ? "capitalize" : ""
-          }`}
+          className={`font-semibold text-gray-900 truncate ${capitalize ? "capitalize" : ""
+            }`}
         >
           {value}
         </p>

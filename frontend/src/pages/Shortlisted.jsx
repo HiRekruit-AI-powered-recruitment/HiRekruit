@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from "react";
-import { Search, FileText, Award, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, FileText, Award, Users, ArrowLeft } from "lucide-react";
 
 import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const ShortlistedResumes = () => {
+  const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -216,15 +218,16 @@ const ShortlistedResumes = () => {
           {currentCandidates.map((candidate) => (
             <div
               key={candidate.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow"
+              onClick={() => navigate(`/dashboard/candidate/${candidate.id}`)}
+              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-medium text-sm flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-medium text-sm flex-shrink-0 group-hover:bg-gray-200 transition-colors">
                     {getInitials(candidate.name)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                    <h3 className="text-lg font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
                       {candidate.name}
                     </h3>
                     <p className="text-gray-600 text-sm">{candidate.email}</p>
@@ -287,9 +290,8 @@ const ShortlistedResumes = () => {
               <button
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
-                className={`px-3 py-1 border rounded ${
-                  currentPage === i + 1 ? "bg-gray-200 font-medium" : ""
-                }`}
+                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-gray-200 font-medium" : ""
+                  }`}
               >
                 {i + 1}
               </button>

@@ -56,7 +56,6 @@ const PRESET_SKILLS = [
   "Flutter",
   "Swift",
   "Objective-C",
-  "Kotlin",
   "Java Android",
   "Xamarin",
   "Ionic",
@@ -374,7 +373,6 @@ const PRESET_SKILLS = [
   "WebSockets",
   "OAuth",
   "JWT",
-  "Risk Management",
   "Stakeholder Management",
   "Resource Planning",
   "Gantt Charts",
@@ -398,8 +396,6 @@ const PRESET_SKILLS = [
   "KPI Development",
   "Metrics & Reporting",
   "Consulting",
-  "Change Management",
-  "Vendor Management",
   "Contract Negotiation",
 
   // Legal & Compliance
@@ -429,7 +425,6 @@ const PRESET_SKILLS = [
   "Churn Reduction",
   "Net Promoter Score",
   "Customer Satisfaction",
-  "Account Management",
   "Client Relations",
   "Troubleshooting",
 
@@ -439,15 +434,12 @@ const PRESET_SKILLS = [
   "Logistics",
   "Procurement",
   "Vendor Management",
-  "Inventory Management",
   "Warehouse Management",
   "Quality Assurance",
   "Quality Control",
   "Lean Manufacturing",
   "Process Optimization",
   "ERP Systems",
-  "SAP",
-  "Oracle",
 
   // Specialized Technical Skills
   "Blockchain",

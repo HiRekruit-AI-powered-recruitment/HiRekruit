@@ -106,6 +106,7 @@ def evaluate_interview_controller(resume_text, transcript, driveCandidateId, int
                         round_info["result"] = "passed" if decision == "PASS" else "failed"
                         round_info["feedback"] = feedback
                         round_info["score"] = final_round_score
+                        round_info["conversation"] = conversation_only
                         updated_round = True
                         print(f"Updated round with type '{interviewType}' for candidate {driveCandidateId}")
                         break

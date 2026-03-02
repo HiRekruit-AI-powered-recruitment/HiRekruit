@@ -48,6 +48,7 @@ def initialize_candidate_rounds(drive_rounds):
             "feedback": "",
             "scheduled_date": None,
             "completed_date": None,
-            "score": None    #NEW FIELD → Score for each round
+            "score": None,    #NEW FIELD → Score for each round
+            "conversation": []
         })
     return rounds_status

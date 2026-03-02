@@ -13,7 +13,9 @@ from src.Controllers.drive_controller import (
     remove_application_by_job,
     get_drive_id_by_job,
     get_shortlisted_candidates_by_job,
-    get_selected_candidates_by_job
+    get_selected_candidates_by_job,
+    update_drive,
+    delete_drive
 )
 
 drive_bp = Blueprint("drive_bp", __name__, url_prefix="/api/drive")
@@ -56,6 +58,16 @@ drive_bp.route("/all", methods=["GET"])(get_all_drives)
 @drive_bp.route("/<drive_id>", methods=["GET"])
 def get_drive(drive_id):
     return get_drive_by_id(drive_id)
+
+# Update a drive by ID
+@drive_bp.route("/<drive_id>/update", methods=["PUT"])
+def update_drive_route(drive_id):
+    return update_drive(drive_id)
+
+# Delete a drive by ID
+@drive_bp.route("/<drive_id>", methods=["DELETE"])
+def delete_drive_route(drive_id):
+    return delete_drive(drive_id)
 
 # Update drive status
 @drive_bp.route("/<drive_id>/status", methods=["PUT"])

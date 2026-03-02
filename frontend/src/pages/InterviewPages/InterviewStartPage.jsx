@@ -36,7 +36,7 @@ const InterviewStartPage = () => {
         setError(null);
 
         const response = await fetch(
-          `${BASE_URL}/api/interview/candidate/${drive_candidate_id}`
+          `${BASE_URL}/api/interview/candidate/${drive_candidate_id}`,
         );
 
         if (!response.ok) {
@@ -62,7 +62,7 @@ const InterviewStartPage = () => {
     console.log("🔑 Requesting LiveKit token for candidate:", identity);
 
     const response = await fetch(
-      `${BASE_URL}/api/livekit/token?driveCandidateId=${drive_candidate_id}&type=${interviewType}&role=candidate&identity=${identity}`
+      `${BASE_URL}/api/livekit/token?driveCandidateId=${drive_candidate_id}&type=${interviewType}&role=candidate&identity=${identity}`,
     );
 
     if (!response.ok) {
@@ -103,7 +103,7 @@ const InterviewStartPage = () => {
       // 1️⃣ Generate AI prompt
       const prompt = getMockInterviewPrompt(
         userData.resume_content,
-        interviewType
+        interviewType,
       );
       console.log("✅ Generated AI prompt");
 
@@ -137,7 +137,7 @@ const InterviewStartPage = () => {
     } catch (error) {
       console.error("❌ Error starting interview:", error);
       alert(
-        `Unable to start interview: ${error.message}\n\nPlease try again or contact support.`
+        `Unable to start interview: ${error.message}\n\nPlease try again or contact support.`,
       );
       setIsStarting(false);
     }
@@ -154,7 +154,7 @@ const InterviewStartPage = () => {
           className="text-center mb-8"
         >
           <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            AI-Powered Hiring Interview
+            AI-Powered Interview
           </h1>
           <p className="text-lg text-gray-600">
             An AI-enabled interview session conducted via the HiRekruit

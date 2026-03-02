@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Menu,
   X,
@@ -16,7 +16,7 @@ import {
   Bell,
   Settings,
 } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import logo from "../assets/HiRekruit.png";
 
 const items = [
@@ -42,6 +42,21 @@ const items = [
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(3); // Mock unread count
+
+  // Mock notification count update (in real app, this would come from context/API)
+  useEffect(() => {
+    // Simulate notification updates
+    const interval = setInterval(() => {
+      setUnreadCount((prev) => {
+        // Randomly increase or decrease for demo
+        const change = Math.random() > 0.7 ? 1 : Math.random() > 0.9 ? -1 : 0;
+        return Math.max(0, Math.min(9, prev + change));
+      });
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <aside
@@ -50,7 +65,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     >
       {/* Desktop header */}
       <div className="flex justify-between items-center px-4 py-4 h-16 border-b border-gray-200">
-        {isOpen && <img src={logo} alt="HiRekruit" className="h-[20px]" />}
+        {isOpen && (
+          /* Team Note: Sidebar logo now redirects to homepage for better navigation UX */
+          <Link to="/" className="flex items-center">
+            <img src={logo} alt="HiRekruit" className="h-[20px]" />
+          </Link>
+        )}
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-1 hover:bg-gray-100 rounded-lg transition-colors ml-auto"
@@ -64,11 +84,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         {items.map((item) => {
           const IconComponent = item.icon;
           const isActive = location.pathname === item.path;
+          const showBadge = item.label === "Notifications" && unreadCount > 0;
+
           return (
             <button
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path);
+                // Clear unread count when clicking notifications
+                if (item.label === "Notifications") {
+                  setUnreadCount(0);
+                }
+              }}
               key={item.label}
-              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200
+              className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200 relative
                 ${
                   isActive
                     ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
@@ -84,6 +112,17 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               >
                 {item.label}
               </span>
+
+              {/* Notification Badge */}
+              {showBadge && (
+                <span
+                  className={`absolute top-3 right-3 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-all duration-200 ${
+                    isOpen ? "scale-100" : "scale-90"
+                  }`}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
           );
         })}
