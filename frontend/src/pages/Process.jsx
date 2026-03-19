@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
   Upload,
@@ -14,6 +13,7 @@ import {
   CheckCircle2,
   Computer,
   Clock,
+  Activity
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import Loader from "../components/Loader";
@@ -22,18 +22,22 @@ const BaseURL = import.meta.env.VITE_BASE_URL;
 
 const Process = () => {
   const { driveId } = useParams();
-  // Team Note: Added for Back button navigation only
   const navigate = useNavigate();
 
   // State Management
-  const [currentStep, setCurrentStep] = useState(null);
+  const [activeStage, setActiveStage] = useState(0); // Maximum unlocked stage
+  const [viewedStep, setViewedStep] = useState(0);   // The step user is currently looking at
+  
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const[error, setError] = useState(null);
   const [driveData, setDriveData] = useState(null);
   const [steps, setSteps] = useState([]);
   const [roundProgress, setRoundProgress] = useState([]);
   const [selectedDeadline, setSelectedDeadline] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const[deadline, setDeadline] = useState("");
+  
+  // Live Stats
+  const [stats, setStats] = useState({ total: 0, shortlisted: 0, selected: 0 });
 
   const roundTypeIcons = {
     Technical: Settings,
@@ -84,28 +88,49 @@ const Process = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // 1. Fetch Drive info
       const response = await fetch(`${BaseURL}/api/drive/${driveId}`);
-
       if (!response.ok) throw new Error("Failed to fetch drive details");
-
       const data = await response.json();
       const drive = data.drive;
 
       setDriveData(drive);
-      setSteps(buildStepsFromStages(drive));
-      setCurrentStep(drive.currentStage || 0);
+      
+      const generatedSteps = buildStepsFromStages(drive);
+      setSteps(generatedSteps);
+
+      // Backend currentStage maps to index without Overview. We add 1 because Overview is Step 0.
+      const backendStage = drive.currentStage !== undefined && drive.currentStage !== null ? drive.currentStage : 0;
+      const frontendActiveStage = backendStage + 1;
+      
+      setActiveStage(frontendActiveStage);
+      setViewedStep(0); // Always default to viewing the Live Overview first
 
       if (drive.round_progress) {
         setRoundProgress(drive.round_progress);
       }
 
       // Check if current round is coding to get deadline
-      const currentStepData = buildStepsFromStages(drive)[drive.currentStage || 0];
-      if (currentStepData?.isRound && currentStepData.roundType === "Coding") {
+      const currentActiveStepData = generatedSteps[frontendActiveStage];
+      if (currentActiveStepData?.isRound && currentActiveStepData.roundType === "Coding") {
         const deadlineRes = await fetch(`${BaseURL}/api/drive/get_deadline?drive_id=${driveId}`);
         const deadlineData = await deadlineRes.json();
         setDeadline(deadlineData.deadline);
       }
+
+      // 2. Fetch Live Candidates Stats for Overview Node
+      const statsRes = await fetch(`${BaseURL}/api/drive/${driveId}/candidates`);
+      if (statsRes.ok) {
+        const cData = await statsRes.json();
+        const candidatesList = Array.isArray(cData) ? cData : (cData.candidates || cData.data ||[]);
+        setStats({
+          total: candidatesList.length,
+          shortlisted: candidatesList.filter(c => c.resume_shortlisted === "yes" || c.shortlisted === true).length,
+          selected: candidatesList.filter(c => c.selected === "yes").length
+        });
+      }
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -118,13 +143,13 @@ const Process = () => {
   }, [driveId]);
 
   const buildStepsFromStages = (drive) => {
-    const stages = drive.stages || [];
+    const stages = drive.stages ||[];
     const rounds = drive.rounds || [];
-    const steps = [];
+    const workflowSteps =[];
 
     stages.forEach((stage) => {
       if (stageToStepMap[stage]) {
-        steps.push(stageToStepMap[stage]);
+        workflowSteps.push(stageToStepMap[stage]);
       } else if (stage.startsWith("schedule") && stage.endsWith("Round")) {
         let roundTypeName = stage.replace(/^schedule/, "").replace(/Round$/, "");
         roundTypeName = roundTypeName.replace(/([A-Z])/g, " $1").trim();
@@ -135,7 +160,7 @@ const Process = () => {
 
         if (roundIndex >= 0) {
           const round = rounds[roundIndex];
-          steps.push({
+          workflowSteps.push({
             id: `round_${roundIndex + 1}`,
             label: `Round ${roundIndex + 1}: ${round.type}`,
             shortLabel: round.type,
@@ -148,12 +173,31 @@ const Process = () => {
         }
       }
     });
-    return steps;
+
+    // Inject Live Overview as the First Node
+    return[
+      {
+        id: "live_overview",
+        label: "Live Drive Overview",
+        shortLabel: "Live Stats",
+        description: "Real-time tracking of applications, shortlists, and overall drive status.",
+        icon: Activity,
+        isOverview: true
+      },
+      ...workflowSteps
+    ];
   };
 
   const handleNextStep = async () => {
-    if (currentStep >= steps.length - 1) return;
-    const nextStepData = steps[currentStep + 1];
+    // If they are just viewing an older step, clicking next just navigates them forward visually
+    if (viewedStep < activeStage) {
+      setViewedStep(viewedStep + 1);
+      return;
+    }
+
+    // If they are on the current active stage, we trigger the backend update
+    if (viewedStep >= steps.length - 1) return;
+    const nextStepData = steps[viewedStep + 1];
 
     try {
       setLoading(true);
@@ -178,7 +222,7 @@ const Process = () => {
 
   const handleUpdateDeadline = async () => {
     if (!selectedDeadline) return alert("Select a date and time");
-    const currentStepData = steps[currentStep];
+    const currentStepData = steps[viewedStep];
 
     try {
       setLoading(true);
@@ -186,7 +230,7 @@ const Process = () => {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          deadlines: [{
+          deadlines:[{
             round_number: currentStepData.roundNumber,
             deadline: new Date(selectedDeadline).toISOString(),
           }],
@@ -204,7 +248,7 @@ const Process = () => {
   };
 
   const markRoundComplete = async () => {
-    const currentStepData = steps[currentStep];
+    const currentStepData = steps[viewedStep];
     try {
       setLoading(true);
       const response = await fetch(`${BaseURL}/api/drive/${driveId}/status`, {
@@ -227,8 +271,8 @@ const Process = () => {
   if (loading && !driveData) return <Loader message="Fetching workflow..." />;
   if (steps.length === 0) return <Loader message="Initializing stages..." />;
 
-  const currentStepData = steps[currentStep];
-  const isLastStep = currentStep === steps.length - 1;
+  const currentStepData = steps[viewedStep];
+  const isLastStep = viewedStep === steps.length - 1;
 
   // Determine if the current round is marked as completed in driveData
   const activeRoundInfo = currentStepData.isRound
@@ -240,7 +284,6 @@ const Process = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center px-6 py-10">
       <div className="max-w-5xl w-full">
         <div className="text-center mb-10">
-          {/* Team Note: Back button added so user can return without going to Drives manually */}
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black mb-4"
@@ -257,41 +300,67 @@ const Process = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between mb-16 px-4 overflow-x-auto">
-          {steps.map((step, index) => (
-            <React.Fragment key={step.id}>
-              <div className="flex flex-col items-center min-w-[100px]">
-                <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all ${index <= currentStep ? "bg-black border-black text-white" : "bg-white border-slate-200 text-slate-400"
-                  }`}>
-                  {index < currentStep ? <Check size={24} /> : React.createElement(step.icon, { size: 24 })}
+        {/* Stepper Visualization */}
+        <div className="flex items-center justify-between mb-16 px-4 overflow-x-auto pb-4">
+          {steps.map((step, index) => {
+            const isCompleted = index < activeStage;
+            const isActive = index === activeStage;
+            const isViewed = index === viewedStep;
+            const isLocked = index > activeStage;
+
+            return (
+              <React.Fragment key={step.id}>
+                <div 
+                  className={`flex flex-col items-center min-w-[100px] transition-transform ${isLocked ? "opacity-50" : "cursor-pointer hover:scale-105"}`}
+                  onClick={() => !isLocked && setViewedStep(index)}
+                >
+                  <div className={`w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all 
+                    ${isViewed ? "border-blue-600 bg-blue-50 text-blue-600" 
+                    : isCompleted || isActive ? "bg-black border-black text-white" 
+                    : "bg-white border-slate-200 text-slate-400"
+                    }`}>
+                    {isCompleted && !isViewed ? <Check size={24} /> : React.createElement(step.icon, { size: 24 })}
+                  </div>
+                  <p className={`text-[10px] font-bold mt-2 uppercase tracking-tighter 
+                    ${isViewed ? "text-blue-600" : isCompleted || isActive ? "text-black" : "text-slate-400"}`}>
+                    {step.shortLabel}
+                  </p>
                 </div>
-                <p className={`text-[10px] font-bold mt-2 uppercase tracking-tighter ${index <= currentStep ? "text-black" : "text-slate-400"}`}>
-                  {step.shortLabel}
-                </p>
-              </div>
-              {index < steps.length - 1 && (
-                <div className={`h-1 flex-1 mx-2 rounded-full ${index < currentStep ? "bg-black" : "bg-slate-200"}`} />
-              )}
-            </React.Fragment>
-          ))}
+                {index < steps.length - 1 && (
+                  <div className={`h-1 flex-1 mx-2 rounded-full ${index < activeStage ? "bg-black" : "bg-slate-200"}`} />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
+        {/* Active Node Card Content */}
         <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-            <div className="p-5 bg-slate-100 rounded-2xl">
-              {React.createElement(currentStepData.icon, { size: 40, className: "text-black" })}
+            <div className={`p-5 rounded-2xl ${currentStepData.isOverview ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-black"}`}>
+              {React.createElement(currentStepData.icon, { size: 40 })}
             </div>
+            
             <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-bold text-slate-800">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center justify-center md:justify-start gap-3">
                 {currentStepData.label}
-                {isCurrentRoundCompleted && <span className="ml-3 text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">Completed</span>}
+                {isCurrentRoundCompleted && <span className="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full">Completed</span>}
+                {viewedStep < activeStage && !currentStepData.isOverview && <span className="text-sm bg-slate-100 text-slate-600 px-3 py-1 rounded-full">Past Stage</span>}
               </h2>
               <p className="text-slate-500 mt-1">{currentStepData.description}</p>
             </div>
 
             <div className="flex flex-col gap-3">
-              {/* If it's a Round, show Mark Complete first. Hide Next Stage until Complete. */}
-              {currentStepData.isRound && !isCurrentRoundCompleted ? (
+              {viewedStep < activeStage ? (
+                // Just navigate to the next viewed node visually
+                <button
+                  onClick={handleNextStep}
+                  className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100 transition-all shadow-sm"
+                >
+                  View Next Step ➔
+                </button>
+              ) : currentStepData.isRound && !isCurrentRoundCompleted ? (
+                // It's the active round, mark complete
                 <button
                   onClick={markRoundComplete}
                   disabled={loading}
@@ -300,6 +369,7 @@ const Process = () => {
                   {loading ? "Processing..." : "Mark Round Complete"}
                 </button>
               ) : (
+                // It's a completed stage, move to next stage in backend
                 !isLastStep && (
                   <button
                     onClick={handleNextStep}
@@ -313,6 +383,56 @@ const Process = () => {
             </div>
           </div>
 
+          {/* Render extra details if it is the First Node (Live Dashboard) */}
+          {currentStepData.isOverview && (
+            <div className="mt-8 pt-8 border-t border-slate-100">
+              <h3 className="text-lg font-bold text-slate-800 mb-6">Live Drive Analytics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-blue-600 mb-1">Total Applications</p>
+                      <p className="text-4xl font-black text-blue-900">{stats.total}</p>
+                    </div>
+                    <Users className="text-blue-200" size={48} />
+                </div>
+                <div className="bg-green-50 p-6 rounded-2xl border border-green-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-green-600 mb-1">Shortlisted</p>
+                      <p className="text-4xl font-black text-green-900">{stats.shortlisted}</p>
+                    </div>
+                    <CheckCircle2 className="text-green-200" size={48} />
+                </div>
+                <div className="bg-purple-50 p-6 rounded-2xl border border-purple-100 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-purple-600 mb-1">Selected</p>
+                      <p className="text-4xl font-black text-purple-900">{stats.selected}</p>
+                    </div>
+                    <Target className="text-purple-200" size={48} />
+                </div>
+              </div>
+
+              <div className="mt-6 pt-6 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Role</p>
+                  <p className="text-sm font-bold text-slate-700 mt-1">{driveData?.role || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Company</p>
+                  <p className="text-sm font-bold text-slate-700 mt-1">{driveData?.company_name || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Job ID</p>
+                  <p className="text-sm font-bold text-slate-700 mt-1">{driveData?.job_id || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Stages</p>
+                  <p className="text-sm font-bold text-slate-700 mt-1">{steps.length - 1} Workflow Steps</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Render extra details if it is a Round */}
           {currentStepData.isRound && (
             <div className="mt-10 pt-8 border-t border-slate-100">
               <div className="grid md:grid-cols-2 gap-8">

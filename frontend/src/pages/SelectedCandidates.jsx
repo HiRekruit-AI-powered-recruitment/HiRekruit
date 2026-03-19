@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Search, FileText, Download, Trophy } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Loader from "../components/Loader";
-
+import ExportExcel from "../components/ExportExcel";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const SelectedCandidates = () => {
@@ -113,13 +113,21 @@ const SelectedCandidates = () => {
     <div className="min-h-screen bg-gray-50">
       {/* header */}
       <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-            Selected Candidates
-          </h1>
-          <p className="text-sm text-gray-600">
-            View selected candidates by Job ID
-          </p>
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              Selected Candidates
+            </h1>
+            <p className="text-sm text-gray-600">
+              View selected candidates by Job ID
+            </p>
+          </div>
+
+          {/* Export Button */}
+          <ExportExcel 
+             candidates={filteredCandidates} 
+             fileName={searchJobId ? `Job_${searchJobId}_Selected` : "Selected_Candidates"} 
+          />
         </div>
       </div>
 
