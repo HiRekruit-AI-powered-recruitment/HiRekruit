@@ -18,6 +18,9 @@ const Dashboard = () => {
   const [processing, setProcessing] = useState(false);
   const [jobData, setJobData] = useState(null);
 
+  const [applications, setApplications] = useState([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+
   // New State for Posting Configuration
   const [postingConfig, setPostingConfig] = useState({
     visibility: "public",
@@ -45,6 +48,35 @@ const Dashboard = () => {
       }
     }
   }, []);
+
+
+
+
+
+ const fetchApplications = useCallback(async () => {
+    setLoadingApps(true);
+    try {
+      // Ensure this endpoint matches your route in application.routes.js
+      const response = await fetch(`${BASE_URL}/v1/application`);
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Based on your controller, the data is inside result.data.applications
+        setApplications(result.data.applications || []);
+      } else {
+        toast.error("Failed to load applications");
+      }
+    } catch (error) {
+      console.error("Error fetching apps:", error);
+    } finally {
+      setLoadingApps(false);
+    }
+  }, []);
+
+  // ADDED: Call fetch on mount
+  useEffect(() => {
+    fetchApplications();
+  }, [fetchApplications]);
 
   const onAddFiles = useCallback(
     (newFiles) => {
@@ -351,10 +383,68 @@ const Dashboard = () => {
         <div className="p-4">
             <UploadDropzone onAddFiles={onAddFiles} />
             <FileList files={files} onRemove={onRemove} />
+            <GetApplicationOnline baseUrl={BASE_URL} />
+
         </div>
+
+
+     
+
       </div>
 
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+    </div>
+  );
+};
+
+
+const GetApplicationOnline = ({ baseUrl }) => {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const response = await fetch(`${baseUrl}/v1/application`);
+        const result = await response.json();
+        // Assuming your backend response is { data: { applications: [] } }
+        if (response.ok) {
+          setApplications(result.data?.applications || []);
+        }
+      } catch (err) {
+        console.error("Error fetching apps:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApps();
+  }, [baseUrl]);
+
+  if (loading) return <p className="p-4 text-sm text-gray-500">Loading applications...</p>;
+
+  return (
+    <div className="mt-6">
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">Live Applications</h3>
+      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2">Email</th>
+              <th className="px-4 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {applications.map((app) => (
+              <tr key={app._id}>
+                <td className="px-4 py-2">{app.fullName}</td>
+                <td className="px-4 py-2">{app.email}</td>
+                <td className="px-4 py-2 text-xs font-bold text-blue-600">{app.currentStatus}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

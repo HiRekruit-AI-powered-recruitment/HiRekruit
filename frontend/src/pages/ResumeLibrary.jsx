@@ -3,7 +3,7 @@ import { Search, FileText, ChevronDown, Download } from "lucide-react";
 import { useAuth } from "../Context/AuthContext.jsx";
 import { toast } from "react-hot-toast";
 import Loader from "../components/Loader";
-
+import ExportExcel from "../components/ExportExcel";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const ResumeLibrary = () => {
@@ -204,14 +204,20 @@ const ResumeLibrary = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-            All Applicants
-          </h1>
-          <p className="text-sm text-gray-600">View all applicants by Job ID</p>
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              All Applicants
+            </h1>
+            <p className="text-sm text-gray-600">View all applicants by Job ID</p>
+          </div>
+          
+          <ExportExcel 
+             candidates={filteredCandidates} 
+             fileName={searchJobId ? `Job_${searchJobId}_Candidates` : "All_Candidates"} 
+          />
         </div>
       </div>
-
       {/* Filters */}
       <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
         {/* Job ID Search Input */}
