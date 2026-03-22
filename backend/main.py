@@ -35,6 +35,10 @@ CORS(
             "origins": [
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
+                "http://localhost:5174",
+                "http://127.0.0.1:5174",
+                "http://localhost:5175",
+                "http://127.0.0.1:5175",
                 "https://hirekruit.com",
                 "https://www.hirekruit.com"
             ],
@@ -66,7 +70,7 @@ app.register_blueprint(feedback_bp, url_prefix="/api/interview-feedback")
 
 if __name__ == "__main__":
     import os
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     debug = os.environ.get("FLASK_ENV") == "development"
     print(f"Flask server started on port {port}")
     app.run(host="0.0.0.0", port=port, debug=debug)

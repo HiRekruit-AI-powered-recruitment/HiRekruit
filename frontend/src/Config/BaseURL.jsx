@@ -1,9 +1,5 @@
 const config = {
-  // Uncomment the one you want to use
-  BASE_URL: "http://localhost:5000", // Local development URL
-
-  // For deployment
-  // BASE_URL: "https://hiremate-dde0.onrender.com", // Deployed production URL
+  BASE_URL: import.meta.env.VITE_BASE_URL || "http://localhost:5001",
 };
 
 export default config;
