@@ -25,17 +25,22 @@ const Process = () => {
   const navigate = useNavigate();
 
   // State Management
-  const[activeStage, setActiveStage] = useState(0); // Only tracking current unlocked stage
+  const [activeStage, setActiveStage] = useState(0); 
   
   const[loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const[driveData, setDriveData] = useState(null);
   const [steps, setSteps] = useState([]);
-  const [selectedDeadline, setSelectedDeadline] = useState("");
-  const [deadline, setDeadline] = useState("");
   
-  // Live Stats - Only tracking total live applications now
-  const [stats, setStats] = useState({ total: 0 });
+  // Deadline states
+  const [selectedDeadline, setSelectedDeadline] = useState("");
+  const[deadline, setDeadline] = useState("");
+  
+  // NEW: State for extending the main application deadline
+  const [selectedAppDeadline, setSelectedAppDeadline] = useState("");
+  
+  // Live Stats
+  const[stats, setStats] = useState({ total: 0 });
 
   const roundTypeIcons = {
     Technical: Settings,
@@ -87,7 +92,6 @@ const Process = () => {
       setLoading(true);
       setError(null);
       
-      // 1. Fetch Drive info
       const response = await fetch(`${BaseURL}/api/drive/${driveId}`);
       if (!response.ok) throw new Error("Failed to fetch drive details");
       const data = await response.json();
@@ -98,7 +102,6 @@ const Process = () => {
       const generatedSteps = buildStepsFromStages(drive);
       setSteps(generatedSteps);
 
-      // 2. Check if the pipeline has officially started moving forward
       const startedStatuses =[
         "resumeUploaded", 
         "resumeShortlisted", 
@@ -111,13 +114,9 @@ const Process = () => {
       const hasStarted = drive.status && startedStatuses.includes(drive.status);
       const backendStage = drive.currentStage !== undefined && drive.currentStage !== null ? drive.currentStage : 0;
       
-      // If it hasn't started, stay on Index 0 (Live Applications)
-      // If it has started, map it directly to the backend stage + 1 (since 0 is Overview)
       const frontendActiveStage = hasStarted ? backendStage + 1 : 0;
-      
       setActiveStage(frontendActiveStage);
 
-      // Check if current round is coding to get deadline
       const currentActiveStepData = generatedSteps[frontendActiveStage];
       if (currentActiveStepData?.isRound && currentActiveStepData.roundType === "Coding") {
         const deadlineRes = await fetch(`${BaseURL}/api/drive/get_deadline?drive_id=${driveId}`);
@@ -125,7 +124,6 @@ const Process = () => {
         setDeadline(deadlineData.deadline);
       }
 
-      // 3. Fetch Live Candidates Stats for Overview Node (Total Live Only)
       const statsRes = await fetch(`${BaseURL}/api/drive/${driveId}/candidates`);
       if (statsRes.ok) {
         const cData = await statsRes.json();
@@ -178,7 +176,6 @@ const Process = () => {
       }
     });
 
-    // Inject Live Overview as the First Node
     return[
       {
         id: "live_overview",
@@ -195,7 +192,6 @@ const Process = () => {
   const handleNextStep = async () => {
     if (activeStage >= steps.length - 1) return;
     
-    // Grabbing the next step to update the backend to start the ACTUAL pipeline
     const nextStepData = steps[activeStage + 1];
 
     try {
@@ -212,6 +208,32 @@ const Process = () => {
 
       if (!response.ok) throw new Error("Update failed");
       await fetchDriveStatus();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // NEW: Handler for extending the main Application Deadline
+  const handleExtendAppDeadline = async () => {
+    if (!selectedAppDeadline) return alert("Select a date and time");
+    
+    try {
+      setLoading(true);
+      // Adjust this endpoint structure based on how your backend handles drive updates
+      const response = await fetch(`${BaseURL}/api/drive/${driveId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          application_deadline: new Date(selectedAppDeadline).toISOString(),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to extend application deadline");
+      alert("Application deadline extended successfully!");
+      setSelectedAppDeadline("");
+      fetchDriveStatus();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -273,7 +295,6 @@ const Process = () => {
   const currentStepData = steps[activeStage];
   const isLastStep = activeStage === steps.length - 1;
 
-  // Determine if the current round is marked as completed in driveData
   const activeRoundInfo = currentStepData.isRound
     ? driveData.round_statuses?.find(rs => rs.round_number === currentStepData.roundNumber)
     : null;
@@ -299,7 +320,6 @@ const Process = () => {
           </div>
         )}
 
-        {/* Stepper Visualization (View-only Progress Bar - CANNOT click to track back) */}
         <div className="flex items-center justify-between mb-16 px-4 overflow-x-auto pb-4">
           {steps.map((step, index) => {
             const isCompleted = index < activeStage;
@@ -331,7 +351,6 @@ const Process = () => {
           })}
         </div>
 
-        {/* Active Node Card Content */}
         <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className={`p-5 rounded-2xl ${currentStepData.isOverview ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-black"}`}>
@@ -348,7 +367,6 @@ const Process = () => {
 
             <div className="flex flex-col gap-3">
               {currentStepData.isRound && !isCurrentRoundCompleted ? (
-                // It's the active round, mark complete
                 <button
                   onClick={markRoundComplete}
                   disabled={loading}
@@ -357,25 +375,27 @@ const Process = () => {
                   {loading ? "Processing..." : "Mark Round Complete"}
                 </button>
               ) : (
-                // It's a completed stage, move to next stage in backend
                 !isLastStep && (
                   <button
                     onClick={handleNextStep}
                     disabled={loading}
-                    className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg disabled:bg-slate-300"
+                    // Changed color to Red when on overview to signify "Stop Accepting"
+                    className={`px-6 py-3 text-white rounded-xl font-bold transition-all shadow-lg disabled:bg-slate-300 
+                      ${currentStepData.isOverview ? "bg-red-600 hover:bg-red-700" : "bg-black hover:bg-slate-800"}`}
                   >
-                    {loading ? "Processing..." : "Proceed to Next Stage"}
+                    {/* NEW: Dynamically change button text for the Overview Stage */}
+                    {loading ? "Processing..." : (currentStepData.isOverview ? "Stop Accepting Applications" : "Proceed to Next Stage")}
                   </button>
                 )
               )}
             </div>
           </div>
 
-          {/* Render Live Drive Overview details (Only Live Applications Count) */}
           {currentStepData.isOverview && (
             <div className="mt-8 pt-8 border-t border-slate-100">
               <h3 className="text-lg font-bold text-slate-800 mb-6">Live Drive Analytics</h3>
-              <div className="grid grid-cols-1">
+              
+              <div className="grid grid-cols-1 mb-6">
                 <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-blue-600 mb-1">Total Live Applications</p>
@@ -385,7 +405,33 @@ const Process = () => {
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+              {/* NEW: Extend Application Deadline UI */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Clock size={16} /> Extend Application Deadline
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Current Deadline: <span className="font-semibold text-slate-700">{driveData?.application_deadline ? new Date(driveData.application_deadline).toLocaleString() : "Not Set"}</span>
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full md:w-auto">
+                  <input
+                    type="datetime-local"
+                    className="flex-1 md:w-48 p-2 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-black text-sm bg-white"
+                    value={selectedAppDeadline}
+                    onChange={(e) => setSelectedAppDeadline(e.target.value)}
+                  />
+                  <button
+                    onClick={handleExtendAppDeadline}
+                    className="bg-black text-white px-5 py-2 rounded-xl font-bold hover:bg-slate-800 text-sm transition-all"
+                  >
+                    Extend
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                 <div>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Role</p>
                   <p className="text-sm font-bold text-slate-700 mt-1">{driveData?.role || "N/A"}</p>
@@ -406,7 +452,6 @@ const Process = () => {
             </div>
           )}
 
-          {/* Render Round details (Only Update Deadline) */}
           {currentStepData.isRound && (
             <div className="mt-10 pt-8 border-t border-slate-100 flex justify-start">
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 w-full max-w-xl">
@@ -425,7 +470,7 @@ const Process = () => {
                     <div className="flex gap-2 w-full">
                       <input
                         type="datetime-local"
-                        className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-black"
+                        className="flex-1 p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-black bg-white"
                         value={selectedDeadline}
                         onChange={(e) => setSelectedDeadline(e.target.value)}
                       />

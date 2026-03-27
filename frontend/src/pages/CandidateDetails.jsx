@@ -49,23 +49,18 @@ const CandidateDetails = () => {
         }
     }, [candidateId]);
 
-    // Team Note: View Resume should preview PDF in new tab (not download)
+    // Team Note: View Resume should preview PDF in new tab
     const handleViewResume = () => {
-        window.open(
-            `${BASE_URL}/api/resume/view/${candidateId}`,
-            "_blank"
-        );
+        const url = `${BASE_URL}/api/resume/view/${candidateId}`;
+        console.log("DEBUG: Opening View URL:", url);
+        window.open(url, "_blank");
     };
 
-    // ✅ Fix: Download PDF should force download
+    // ✅ Fix: Download PDF should use backend download route to force download
     const handleDownloadResume = () => {
-        if (!candidate?.resume_url) return;
-
-        // Feature: Force resume download instead of preview
-        const link = document.createElement("a");
-        link.href = candidate.resume_url;
-        link.download = `${candidate.name || 'Candidate'}_Resume.pdf`;
-        link.click();
+        const url = `${BASE_URL}/api/resume/download/${candidateId}`;
+        console.log("DEBUG: Opening Download URL:", url);
+        window.open(url, "_blank");
     };
 
     if (loading) return <Loader />;

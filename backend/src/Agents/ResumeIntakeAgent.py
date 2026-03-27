@@ -98,15 +98,26 @@ class ResumeIntakeAgent:
 
         for item in resume_data:
             # Handle both dictionary (new) and string (old) inputs
+            public_id = None
+            version = None
+            format_type = None
             if isinstance(item, dict):
                 resume_url = item.get("url")
                 raw_text = item.get("text")
+                public_id = item.get("public_id")
+                version = item.get("version")
+                format_type = item.get("format")
+                resource_type = item.get("resource_type")
                 print(f"Processing resume from provided text: {resume_url}")
             else:
                 resume_url = item
                 print(f"Processing resume from Cloudinary URL (legacy mode): {resume_url}")
                 pdf_bytes = self.download_pdf(resume_url)
                 raw_text = self.extract_text(pdf_bytes)
+                public_id = None
+                version = None
+                format_type = None
+                resource_type = "image"  # Assumption for legacy URLs
 
             human_prompt = f"Extract candidate information:\n\n{raw_text}"
             messages = self.prompt_builder.build(system_prompt, human_prompt)
@@ -137,7 +148,11 @@ class ResumeIntakeAgent:
                 name=llm_output["name"],
                 email=llm_output["email"],
                 resume_content=llm_output["resume_content"],
-                resume_url=resume_url  # ✅ Store Cloudinary PDF link
+                resume_url=resume_url,    # ✅ Store Cloudinary PDF link
+                public_id=public_id,       # ✅ Store Cloudinary public_id
+                version=version,           # ✅ Store Cloudinary version
+                format=format_type,        # ✅ Store Cloudinary format
+                resource_type=resource_type # ✅ Store Cloudinary resource_type
             )
 
             # Preserve created_at if candidate already exists
