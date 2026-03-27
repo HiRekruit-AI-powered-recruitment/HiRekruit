@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Camera, // <-- Added Camera icon
 } from "lucide-react";
 import { useAuth } from "../Context/AuthContext";
 import Loader from "../components/Loader";
@@ -23,12 +24,19 @@ const Profile = () => {
   // Local state for company name
   const [companyName, setCompanyName] = useState("");
 
-  // Team Note: Fetching company name dynamically using the existing company_id via AuthContext
+  // Profile Photo State
+  const [isUploading, setIsUploading] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+
+  // Initialize photo and company name
   useEffect(() => {
     if (companyData && companyData.name) {
       setCompanyName(companyData.name);
     }
-  }, [companyData]);
+    if (user && user.profile_photo) {
+      setProfilePhoto(user.profile_photo);
+    }
+  }, [companyData, user]);
 
   // Modal state
   const [showResetModal, setShowResetModal] = useState(false);
@@ -54,7 +62,52 @@ const Profile = () => {
 
   if (isLoading) return <Loader />;
   if (!user) return null;
+const handlePhotoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large! Please upload a photo under 5MB.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("profile_photo", file);
+
+    try {
+      setIsUploading(true);
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const res = await fetch(`${baseUrl}/api/auth/update-photo`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      // --- NEW SAFETY CHECK ---
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textError = await res.text();
+        console.error("SERVER RETURNED HTML INSTEAD OF JSON:", textError);
+        throw new Error("Backend route not found or server crashed. Check console.");
+      }
+      // ------------------------
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to upload photo");
+      }
+
+      setProfilePhoto(data.url || URL.createObjectURL(file));
+      
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert(err.message || "Failed to upload photo. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
   // Step 1: Request reset code
   const handleRequestReset = async () => {
     try {
@@ -161,9 +214,38 @@ const Profile = () => {
           {/* Header with Gradient */}
           <div className="bg-gradient-to-r from-black to-gray-700 text-white px-8 py-10">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-lg">
-                <User size={36} strokeWidth={2} />
+              
+              {/* --- UPDATED AVATAR SECTION WITH UPLOAD --- */}
+              <div className="relative group">
+                <div className="w-20 h-20 bg-white text-black rounded-full flex items-center justify-center shadow-lg overflow-hidden border-2 border-white">
+                  {profilePhoto ? (
+                    <img 
+                      src={profilePhoto} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <User size={36} strokeWidth={2} />
+                  )}
+                </div>
+                
+                <label className="absolute bottom-0 right-0 bg-black text-white p-1.5 rounded-full cursor-pointer hover:bg-gray-800 transition-colors shadow-lg border-2 border-white z-10">
+                  {isUploading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <Camera size={14} />
+                  )}
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handlePhotoChange} 
+                    disabled={isUploading}
+                  />
+                </label>
               </div>
+              {/* ------------------------------------------- */}
+
               <div>
                 <h1 className="text-3xl font-bold mb-1">{user.name}</h1>
                 <p className="text-gray-200 text-sm flex items-center gap-2">
@@ -204,12 +286,12 @@ const Profile = () => {
                 value={
                   user.last_login
                     ? new Date(user.last_login).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
                     : "Never"
                 }
               />
@@ -280,19 +362,21 @@ const Profile = () => {
                 {/* Step Indicator */}
                 <div className="flex items-center justify-center gap-2 mb-6">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${resetStep === 1
-                      ? "bg-black text-white"
-                      : "bg-green-500 text-white"
-                      }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      resetStep === 1
+                        ? "bg-black text-white"
+                        : "bg-green-500 text-white"
+                    }`}
                   >
                     {resetStep === 1 ? "1" : "✓"}
                   </div>
                   <div className="w-12 h-0.5 bg-gray-300"></div>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${resetStep === 2
-                      ? "bg-black text-white"
-                      : "bg-gray-200 text-gray-500"
-                      }`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      resetStep === 2
+                        ? "bg-black text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
                   >
                     2
                   </div>
@@ -484,8 +568,9 @@ const ProfileCard = ({ icon, label, value, capitalize }) => (
           {label}
         </p>
         <p
-          className={`font-semibold text-gray-900 truncate ${capitalize ? "capitalize" : ""
-            }`}
+          className={`font-semibold text-gray-900 truncate ${
+            capitalize ? "capitalize" : ""
+          }`}
         >
           {value}
         </p>

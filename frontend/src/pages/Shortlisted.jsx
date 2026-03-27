@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, FileText, Award, Users, ArrowLeft } from "lucide-react";
-
+import ExportExcel from "../components/ExportExcel";
 import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -144,14 +144,23 @@ const ShortlistedResumes = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
+      {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-            Shortlisted Resumes
-          </h1>
-          <p className="text-sm text-gray-600">
-            View shortlisted candidates by Job ID
-          </p>
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              Shortlisted Resumes
+            </h1>
+            <p className="text-sm text-gray-600">
+              View shortlisted candidates by Job ID
+            </p>
+          </div>
+
+          {/* Export Button */}
+          <ExportExcel 
+             candidates={filteredCandidates} 
+             fileName={jobId ? `Job_${jobId}_Shortlisted` : "Shortlisted_Candidates"} 
+          />
         </div>
       </div>
 

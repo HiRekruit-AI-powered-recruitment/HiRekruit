@@ -22,7 +22,7 @@ const JobCreation = () => {
   const navigate = useNavigate();
   const { driveId } = useParams();
   const isEditMode = !!driveId;
-
+  const supportedLanguages = ["English", "Hindi", "Other"];
   console.log("User :", user);
   console.log(BASE_URL);
 
@@ -608,8 +608,6 @@ const JobCreation = () => {
     "Behavioral",
     "System Design",
     "Coding",
-    "Panel",
-    "Final",
   ];
 
   // Team Note: Preventing initial error flicker by showing loading state until data fetch completes
@@ -951,52 +949,73 @@ const JobCreation = () => {
 
           <div className="space-y-3">
             {jobData.rounds.map((round, index) => (
-              <div
-                key={index}
-                className="flex gap-3 items-center p-3 border border-gray-300 rounded-md bg-gray-50"
-              >
-                <div className="flex-1">
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Round {index + 1} Type
-                  </label>
-                  <select
-                    value={round.type}
-                    onChange={(e) =>
-                      handleRoundChange(index, "type", e.target.value)
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                  >
-                    {roundTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-2">
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Description (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={round.description}
-                    onChange={(e) =>
-                      handleRoundChange(index, "description", e.target.value)
-                    }
-                    placeholder="Brief description of the round"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-                  />
-                </div>
-                {jobData.rounds.length > 1 && (
-                  <button
-                    onClick={() => removeRound(index)}
-                    className="px-2 py-2 text-red-600 hover:bg-red-100 rounded-md"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
+  <div
+    key={index}
+    className="flex flex-col gap-3 p-4 border border-gray-300 rounded-md bg-gray-50"
+  >
+    <div className="flex gap-3 items-start">
+      <div className="flex-1">
+        <label className="block text-sm text-gray-600 mb-1">
+          Round {index + 1} Type
+        </label>
+        <select
+          value={round.type}
+          onChange={(e) => handleRoundChange(index, "type", e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+        >
+          {roundTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* --- ADDED LANGUAGE DROPDOWN --- */}
+      {(round.type === "HR" || round.type === "Technical") && (
+        <div className="w-1/3">
+          <label className="block text-sm text-gray-600 mb-1">
+            Language
+          </label>
+          <select
+            value={round.language || "English"}
+            onChange={(e) => handleRoundChange(index, "language", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+          >
+            {supportedLanguages.map((lang) => (
+              <option key={lang} value={lang}>
+                {lang}
+              </option>
             ))}
+          </select>
+        </div>
+      )}
+
+      {jobData.rounds.length > 1 && (
+        <button
+          onClick={() => removeRound(index)}
+          className="mt-6 px-2 py-2 text-red-600 hover:bg-red-100 rounded-md"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+
+    {/* Description input stays below the dropdowns */}
+    <div>
+      <label className="block text-sm text-gray-600 mb-1">
+        Description (Optional)
+      </label>
+      <input
+        type="text"
+        value={round.description}
+        onChange={(e) => handleRoundChange(index, "description", e.target.value)}
+        placeholder="Brief description of the round"
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+      />
+    </div>
+  </div>
+))}
           </div>
         </div>
 

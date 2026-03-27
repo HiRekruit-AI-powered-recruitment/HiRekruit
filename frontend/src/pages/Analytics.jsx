@@ -37,6 +37,7 @@ import {
   Title,
 } from "chart.js";
 import { Doughnut, Bar, Line, Pie } from "react-chartjs-2";
+import ExportExcel from "../components/ExportExcel";
 import Loader from "../components/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
@@ -380,13 +381,21 @@ export default function Analytics() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-            Analytics Dashboard
-          </h1>
-          <p className="text-sm text-gray-600">
-            Comprehensive recruitment insights and metrics
-          </p>
+        <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900 mb-1">
+              Analytics Dashboard
+            </h1>
+            <p className="text-sm text-gray-600">
+              Comprehensive recruitment insights and metrics
+            </p>
+          </div>
+
+          {/* Export Button */}
+          <ExportExcel 
+             candidates={candidates} 
+             fileName={jobId ? `Job_${jobId}_Analytics_Candidates` : "Analytics_Candidates"} 
+          />
         </div>
       </div>
 
