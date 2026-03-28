@@ -3,26 +3,6 @@ import { User, Star, Quote, ChevronLeft, ChevronRight } from "lucide-react";
 
 const testimonials = [
   {
-    id: 1,
-    name: "Shikha Gupta",
-    role: "Human Resources",
-    company: "StackCart",
-    text: "This platform has changed the way I hire. Highly recommend!",
-    rating: 5,
-    image:
-      "https://media.licdn.com/dms/image/v2/D5603AQGXfMpfklh_jg/profile-displayphoto-shrink_800_800/B56ZZPzFlfHoAc-/0/1745095515416?e=1767225600&v=beta&t=fazu2E0IVxamTE_-dxlsgugXBleoJSD4z05KCJomYck", // Add image URL here like: "https://example.com/photo.jpg"
-  },
-  {
-    id: 2,
-    name: "Kavita Verma",
-    role: "Human Resources",
-    company: "HiRekruit",
-    text: "A seamless experience from start to finish.",
-    rating: 5,
-    image:
-      "https://media.licdn.com/dms/image/v2/D5603AQHRD3f6o5EysQ/profile-displayphoto-crop_800_800/B56ZsXcnSRJwAI-/0/1765624940935?e=1767225600&v=beta&t=pJFj6mk4LHxBSN9ok4b-z3EvXVH4IWavL8P3K98EAvA",
-  },
-  {
     id: 3,
     name: "Piyush Patel",
     role: "Placement Head at NITK",

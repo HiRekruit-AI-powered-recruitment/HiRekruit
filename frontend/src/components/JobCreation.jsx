@@ -11,9 +11,14 @@ let BASE_URL = VITE_BASE_URL;
 const JobCreation = () => {
   // Check if we need to adjust BASE_URL based on how the site is accessed
   useEffect(() => {
-    if (window.location.hostname === "127.0.0.1" && BASE_URL.includes("localhost")) {
-      console.log("Switching BASE_URL to 127.0.0.1 for consistency with current hostname");
-      // Optionally update BASE_URL here or just trust the fetch environment. 
+    if (
+      window.location.hostname === "127.0.0.1" &&
+      BASE_URL.includes("localhost")
+    ) {
+      console.log(
+        "Switching BASE_URL to 127.0.0.1 for consistency with current hostname",
+      );
+      // Optionally update BASE_URL here or just trust the fetch environment.
       // But usually, if one works, the other might be blocked by browser/OS.
     }
   }, []);
@@ -22,22 +27,20 @@ const JobCreation = () => {
   const navigate = useNavigate();
   const { driveId } = useParams();
   const isEditMode = !!driveId;
-
-  console.log("User :", user);
-  console.log(BASE_URL);
-
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [companyId, setCompanyId] = useState(null);
   const [fetchingHRInfo, setFetchingHRInfo] = useState(true);
   const [showCodingQuestions, setShowCodingQuestions] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [postJobOnPortal, setPostJobOnPortal] = useState(false);
   const [jobData, setJobData] = useState({
     company_id: "",
     job_id: "",
     role: "",
     rounds: [{ type: "HR", description: "" }],
     start_date: "",
+    application_deadline: "",
     end_date: "",
     location: "",
     skills: "",
@@ -50,10 +53,9 @@ const JobCreation = () => {
     internship_duration: "",
     coding_questions: [],
 
-    //setting time duration 
+    //setting time duration
     assessment_duration_hours: "1",
     assessment_duration_minutes: "0",
-
   });
 
   // Team Note: Fetch drive details for Edit Mode
@@ -69,7 +71,7 @@ const JobCreation = () => {
           const drive = data.drive;
 
           // Populate form with drive data
-          setJobData(prev => ({
+          setJobData((prev) => ({
             ...prev,
             ...drive,
             // Ensure rounds is an array
@@ -84,7 +86,6 @@ const JobCreation = () => {
           }));
 
           if (drive.company_id) setCompanyId(drive.company_id);
-
         } catch (err) {
           console.error("Error fetching drive details:", err);
           toast.error("Failed to load drive details for editing");
@@ -113,7 +114,7 @@ const JobCreation = () => {
         }
 
         const response = await fetch(
-          `${BASE_URL}/api/drive/hr-info?email=${encodeURIComponent(email)}`
+          `${BASE_URL}/api/drive/hr-info?email=${encodeURIComponent(email)}`,
         );
 
         if (!response.ok) {
@@ -121,18 +122,9 @@ const JobCreation = () => {
         }
 
         const hrData = await response.json();
-        console.log("Respose of HR data", hrData);
-        console.log("=".repeat(50));
-        console.log("HR INFO FROM JOB CREATION:");
-        console.log("Full HR Data:", hrData);
-        console.log("Email:", hrData.email);
-        console.log("Name:", hrData.name);
-        console.log("Company ID:", hrData.company_id);
-        console.log("Role:", hrData.role);
-        console.log("=".repeat(50));
 
         if (hrData.company_id) {
-          // Only set if not already set by edit mode fetch? 
+          // Only set if not already set by edit mode fetch?
           // Or just set it. It should be same company.
           if (!companyId) {
             setCompanyId(hrData.company_id);
@@ -141,14 +133,12 @@ const JobCreation = () => {
               company_id: hrData.company_id,
             }));
           }
-          console.log("Set companyId to:", hrData.company_id);
           const timer = setTimeout(() => setLoading(false), 3000);
           return () => clearTimeout(timer);
         } else {
           toast.error("Company ID not found in HR information");
         }
       } catch (err) {
-        console.error("Error fetching HR info:", err.message);
         toast.error("Could not load HR information.");
       } finally {
         setFetchingHRInfo(false);
@@ -166,7 +156,7 @@ const JobCreation = () => {
   useEffect(() => {
     if (jobData.rounds) {
       const hasCodingRound = jobData.rounds.some(
-        (round) => round.type === "Coding"
+        (round) => round.type === "Coding",
       );
       setShowCodingQuestions(hasCodingRound);
 
@@ -243,7 +233,7 @@ const JobCreation = () => {
     setJobData((prev) => ({
       ...prev,
       coding_questions: prev.coding_questions.map((q) =>
-        q.id === questionId ? { ...q, [field]: value } : q
+        q.id === questionId ? { ...q, [field]: value } : q,
       ),
     }));
   };
@@ -254,10 +244,13 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-            ...q,
-            testCases: [...q.testCases, { input: "", output: "", type: "public" }]
-          }
-          : q
+              ...q,
+              testCases: [
+                ...q.testCases,
+                { input: "", output: "", type: "public" },
+              ],
+            }
+          : q,
       ),
     }));
   };
@@ -268,15 +261,13 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-            ...q,
-            testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
-          }
-          : q
+              ...q,
+              testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
+            }
+          : q,
       ),
     }));
   };
-
-
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -333,21 +324,19 @@ const JobCreation = () => {
           coding_questions: [...prev.coding_questions, ...formattedQuestions],
         }));
 
-        toast.success(`${extractedData.questions.length} questions extracted successfully!`);
+        toast.success(
+          `${extractedData.questions.length} questions extracted successfully!`,
+        );
       }
     } catch (err) {
       console.error(err);
-      toast.error("AI could not read the PDF. Please enter questions manually.");
+      toast.error(
+        "AI could not read the PDF. Please enter questions manually.",
+      );
     } finally {
       setIsExtracting(false);
     }
   };
-
-
-
-
-
-
 
   const removeFile = () => {
     setJobData((prev) => ({
@@ -357,20 +346,18 @@ const JobCreation = () => {
     }));
   };
 
-
-
   const handleTestCaseChange = (questionId, testCaseIndex, field, value) => {
     setJobData((prev) => ({
       ...prev,
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-            ...q,
-            testCases: q.testCases.map((tc, idx) =>
-              idx === testCaseIndex ? { ...tc, [field]: value } : tc
-            ),
-          }
-          : q
+              ...q,
+              testCases: q.testCases.map((tc, idx) =>
+                idx === testCaseIndex ? { ...tc, [field]: value } : tc,
+              ),
+            }
+          : q,
       ),
     }));
   };
@@ -452,7 +439,7 @@ const JobCreation = () => {
           {
             position: "top-right",
             autoClose: 3000,
-          }
+          },
         );
         setLoading(false);
         return;
@@ -473,7 +460,7 @@ const JobCreation = () => {
           {
             position: "top-right",
             autoClose: 3000,
-          }
+          },
         );
         setLoading(false);
         return;
@@ -481,7 +468,9 @@ const JobCreation = () => {
     }
 
     if (showCodingQuestions) {
-      const totalMinutes = (parseInt(assessment_duration_hours) || 0) * 60 + (parseInt(assessment_duration_minutes) || 0);
+      const totalMinutes =
+        (parseInt(assessment_duration_hours) || 0) * 60 +
+        (parseInt(assessment_duration_minutes) || 0);
       if (totalMinutes <= 0) {
         toast.error("Assessment duration must be greater than 0 minutes", {
           position: "top-right",
@@ -501,7 +490,7 @@ const JobCreation = () => {
             {
               position: "top-right",
               autoClose: 3000,
-            }
+            },
           );
           setLoading(false);
           return;
@@ -509,7 +498,7 @@ const JobCreation = () => {
 
         if (
           question.testCases.some(
-            (tc) => !tc.input?.trim() || !tc.output?.trim()
+            (tc) => !tc.input?.trim() || !tc.output?.trim(),
           )
         ) {
           toast.error("Please fill in all test cases for coding questions", {
@@ -562,22 +551,36 @@ const JobCreation = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Server responded with error:", errorText);
-        throw new Error(isEditMode ? "Failed to update drive" : "Failed to create a drive");
+        // console.error("Server responded with error:", errorText);
+        toast.error(errorText);
+        throw new Error(
+          isEditMode ? "Failed to update drive" : "Failed to create a drive",
+        );
       }
 
       const data = await response.json();
-      console.log(isEditMode ? "Drive updated successfully!" : "Drive created successfully!", data);
+      console.log(
+        isEditMode
+          ? "Drive updated successfully!"
+          : "Drive created successfully!",
+        data,
+      );
 
       if (!isEditMode) {
         // Save job data to localStorage only for new creation flow?
-        localStorage.setItem("currentJobData", JSON.stringify(jobData));
+        const dataToSave = { ...jobData, postJobOnPortal };
+        localStorage.setItem("currentJobData", JSON.stringify(dataToSave));
       }
 
-      toast.success(isEditMode ? "Drive updated successfully!" : "Drive created successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      });
+      toast.success(
+        isEditMode
+          ? "Drive updated successfully!"
+          : "Drive created successfully!",
+        {
+          position: "top-right",
+          autoClose: 3000,
+        },
+      );
 
       setTimeout(() => {
         // Navigate back to drives list or dashboard
@@ -595,7 +598,7 @@ const JobCreation = () => {
         {
           position: "top-right",
           autoClose: 3000,
-        }
+        },
       );
     } finally {
       setLoading(false);
@@ -663,11 +666,27 @@ const JobCreation = () => {
                 <div>
                   <strong>Start Date:</strong> {jobData.start_date || "N/A"}
                 </div>
+                {postJobOnPortal && (
+                  <div>
+                    <strong>Application Deadline:</strong>{" "}
+                    {jobData.application_deadline || "N/A"}
+                  </div>
+                )}
                 <div>
                   <strong>End Date:</strong> {jobData.end_date || "N/A"}
                 </div>
                 <div>
                   <strong>Job Type:</strong> {jobData.job_type || "N/A"}
+                </div>
+                <div>
+                  <strong>Post on Career Portal:</strong>{" "}
+                  <span
+                    className={`font-semibold ${
+                      postJobOnPortal ? "text-green-600" : "text-gray-600"
+                    }`}
+                  >
+                    {postJobOnPortal ? "✓ Yes" : "✗ No"}
+                  </span>
                 </div>
                 {jobData.job_type === "internship" && (
                   <div>
@@ -753,8 +772,9 @@ const JobCreation = () => {
                 <button
                   onClick={confirmSubmit}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-md text-white ${loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
-                    }`}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
+                  }`}
                 >
                   {loading ? "Submitting..." : "Confirm & Submit"}
                 </button>
@@ -1000,8 +1020,6 @@ const JobCreation = () => {
           </div>
         </div>
 
-
-
         {/* Assessment Duration Section */}
         {showCodingQuestions && (
           <div className="bg-gray-50 p-4 rounded-md border border-gray-300 mb-6">
@@ -1015,7 +1033,12 @@ const JobCreation = () => {
                   min="0"
                   max="24"
                   value={jobData.assessment_duration_hours}
-                  onChange={(e) => handleInputChange("assessment_duration_hours", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "assessment_duration_hours",
+                      e.target.value,
+                    )
+                  }
                   className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
                 />
                 <span className="text-sm text-gray-600">Hours</span>
@@ -1026,19 +1049,27 @@ const JobCreation = () => {
                   min="0"
                   max="59"
                   value={jobData.assessment_duration_minutes}
-                  onChange={(e) => handleInputChange("assessment_duration_minutes", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "assessment_duration_minutes",
+                      e.target.value,
+                    )
+                  }
                   className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-black outline-none"
                 />
                 <span className="text-sm text-gray-600">Minutes</span>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2 italic">
-              This is the total time candidates will have to complete the coding assessment.
+              This is the total time candidates will have to complete the coding
+              assessment.
             </p>
           </div>
         )}
         {showCodingQuestions && (
-          <> {/* <--- ADD THIS FRAGMENT START */}
+          <>
+            {" "}
+            {/* <--- ADD THIS FRAGMENT START */}
             {/* PDF Upload Section */}
             <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-black transition-colors relative">
               <label className="block text-gray-700 font-medium mb-2">
@@ -1054,18 +1085,36 @@ const JobCreation = () => {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <div className="text-gray-400 mb-2">
-                    <svg className="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    <svg
+                      className="w-10 h-10 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                   </div>
-                  <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-                  <p className="text-xs text-gray-400 mt-1">PDF only (Max 5MB)</p>
+                  <p className="text-sm text-gray-500">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    PDF only (Max 5MB)
+                  </p>
                 </div>
               ) : (
                 <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
                   <div className="flex items-center gap-3">
                     <div className="bg-red-100 p-2 rounded text-red-600">
-                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-6 h-6"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path d="M4 4a2 2 0 012-2h4.586A1 1 0 0111 2.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
                       </svg>
                     </div>
@@ -1081,17 +1130,28 @@ const JobCreation = () => {
                     onClick={removeFile}
                     className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
               )}
             </div>
-
             <div className="relative flex py-4 items-center">
               <div className="flex-grow border-t border-gray-300"></div>
-              <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">OR Manual Entry</span>
+              <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">
+                OR Manual Entry
+              </span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
           </>
@@ -1099,12 +1159,11 @@ const JobCreation = () => {
         {isExtracting && (
           <div className="flex items-center justify-center p-4 bg-black text-white rounded-lg mb-4 animate-pulse">
             <Loader size="sm" className="mr-2" />
-            <span className="text-sm font-medium">AI is reading your document... Please wait</span>
+            <span className="text-sm font-medium">
+              AI is reading your document... Please wait
+            </span>
           </div>
-
         )}
-
-
 
         {/* Coding Questions Section (conditional) */}
 
@@ -1159,7 +1218,7 @@ const JobCreation = () => {
                             handleQuestionChange(
                               question.id,
                               "title",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           placeholder="e.g., Sum of Two Numbers"
@@ -1178,7 +1237,7 @@ const JobCreation = () => {
                             handleQuestionChange(
                               question.id,
                               "description",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           placeholder="Provide problem description with examples"
@@ -1199,7 +1258,7 @@ const JobCreation = () => {
                             handleQuestionChange(
                               question.id,
                               "constraints",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           placeholder="e.g., 1 ≤ a, b ≤ 10^9"
@@ -1236,7 +1295,7 @@ const JobCreation = () => {
                                       question.id,
                                       tcIndex,
                                       "input",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                   placeholder="Input"
@@ -1252,7 +1311,7 @@ const JobCreation = () => {
                                       question.id,
                                       tcIndex,
                                       "output",
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
                                   placeholder="Output"
@@ -1263,7 +1322,12 @@ const JobCreation = () => {
                                 <select
                                   value={testCase.type}
                                   onChange={(e) =>
-                                    handleTestCaseChange(question.id, tcIndex, "type", e.target.value)
+                                    handleTestCaseChange(
+                                      question.id,
+                                      tcIndex,
+                                      "type",
+                                      e.target.value,
+                                    )
                                   }
                                   className="w-full px-1 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black bg-gray-50"
                                 >
@@ -1293,31 +1357,148 @@ const JobCreation = () => {
           </div>
         )}
 
-        {/* Date Range */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-gray-700 mb-2 font-medium">
-              Start Date <span className="text-red-500">*</span>
+        {/* Date Range Section */}
+        <div>
+          <div className="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={postJobOnPortal}
+                onChange={(e) => setPostJobOnPortal(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black"
+              />
+              <span className="text-gray-700 font-medium">
+                Post this job on Career Portal?
+              </span>
             </label>
-            <input
-              type="date"
-              value={jobData.start_date}
-              onChange={(e) => handleInputChange("start_date", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-            />
+            <p className="text-xs text-gray-600 mt-2 ml-8">
+              Enable this to make the job publicly visible on your career page
+              and accept applications.
+            </p>
           </div>
-          <div>
-            <label className="block text-gray-700 mb-2 font-medium">
-              End Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={jobData.end_date}
-              onChange={(e) => handleInputChange("end_date", e.target.value)}
-              min={jobData.start_date}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
-            />
-          </div>
+
+          {postJobOnPortal ? (
+            <>
+              {/* Three Date Fields for Portal Posting */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <svg
+                      className="w-5 h-5 text-indigo-600 mt-0.5"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zm-11-1a1 1 0 11-2 0 1 1 0 012 0zM8 7a1 1 0 000 2h6a1 1 0 100-2H8zm0 4a1 1 0 000 2h3a1 1 0 100-2H8z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-semibold text-indigo-900 mb-1">
+                      Career Portal Timeline
+                    </p>
+                    <ul className="text-indigo-800 space-y-1 text-xs">
+                      <li>
+                        <strong>Start Date:</strong> When the job posting goes
+                        live
+                      </li>
+                      <li>
+                        <strong>Application Deadline:</strong> When candidates
+                        can no longer apply
+                      </li>
+                      <li>
+                        <strong>End Date:</strong> When the entire hiring
+                        process concludes
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={jobData.start_date}
+                    onChange={(e) =>
+                      handleInputChange("start_date", e.target.value)
+                    }
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Job goes live</p>
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    Application Deadline <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={jobData.application_deadline}
+                    onChange={(e) =>
+                      handleInputChange("application_deadline", e.target.value)
+                    }
+                    min={jobData.start_date}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Stop accepting applications
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2 font-medium">
+                    End Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={jobData.end_date}
+                    onChange={(e) =>
+                      handleInputChange("end_date", e.target.value)
+                    }
+                    min={jobData.application_deadline}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Hiring process ends
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 mb-2 font-medium">
+                  Start Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={jobData.start_date}
+                  onChange={(e) =>
+                    handleInputChange("start_date", e.target.value)
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 mb-2 font-medium">
+                  End Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={jobData.end_date}
+                  onChange={(e) =>
+                    handleInputChange("end_date", e.target.value)
+                  }
+                  min={jobData.start_date}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Location */}
@@ -1339,10 +1520,17 @@ const JobCreation = () => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${loading ? "opacity-70 cursor-not-allowed" : ""
-              }`}
+            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${
+              loading ? "opacity-70 cursor-not-allowed" : ""
+            }`}
           >
-            {loading ? (isEditMode ? "Updating..." : "Creating...") : (isEditMode ? "Update Drive" : "Create Drive")}
+            {loading
+              ? isEditMode
+                ? "Updating..."
+                : "Creating..."
+              : isEditMode
+                ? "Update Drive"
+                : "Create Drive"}
           </button>
         </div>
       </div>
