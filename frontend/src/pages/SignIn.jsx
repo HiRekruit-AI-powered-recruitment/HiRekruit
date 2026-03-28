@@ -45,7 +45,7 @@ export default function SignIn() {
       }
 
       // Successful login - redirect to dashboard
-      window.location.href = "/";
+      navigate("/");
     } catch (err) {
       console.error("SignIn error:", err);
       setErrors([

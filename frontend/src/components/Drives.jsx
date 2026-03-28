@@ -33,7 +33,7 @@ const Drives = () => {
         }
 
         const response = await fetch(
-          `${BASE_URL}/api/drive/hr-info?email=${encodeURIComponent(email)}`
+          `${BASE_URL}/api/drive/hr-info?email=${encodeURIComponent(email)}`,
         );
 
         if (!response.ok) {
@@ -41,18 +41,9 @@ const Drives = () => {
         }
 
         const hrData = await response.json();
-        console.log("=".repeat(50));
-        console.log("HR INFO FROM FRONTEND:");
-        console.log("Full HR Data:", hrData);
-        console.log("Email:", hrData.email);
-        console.log("Name:", hrData.name);
-        console.log("Company ID:", hrData.company_id);
-        console.log("Role:", hrData.role);
-        console.log("=".repeat(50));
 
         if (hrData.company_id) {
           setCompanyId(hrData.company_id);
-          console.log("Set companyId to:", hrData.company_id);
         }
       } catch (err) {
         console.error("Error fetching HR info:", err.message);
@@ -72,22 +63,20 @@ const Drives = () => {
 
         if (!companyId) return;
         const response = await fetch(
-          `${BASE_URL}/api/drive/company/${companyId}`
+          `${BASE_URL}/api/drive/company/${companyId}`,
         );
         if (!response.ok) {
           throw new Error("Failed to fetch drives");
         }
 
         const data = await response.json();
-        console.log("All drives : ", data.drives);
 
         // Fix: Latest created drive should appear on top
         const sortedDrives = (data.drives || []).sort(
-          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
         );
         setDrives(sortedDrives);
       } catch (err) {
-        console.error("Error fetching drives:", err.message);
         toast.error("Could not load drives. Please try again.");
       } finally {
         const timer = setTimeout(() => setLoading(false), 1000);
@@ -114,7 +103,7 @@ const Drives = () => {
     // Check round statuses
     const roundStatuses = drive.round_statuses || [];
     const hasActiveRound = roundStatuses.some(
-      (rs) => rs.status === "in_progress" || rs.status === "pending"
+      (rs) => rs.status === "in_progress" || rs.status === "pending",
     );
 
     return hasActiveRound;
@@ -162,7 +151,7 @@ const Drives = () => {
   const startIndex = (currentPage - 1) * drivesPerPage;
   const currentDrives = filteredDrives.slice(
     startIndex,
-    startIndex + drivesPerPage
+    startIndex + drivesPerPage,
   );
 
   const handleCreateNewDrive = () => {
@@ -348,10 +337,11 @@ const Drives = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${currentPage === i + 1
+                  className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${
+                    currentPage === i + 1
                       ? "bg-gray-900 text-white border-gray-900"
                       : "border-gray-300 hover:bg-gray-50"
-                    }`}
+                  }`}
                 >
                   {i + 1}
                 </button>
