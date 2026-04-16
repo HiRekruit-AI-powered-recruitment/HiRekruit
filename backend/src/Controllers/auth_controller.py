@@ -541,3 +541,32 @@ def get_candidate_by_id():
         "message": "Candidate fetched successfully",
         "candidate": candidate
     }), 200
+
+def get_all_users():
+    """
+    Fetch all users
+    """
+    try:
+        users_cursor = db.users.find()
+
+        users = []
+        for user in users_cursor:
+            users.append({
+                "_id": str(user["_id"]),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": user.get("role"),
+                "company_id": str(user.get("company_id")) if user.get("company_id") else None,
+                "is_verified": user.get("is_verified", False),
+                "created_at": user.get("created_at")
+            })
+
+        return jsonify({
+            "message": "Users fetched successfully",
+            "count": len(users),
+            "users": users
+        }), 200
+
+    except Exception as e:
+        print(f"Get all users error: {str(e)}")
+        return jsonify({"message": "Failed to fetch users"}), 500
