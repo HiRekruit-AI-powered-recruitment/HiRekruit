@@ -10,16 +10,20 @@ import {
   Settings,
   Shield,
   Activity,
+  Grid,
+  UserRound,
+  UserPlus,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/HiRekruit.png";
 
 const items = [
-  { label: "Dashboard", icon: Activity, path: "/admin/dashboard" },
+  { label: "Overview", icon: Grid, path: "/admin/overview" },
   { label: "All Companies", icon: Building2, path: "/admin/companies" },
   { label: "Current Drives", icon: Briefcase, path: "/admin/drives" },
-  { label: "All HR Users", icon: Users, path: "/admin/hr-users" },
   { label: "All Candidates", icon: UserCheck, path: "/admin/candidates" },
+  { label: "Current Clients", icon: UserRound, path: "/admin/currentclients" },
+  { label: "Client Requests", icon: UserPlus, path: "/admin/clientrequests" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
   { label: "System Settings", icon: Settings, path: "/admin/settings" },
 ];

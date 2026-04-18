@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from src.Controllers.companyinfo_controller import handle_comapnyinfo_query
+from src.Controllers.companyinfo_controller import (handle_comapnyinfo_query,get_all_companies)
 
 companyinfo_bp = Blueprint("companyinfo", __name__)
 
@@ -17,3 +17,7 @@ def companyinfo_query():
         return jsonify({"response": response})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@companyinfo_bp.route("/companies", methods=["GET"])
+def handle_get_all_companies():
+    return get_all_companies()

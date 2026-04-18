@@ -41,7 +41,7 @@ client.interceptors.response.use(
       return client(originalRequest);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export const createJobInHiKareers = (data) => client.post("/jobs", data);

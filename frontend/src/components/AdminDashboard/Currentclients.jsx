@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  Search,
   Building2,
+  Search,
   Users,
   Briefcase,
   MoreVertical,
@@ -12,25 +12,22 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../Loader";
-import { useGetCompanies } from "../../Hooks/company hooks/useGetCompanies";
 import { useUsers } from "../../Hooks/userHooks/useGetAllUsers";
 import { useGetAllDrives } from "../../Hooks/drives hooks/useGetAllDrives";
 import { useGetAllCandidates } from "../../Hooks/candidate hooks/useGetAllCandidates";
 
-const AdminCompanies = () => {
-  const [companies, setCompanies] = useState([]);
+const CurrentClients = () => {
+  const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCompany, setSelectedCompany] = useState(null);
   const [showMenu, setShowMenu] = useState(null);
 
-  const { companies: com, loading: isGettingCompanies } = useGetCompanies();
   const { users, loading: isGettingAllUsers } = useUsers();
   const { drives, loading: isGettingDrives } = useGetAllDrives();
   const { candidates, loading: isGettingCandidates } = useGetAllCandidates();
 
-  const companiesPerPage = 10;
+  const usersPerPage = 10;
   const activeDrives = drives.filter((drive) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -45,88 +42,64 @@ const AdminCompanies = () => {
   });
 
   useEffect(() => {
-    if (
-      !isGettingCompanies &&
-      !isGettingAllUsers &&
-      !isGettingDrives &&
-      !isGettingCandidates
-    ) {
-      setCompanies(com || []);
+    if (!isGettingAllUsers && !isGettingDrives && !isGettingCandidates) {
+      const approvedUsers = (users || []).filter(
+        (user) => user.is_approved === true,
+      );
+
+      setAllUsers(approvedUsers);
       setLoading(false);
     }
   }, [
-    com,
     users,
     drives,
     candidates,
-    isGettingCompanies,
     isGettingAllUsers,
     isGettingDrives,
     isGettingCandidates,
   ]);
 
-  const filteredCompanies = companies.filter(
-    (company) =>
-      company.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.industry?.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredUsers = allUsers.filter(
+    (user) =>
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const totalPages = Math.ceil(filteredCompanies.length / companiesPerPage);
-  const startIndex = (currentPage - 1) * companiesPerPage;
-  const currentCompanies = filteredCompanies.slice(
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+
+  const currentUsers = filteredUsers.slice(
     startIndex,
-    startIndex + companiesPerPage,
+    startIndex + usersPerPage,
   );
 
-  const handleViewCompany = (company) => {
-    setSelectedCompany(company);
-    toast.info(`Viewing details for ${company.name}`);
-  };
-
-  const handleEditCompany = (company) => {
-    toast.info(`Edit functionality for ${company.name}`);
-  };
-
-  const handleDeleteCompany = (company) => {
-    if (window.confirm(`Are you sure you want to delete ${company.name}?`)) {
-      toast.success(`${company.name} deleted successfully`);
-    }
-  };
-
-  if (
-    loading ||
-    isGettingCompanies ||
-    isGettingAllUsers ||
-    isGettingCandidates ||
-    isGettingDrives
-  )
-    return <Loader />;
-
+  if (loading) return <Loader />;
+  console.log(allUsers);
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
 
+      {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-2">
-            <Building2 className="w-8 h-8 text-blue-600" />
-            <h1 className="text-2xl font-semibold text-gray-900">
-              All Companies
-            </h1>
+            <Users className="w-8 h-8 text-blue-600" />
+            <h1 className="text-2xl font-semibold text-gray-900">All Users</h1>
           </div>
           <p className="text-sm text-gray-600">
-            Manage and monitor all registered companies
+            View and manage all registered users
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Companies</p>
+            <p className="text-sm text-gray-600 mb-1">Total Clients</p>
             <p className="text-2xl font-bold text-gray-900">
-              {companies.length}
+              {allUsers.length}
             </p>
           </div>
 
@@ -138,11 +111,6 @@ const AdminCompanies = () => {
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Total HR Users</p>
-            <p className="text-2xl font-bold text-green-600">{users.length}</p>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600 mb-1">Total Candidates</p>
             <p className="text-2xl font-bold text-purple-600">
               {candidates.length}
@@ -150,13 +118,14 @@ const AdminCompanies = () => {
           </div>
         </div>
 
+        {/* Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
 
             <input
               type="text"
-              placeholder="Search by company name, email, or industry..."
+              placeholder="Search by user name, email, or role..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -167,22 +136,23 @@ const AdminCompanies = () => {
           </div>
         </div>
 
+        {/* Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Company
+                    User
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Industry
+                    Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                    Location
+                    Role
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
-                    Status
+                    Approved
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
                     Actions
@@ -191,30 +161,29 @@ const AdminCompanies = () => {
               </thead>
 
               <tbody className="divide-y divide-gray-200">
-                {currentCompanies.map((company) => (
-                  <tr key={company._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {company.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {company.email || "-"}
-                        </div>
-                      </div>
+                {currentUsers.map((user) => (
+                  <tr key={user._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 font-medium text-gray-900">
+                      {user.name}
                     </td>
 
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {company.industry || "-"}
+                      {user.email}
                     </td>
 
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {company.location || "-"}
+                      {user.role || "-"}
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium capitalize">
-                        Active
+                      <span
+                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                          user.is_approved
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
+                        }`}
+                      >
+                        {user.is_verified ? "Yes" : "No"}
                       </span>
                     </td>
 
@@ -222,31 +191,29 @@ const AdminCompanies = () => {
                       <div className="relative inline-block">
                         <button
                           onClick={() =>
-                            setShowMenu(
-                              showMenu === company._id ? null : company._id,
-                            )
+                            setShowMenu(showMenu === user._id ? null : user._id)
                           }
                           className="p-1 hover:bg-gray-100 rounded"
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
 
-                        {showMenu === company._id && (
+                        {showMenu === user._id && (
                           <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                             <button
                               onClick={() => {
-                                handleViewCompany(company);
+                                toast.info(`Viewing ${user.name}`);
                                 setShowMenu(null);
                               }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
                             >
                               <Eye className="w-4 h-4" />
-                              View Details
+                              View
                             </button>
 
                             <button
                               onClick={() => {
-                                handleEditCompany(company);
+                                toast.info(`Edit ${user.name}`);
                                 setShowMenu(null);
                               }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
@@ -257,13 +224,13 @@ const AdminCompanies = () => {
 
                             <button
                               onClick={() => {
-                                handleDeleteCompany(company);
+                                toast.success(`${user.name} removed`);
                                 setShowMenu(null);
                               }}
                               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
-                              Delete
+                              Remove
                             </button>
                           </div>
                         )}
@@ -275,6 +242,7 @@ const AdminCompanies = () => {
             </table>
           </div>
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 p-4 border-t border-gray-200">
               <button
@@ -310,11 +278,12 @@ const AdminCompanies = () => {
           )}
         </div>
 
-        {filteredCompanies.length === 0 && (
+        {/* Empty */}
+        {filteredUsers.length === 0 && (
           <div className="text-center py-12">
-            <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No companies found
+              No users found
             </h3>
             <p className="text-gray-500">Try adjusting your search criteria</p>
           </div>
@@ -324,4 +293,4 @@ const AdminCompanies = () => {
   );
 };
 
-export default AdminCompanies;
+export default CurrentClients;
