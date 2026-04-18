@@ -14,7 +14,7 @@ def create_user(
         "role": role,                         # "hr", "manager", "employee"
         "company_id": company_id,             # ObjectId reference
         "is_verified": False,
-        "is_approved": False,
+        "is_approved": None,
 
         # OTP for email verification
         "verification_otp": None,

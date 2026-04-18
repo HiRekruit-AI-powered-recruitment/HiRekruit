@@ -542,6 +542,8 @@ def get_candidate_by_id():
         "candidate": candidate
     }), 200
 
+from flask import jsonify
+
 def get_all_users():
     """
     Fetch all users
@@ -550,23 +552,68 @@ def get_all_users():
         users_cursor = db.users.find()
 
         users = []
+
         for user in users_cursor:
             users.append({
                 "_id": str(user["_id"]),
                 "name": user.get("name"),
                 "email": user.get("email"),
                 "role": user.get("role"),
-                "company_id": str(user.get("company_id")) if user.get("company_id") else None,
+                "company_id": str(user["company_id"]) if user.get("company_id") else None,
                 "is_verified": user.get("is_verified", False),
-                "created_at": user.get("created_at")
+                "is_approved": user.get("is_approved", None),
+                "created_at": user.get("created_at"),
+                "last_login": user.get("last_login")
             })
 
         return jsonify({
+            "success": True,
             "message": "Users fetched successfully",
             "count": len(users),
             "users": users
         }), 200
 
     except Exception as e:
-        print(f"Get all users error: {str(e)}")
-        return jsonify({"message": "Failed to fetch users"}), 500
+        print("Get all users error:", str(e))
+
+        return jsonify({
+            "success": False,
+            "message": "Failed to fetch users"
+        }), 500
+    
+
+def get_all_candidates():
+    """
+    Fetch all candidates
+    """
+    try:
+        candidates_cursor = db.candidates.find()
+
+        candidates = []
+
+        for candidate in candidates_cursor:
+            candidates.append({
+                "_id": str(candidate["_id"]),
+                "name": candidate.get("name"),
+                "email": candidate.get("email"),
+                "resume_content": candidate.get("resume_content"),
+                "resume_url": candidate.get("resume_url"),
+                "public_id": candidate.get("public_id"),
+                "version": candidate.get("version"),
+                "format": candidate.get("format"),
+                "resource_type": candidate.get("resource_type"),
+                "created_at": candidate.get("created_at"),
+                "updated_at": candidate.get("updated_at")
+            })
+
+        return jsonify({
+            "message": "Candidates fetched successfully",
+            "count": len(candidates),
+            "candidates": candidates
+        }), 200
+
+    except Exception as e:
+        print(f"Get all candidates error: {str(e)}")
+        return jsonify({
+            "message": "Failed to fetch candidates"
+        }), 500
