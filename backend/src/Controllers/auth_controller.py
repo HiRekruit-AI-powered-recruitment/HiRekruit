@@ -617,3 +617,27 @@ def get_all_candidates():
         return jsonify({
             "message": "Failed to fetch candidates"
         }), 500
+
+def approve_user(user_id):
+    try:
+        data = request.get_json()
+        is_approved = data.get("is_approved")
+
+        result = db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "is_approved": is_approved,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        if result.matched_count == 0:
+            return jsonify({"message": "User not found"}), 404
+
+        return jsonify({"message": "User updated successfully"}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "Failed"}), 500

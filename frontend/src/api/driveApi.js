@@ -14,3 +14,16 @@ export async function getAllDrives() {
     throw new Error(error.response?.data?.message || error.message);
   }
 }
+
+export async function getAllDrivesByCompany(id) {
+  try {
+    const response = await axios.get(`${URL}/api/drive/company/${id}`, {
+      withCredentials: true,
+    });
+
+    return response.data;
+  } catch (error) {
+    console.log("Get all drives by company:", error);
+    throw new Error(error.response?.data?.message || error.message);
+  }
+}

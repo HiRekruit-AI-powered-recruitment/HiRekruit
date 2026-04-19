@@ -13,7 +13,8 @@ from src.Controllers.auth_controller import (
     get_current_user_info,
     get_candidate_by_id,
     get_all_users,
-    get_all_candidates
+    get_all_candidates,
+    approve_user
 )
 from src.Middleware.auth_middleware import login_required
 
@@ -93,3 +94,7 @@ def handle_get_users():
 def handle_get_all_candidates():
     print("Get All candidates route called")
     return get_all_candidates()
+
+@auth_bp.route("/approve-user/<user_id>", methods=["PUT"])
+def handle_approve_user(user_id):
+    return approve_user(user_id)
