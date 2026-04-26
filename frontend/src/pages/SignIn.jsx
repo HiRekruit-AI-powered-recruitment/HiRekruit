@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -44,8 +46,9 @@ export default function SignIn() {
         return;
       }
 
-      // Successful login - redirect to dashboard
-      navigate("/");
+      // Successful login - update auth context and redirect to dashboard
+      await login(data.user);
+      navigate("/dashboard");
     } catch (err) {
       console.error("SignIn error:", err);
       setErrors([
