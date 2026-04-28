@@ -28,7 +28,6 @@ const AdminCompanies = () => {
   const { drives, loading: isGettingDrives } = useGetAllDrives();
   const { candidates, loading: isGettingCandidates } = useGetAllCandidates();
 
-  // Sync fetched companies into local state
   useEffect(() => {
     if (
       !isGettingCompanies &&
@@ -50,7 +49,6 @@ const AdminCompanies = () => {
     isGettingCandidates,
   ]);
 
-  // Derived data
   const activeDrives = drives.filter((drive) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -68,6 +66,8 @@ const AdminCompanies = () => {
       company.industry?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const acceptedUsers = users.filter((user) => user.is_approved === "accepted");
+
   const totalPages = Math.ceil(filteredCompanies.length / COMPANIES_PER_PAGE);
   const startIndex = (currentPage - 1) * COMPANIES_PER_PAGE;
   const currentCompanies = filteredCompanies.slice(
@@ -75,7 +75,6 @@ const AdminCompanies = () => {
     startIndex + COMPANIES_PER_PAGE,
   );
 
-  // Handlers
   const handleSearchChange = (value) => {
     setSearchTerm(value);
     setCurrentPage(1);
@@ -116,7 +115,6 @@ const AdminCompanies = () => {
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
 
-      {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-2">
@@ -132,21 +130,18 @@ const AdminCompanies = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Stats */}
         <CompanyStatsGrid
           totalCompanies={companies.length}
           activeDrives={activeDrives.length}
-          totalUsers={users.length}
+          totalUsers={acceptedUsers.length}
           totalCandidates={candidates.length}
         />
 
-        {/* Search */}
         <CompanySearchBar
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
         />
 
-        {/* Table */}
         <CompanyTable
           companies={currentCompanies}
           currentPage={currentPage}

@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { Mail, AlertCircle } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const email = searchParams.get("email");
+  const navigate = useNavigate();
 
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // VERIFY OTP
   const handleVerify = async (e) => {
@@ -36,8 +38,8 @@ export default function VerifyEmail() {
         return;
       }
 
-      // Success → Dashboard
-      window.location.href = "/";
+      // Success → show modal
+      setShowSuccessModal(true);
     } catch (err) {
       setErrors([
         { message: "Unable to connect to server. Please try again." },
@@ -87,6 +89,10 @@ export default function VerifyEmail() {
     );
   }
 
+  if (showSuccessModal) {
+    return <SuccessModal onClose={() => navigate("/signin")} />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md">
@@ -105,6 +111,41 @@ export default function VerifyEmail() {
 }
 
 /* ================= COMPONENTS ================= */
+
+function SuccessModal({ onClose }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="bg-white rounded-3xl border border-gray-200 shadow-2xl p-8 max-w-sm w-full mx-4 text-center">
+        <div className="mx-auto w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mb-5">
+          <CheckCircle className="w-7 h-7 text-green-600" />
+        </div>
+
+        <h2 className="text-xl font-semibold text-black mb-2">
+          Account created!
+        </h2>
+
+        <p className="text-sm text-gray-500 leading-relaxed mb-4">
+          Your account has been created successfully. Please wait for admin
+          approval before you can sign in.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6 flex items-start gap-2 text-left">
+          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <span className="text-xs text-amber-700 leading-relaxed">
+            You'll receive an email once your account has been approved.
+          </span>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+        >
+          Go to sign in
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function VerificationForm({
   email,
@@ -150,7 +191,7 @@ function VerificationForm({
       </button>
 
       <p className="text-center text-sm">
-        Didn’t receive code?{" "}
+        Didn't receive code?{" "}
         <button
           type="button"
           onClick={onResend}

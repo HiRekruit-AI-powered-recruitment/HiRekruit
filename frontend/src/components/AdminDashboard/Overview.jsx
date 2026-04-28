@@ -24,9 +24,6 @@ const Overview = () => {
   });
   const [recentActivities, setRecentActivities] = useState([]);
 
-  const totalDrives = drives.length;
-  const totalHR = users.length;
-
   const activeDrives = drives.filter((drive) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -39,14 +36,23 @@ const Overview = () => {
 
     return startDate <= today && endDate >= today;
   });
+
   useEffect(() => {
     fetchDashboardData();
   }, [users, drives, candidates]);
 
   const fetchDashboardData = async () => {
     try {
-      setCurrentClients(users || []);
-      setRequestedClients([]);
+      const acceptedUsers = (users || []).filter(
+        (user) => user.is_approved === "accepted",
+      );
+
+      const pendingUsers = (users || []).filter(
+        (user) => user.is_approved === "pending",
+      );
+
+      setCurrentClients(acceptedUsers);
+      setRequestedClients(pendingUsers);
 
       setPlatformStats({
         totalCandidates: candidates.length || 0,

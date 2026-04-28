@@ -1,5 +1,13 @@
 import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, LogIn, AlertCircle } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  LogIn,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function SignIn() {
@@ -11,6 +19,7 @@ export default function SignIn() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [isPendingApproval, setIsPendingApproval] = useState(false);
 
   const handleSignIn = async (e) => {
     e?.preventDefault();
@@ -22,6 +31,7 @@ export default function SignIn() {
 
     setIsLoading(true);
     setErrors([]);
+    setIsPendingApproval(false);
 
     try {
       const baseUrl = import.meta.env.VITE_BASE_URL;
@@ -29,7 +39,7 @@ export default function SignIn() {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // Important for cookies
+        credentials: "include",
         body: JSON.stringify({
           email,
           password,
@@ -40,7 +50,11 @@ export default function SignIn() {
       const data = await response.json();
 
       if (!response.ok) {
-        setErrors([{ message: data.message || "Invalid email or password" }]);
+        if (data.requires_approval) {
+          setIsPendingApproval(true);
+        } else {
+          setErrors([{ message: data.message || "Invalid email or password" }]);
+        }
         return;
       }
 
@@ -83,6 +97,24 @@ export default function SignIn() {
             </h2>
             <p className="text-gray-600 mt-2">Sign in to HiRekruit</p>
           </div>
+
+          {/* Pending Approval Banner */}
+          {isPendingApproval && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">
+                    Account pending approval
+                  </p>
+                  <p className="text-sm text-amber-700 mt-0.5">
+                    Your account is awaiting admin approval. You will be
+                    informed once you are approved.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Error Messages */}
           {errors.length > 0 && (
