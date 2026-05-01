@@ -58,8 +58,21 @@ export default function SignIn() {
         return;
       }
 
-      // Successful login - redirect to dashboard
-      navigate("/");
+      // ✅ SUCCESS LOGIN
+      const user = data.user;
+
+      // store user locally (optional but useful)
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // optional admin flag
+      localStorage.setItem("isAdmin", user.role === "admin");
+
+      // 🔥 ROLE-BASED REDIRECT
+      if (user.role === "admin") {
+        navigate("/admin/overview");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       console.error("SignIn error:", err);
       setErrors([
@@ -78,166 +91,118 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-200 p-4">
-      {/* Animated background */}
+      {/* Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-4 -right-4 w-72 h-72 bg-gray-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
-        <div className="absolute -bottom-8 -left-4 w-72 h-72 bg-gray-400 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-gray-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" />
+        <div className="absolute -top-4 -right-4 w-72 h-72 bg-gray-300 rounded-full blur-xl opacity-70 animate-pulse" />
+        <div className="absolute -bottom-8 -left-4 w-72 h-72 bg-gray-400 rounded-full blur-xl opacity-70 animate-pulse" />
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/80 backdrop-blur-lg shadow-2xl rounded-3xl p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-6">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-r from-black to-gray-700 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-black rounded-full flex items-center justify-center mb-4">
               <LogIn className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-black to-gray-700 bg-clip-text text-transparent">
-              Welcome Back
-            </h2>
+            <h2 className="text-3xl font-bold">Welcome Back</h2>
             <p className="text-gray-600 mt-2">Sign in to HiRekruit</p>
           </div>
 
-          {/* Pending Approval Banner */}
+          {/* Pending Approval */}
           {isPendingApproval && (
             <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-amber-800">
-                    Account pending approval
-                  </p>
-                  <p className="text-sm text-amber-700 mt-0.5">
-                    Your account is awaiting admin approval. You will be
-                    informed once you are approved.
-                  </p>
-                </div>
+              <div className="flex gap-2">
+                <Clock className="text-amber-600" />
+                <p className="text-sm text-amber-700">
+                  Your account is pending admin approval.
+                </p>
               </div>
             </div>
           )}
 
-          {/* Error Messages */}
+          {/* Errors */}
           {errors.length > 0 && (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-300 rounded-lg">
-              <div className="flex items-start">
-                <AlertCircle className="h-5 w-5 text-gray-600 mt-0.5 mr-2 flex-shrink-0" />
-                <div className="text-sm text-gray-700">
-                  {errors.map((error, index) => (
-                    <div key={index} className="mb-1 last:mb-0">
-                      {error.message}
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+              {errors.map((err, i) => (
+                <p key={i} className="text-sm text-red-600">
+                  {err.message}
+                </p>
+              ))}
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSignIn} className="space-y-4">
-            {/* Email Input */}
+            {/* Email */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
-              </div>
+              <Mail className="absolute left-3 top-3 text-gray-400" />
               <input
                 type="email"
-                placeholder="Email Address"
-                className="block w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50/50 backdrop-blur-sm"
+                placeholder="Email"
+                className="w-full pl-10 p-3 border rounded"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-                autoComplete="email"
                 required
               />
             </div>
 
-            {/* Password Input */}
+            {/* Password */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
-              </div>
+              <Lock className="absolute left-3 top-3 text-gray-400" />
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
-                className="block w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all duration-200 bg-gray-50/50 backdrop-blur-sm"
+                className="w-full pl-10 p-3 border rounded"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={handleKeyPress}
-                disabled={isLoading}
-                autoComplete="current-password"
                 required
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                className="absolute right-3 top-3"
                 onClick={() => setShowPassword(!showPassword)}
-                disabled={isLoading}
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
-                ) : (
-                  <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600 transition-colors" />
-                )}
+                {showPassword ? <EyeOff /> : <Eye />}
               </button>
             </div>
 
-            {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer">
+            {/* Remember */}
+            <div className="flex justify-between items-center">
+              <label>
                 <input
-                  id="remember-me"
-                  name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-black focus:ring-black border-gray-300 rounded cursor-pointer"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                 />
-                <span className="ml-2 block text-sm text-gray-600">
-                  Remember me
-                </span>
+                <span className="ml-2 text-sm">Remember me</span>
               </label>
 
               <button
                 type="button"
-                className="text-sm font-medium text-black hover:text-gray-700 transition-colors"
                 onClick={() => navigate("/forgot-password")}
+                className="text-sm text-blue-600"
               >
-                Forgot password?
+                Forgot?
               </button>
             </div>
 
-            {/* Sign In Button */}
+            {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading || !email || !password}
-              className="w-full bg-gradient-to-r from-black to-gray-700 hover:from-gray-800 hover:to-gray-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+              disabled={isLoading}
+              className="w-full bg-black text-white py-3 rounded"
             >
-              {isLoading ? (
-                <span className="flex items-center justify-center">
-                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                  Signing In...
-                </span>
-              ) : (
-                "Sign In"
-              )}
+              {isLoading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 
-          {/* Sign Up Link */}
-          <div className="text-center mt-6">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                className="font-medium text-black hover:text-gray-700 transition-colors hover:underline"
-                onClick={() => navigate("/signup")}
-              >
-                Sign up
-              </button>
-            </p>
-          </div>
+          {/* Signup */}
+          <p className="text-center mt-4 text-sm">
+            Don’t have an account?{" "}
+            <button onClick={() => navigate("/signup")} className="underline">
+              Sign up
+            </button>
+          </p>
         </div>
       </div>
     </div>
