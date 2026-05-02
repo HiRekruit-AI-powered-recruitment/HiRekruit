@@ -9,8 +9,8 @@ from src.Model.User import create_user
 load_dotenv()
 
 def seed_admin():
-    admin_email = os.getenv("EMAIL_USER")
-    admin_password = os.getenv("EMAIL_PASSWORD")
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
 
     if not admin_email or not admin_password:
         print("❌ ADMIN_EMAIL or ADMIN_PASSWORD missing in .env")
