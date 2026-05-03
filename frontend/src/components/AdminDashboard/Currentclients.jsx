@@ -28,6 +28,7 @@ const CurrentClients = () => {
   const { candidates, loading: isGettingCandidates } = useGetAllCandidates();
 
   const usersPerPage = 10;
+
   const activeDrives = drives.filter((drive) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -44,7 +45,7 @@ const CurrentClients = () => {
   useEffect(() => {
     if (!isGettingAllUsers && !isGettingDrives && !isGettingCandidates) {
       const approvedUsers = (users || []).filter(
-        (user) => user.is_approved === true,
+        (user) => user.is_approved === "accepted",
       );
 
       setAllUsers(approvedUsers);
@@ -75,12 +76,11 @@ const CurrentClients = () => {
   );
 
   if (loading) return <Loader />;
-  console.log(allUsers);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
 
-      {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-2">
@@ -88,13 +88,12 @@ const CurrentClients = () => {
             <h1 className="text-2xl font-semibold text-gray-900">All Users</h1>
           </div>
           <p className="text-sm text-gray-600">
-            View and manage all registered users
+            View and manage all approved users
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-600 mb-1">Total Clients</p>
@@ -118,7 +117,6 @@ const CurrentClients = () => {
           </div>
         </div>
 
-        {/* Search */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -136,7 +134,6 @@ const CurrentClients = () => {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -176,14 +173,8 @@ const CurrentClients = () => {
                     </td>
 
                     <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          user.is_approved
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {user.is_verified ? "Yes" : "No"}
+                      <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        Yes
                       </span>
                     </td>
 
@@ -242,7 +233,6 @@ const CurrentClients = () => {
             </table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 p-4 border-t border-gray-200">
               <button
@@ -278,7 +268,6 @@ const CurrentClients = () => {
           )}
         </div>
 
-        {/* Empty */}
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />

@@ -16,7 +16,6 @@ export default function ProtectedRoute({ children }) {
       const response = await fetch(`${baseUrl}/api/auth/me`, {
         credentials: "include",
       });
-
       if (response.ok) {
         setIsAuthenticated(true);
       } else {
