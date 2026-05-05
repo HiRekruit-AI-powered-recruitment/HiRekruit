@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Play,
   User,
@@ -13,11 +13,13 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { getMockInterviewPrompt } from "../../Prompts/MockInterviewPrompt";
+import TechnicalInterviewStartCard from "../../components/Interview/TechnicalInterviewStartCard";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const InterviewStartPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,10 +29,26 @@ const InterviewStartPage = () => {
   const params = useParams();
   const drive_candidate_id = params.driveCandidateId;
   const interviewType = params.typeOfInterview;
+  const isTechnicalInterview = (interviewType || "")
+    .toLowerCase()
+    .includes("technical");
+  const isPreviewMode = searchParams.get("preview") === "true";
 
   // Fetch candidate data
   useEffect(() => {
     const fetchCandidateData = async () => {
+      if (isPreviewMode) {
+        setUserData({
+          name: "Akash Yadav",
+          email: "akash.yadav@example.com",
+          resume_content:
+            "Frontend developer with React, JavaScript, API integration, and project experience in hiring platforms.",
+          created_at: new Date().toISOString(),
+        });
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
@@ -55,7 +73,7 @@ const InterviewStartPage = () => {
     };
 
     fetchCandidateData();
-  }, [drive_candidate_id]);
+  }, [drive_candidate_id, isPreviewMode]);
 
   // Function to get LiveKit token from backend
   const getLiveKitToken = async (identity) => {
@@ -86,6 +104,13 @@ const InterviewStartPage = () => {
 
   // Handle start interview and navigate
   const handleStartInterview = async () => {
+    if (isPreviewMode) {
+      alert(
+        "Preview mode is only for checking the technical instruction page UI. Use a real drive candidate link to start the AI interview.",
+      );
+      return;
+    }
+
     if (!userData || !userData.resume_content) {
       alert("Resume data is required to start the interview");
       return;
@@ -147,20 +172,22 @@ const InterviewStartPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-3">
-            AI-Powered Interview
-          </h1>
-          <p className="text-lg text-gray-600">
-            An AI-enabled interview session conducted via the HiRekruit
-            recruitment platform.
-          </p>
-        </motion.div>
+        {!isTechnicalInterview && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+              AI-Powered Interview
+            </h1>
+            <p className="text-lg text-gray-600">
+              An AI-enabled interview session conducted via the HiRekruit
+              recruitment platform.
+            </p>
+          </motion.div>
+        )}
 
         {/* Loading */}
         {isLoading && (
@@ -212,6 +239,15 @@ const InterviewStartPage = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="space-y-6"
           >
+            {isTechnicalInterview ? (
+              <TechnicalInterviewStartCard
+                candidate={userData}
+                canStart={Boolean(userData.resume_content)}
+                isStarting={isStarting}
+                onStartInterview={handleStartInterview}
+              />
+            ) : (
+              <>
             {/* Candidate Info Card */}
             <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-200">
               <div className="flex items-start gap-6 mb-6">
@@ -420,6 +456,8 @@ const InterviewStartPage = () => {
                 </p>
               )}
             </motion.div>
+              </>
+            )}
           </motion.div>
         )}
       </div>
