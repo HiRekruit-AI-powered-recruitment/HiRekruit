@@ -9,9 +9,11 @@ import {
   Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
 
 export default function SignIn() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -60,12 +62,9 @@ export default function SignIn() {
 
       // ✅ SUCCESS LOGIN
       const user = data.user;
+      const company = data.company;
 
-      // store user locally (optional but useful)
-      localStorage.setItem("user", JSON.stringify(user));
-
-      // optional admin flag
-      localStorage.setItem("isAdmin", user.role === "admin");
+      await login(user, company);
 
       // 🔥 ROLE-BASED REDIRECT
       if (user.role === "admin") {

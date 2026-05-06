@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import Loader from "../components/Loader";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -35,9 +34,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Login function (call after successful login)
-  const login = async (userData) => {
+  const login = async (userData, companyDataParam = null) => {
     setIsAuthenticated(true);
     setUser(userData);
+    if (companyDataParam) {
+      setCompanyData(companyDataParam);
+    }
   };
 
   // Logout function
