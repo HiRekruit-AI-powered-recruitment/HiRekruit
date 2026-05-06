@@ -66,7 +66,7 @@ const AdminCompanies = () => {
       company.industry?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const acceptedUsers = users.filter((user) => user.is_approved === "accepted");
+  const acceptedUsers = users.filter((user) => user.is_approved === "approved");
 
   const totalPages = Math.ceil(filteredCompanies.length / COMPANIES_PER_PAGE);
   const startIndex = (currentPage - 1) * COMPANIES_PER_PAGE;
