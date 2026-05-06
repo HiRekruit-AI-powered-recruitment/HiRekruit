@@ -5,7 +5,8 @@ def create_user(
     email,
     password_hash,          # bcrypt hashed password
     company_id,
-    role="hr"
+    role="hr",
+     is_approved="pending"
 ):
     return {
         "name": name,
@@ -14,6 +15,8 @@ def create_user(
         "role": role,                         # "hr", "manager", "employee"
         "company_id": company_id,             # ObjectId reference
         "is_verified": False,
+         # Approval status enum: pending / accepted / rejected
+        "is_approved":is_approved,
 
         # OTP for email verification
         "verification_otp": None,
@@ -27,3 +30,5 @@ def create_user(
         "created_at": datetime.utcnow(),
         "last_login": None
     }
+
+

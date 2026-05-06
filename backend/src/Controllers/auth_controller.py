@@ -33,6 +33,7 @@ def register_user():
         password = data.get("password")
         company_name = data.get("company_name")
         role = data.get("role", "hr")
+        is_approved="pending"
 
         # Validation
         if not all([name, email, password, company_name]):
@@ -74,7 +75,8 @@ def register_user():
             email=email,
             company_id=company_id,
             password_hash=password_hash,
-            role=role
+            role=role,
+            is_approved=is_approved,
         )
         user["verification_otp"] = otp
         user["verification_otp_expiry"] = otp_expiry
@@ -169,9 +171,9 @@ def verify_email():
                 }
             }
         )
-        # Create session
-        AuthUtils.create_session(user["_id"], remember_me=False)
-        print("after session creation")
+
+        # NOTE: Session is NOT created here intentionally.
+        # User must log in manually via the login endpoint.
 
         #......................................................
         # Send welcome email
@@ -294,6 +296,14 @@ def login_user():
                 "message": "Please verify your email before logging in",
                 "requires_verification": True
             }), 403
+
+        # Check if approved by admin
+        if user.get("is_approved") != "approved":
+            return jsonify({
+                "message": "Your account is pending admin approval. You will receive an email once approved.",
+                "requires_approval": True
+            }), 403
+
 
         # Update last login
         db.users.update_one(
@@ -541,3 +551,109 @@ def get_candidate_by_id():
         "message": "Candidate fetched successfully",
         "candidate": candidate
     }), 200
+
+from flask import jsonify
+
+def get_all_users():
+    """
+    Fetch all users
+    """
+    try:
+        users_cursor = db.users.find()
+
+        users = []
+
+        for user in users_cursor:
+            users.append({
+                "_id": str(user["_id"]),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": user.get("role"),
+                "company_id": str(user["company_id"]) if user.get("company_id") else None,
+                "is_verified": user.get("is_verified", False),
+                "is_approved": user.get("is_approved", None),
+                "created_at": user.get("created_at"),
+                "last_login": user.get("last_login")
+            })
+
+        return jsonify({
+            "success": True,
+            "message": "Users fetched successfully",
+            "count": len(users),
+            "users": users
+        }), 200
+
+    except Exception as e:
+        print("Get all users error:", str(e))
+
+        return jsonify({
+            "success": False,
+            "message": "Failed to fetch users"
+        }), 500
+    
+
+def get_all_candidates():
+    """
+    Fetch all candidates
+    """
+    try:
+        candidates_cursor = db.candidates.find()
+
+        candidates = []
+
+        for candidate in candidates_cursor:
+            candidates.append({
+                "_id": str(candidate["_id"]),
+                "name": candidate.get("name"),
+                "email": candidate.get("email"),
+                "resume_content": candidate.get("resume_content"),
+                "resume_url": candidate.get("resume_url"),
+                "public_id": candidate.get("public_id"),
+                "version": candidate.get("version"),
+                "format": candidate.get("format"),
+                "resource_type": candidate.get("resource_type"),
+                "created_at": candidate.get("created_at"),
+                "updated_at": candidate.get("updated_at")
+            })
+
+        return jsonify({
+            "message": "Candidates fetched successfully",
+            "count": len(candidates),
+            "candidates": candidates
+        }), 200
+
+    except Exception as e:
+        print(f"Get all candidates error: {str(e)}")
+        return jsonify({
+            "message": "Failed to fetch candidates"
+        }), 500
+
+def approve_user(user_id):
+    try:
+        data = request.get_json()
+        print("===> data:", data)
+        is_approved = data.get("is_approved")
+        print("===> is_approved:", is_approved)
+        print("===> user_id:", user_id)
+
+        result = db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "is_approved": is_approved,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        print("===> matched:", result.matched_count)
+        print("===> modified:", result.modified_count)
+
+        if result.matched_count == 0:
+            return jsonify({"message": "User not found"}), 404
+
+        return jsonify({"message": "User updated successfully"}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "Failed"}), 500

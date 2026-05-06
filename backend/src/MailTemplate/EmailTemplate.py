@@ -762,9 +762,9 @@ class EmailTemplate:
             # ---------------------------------
             # Welcome 
             # ---------------------------------
-            "welcome" : {
-                "subject" : "Welcome to HiRekruit!",
-                "body" : """
+            "welcome": {
+                "subject": "Welcome to HiRekruit!",
+                "body": """
                 <!DOCTYPE html>
                 <html>
                     <head>
@@ -776,53 +776,55 @@ class EmailTemplate:
                             <tr>
                                 <td align="center">
                                     <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
                                         <!-- Header -->
                                         <tr>
                                             <td style="background: linear-gradient(135deg, #000000 0%, #434343 100%); padding: 40px 30px; text-align: center;">
                                                 <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">HiRekruit</h1>
                                             </td>
                                         </tr>
-                                        
+
                                         <!-- Content -->
                                         <tr>
                                             <td style="padding: 40px 30px; text-align: center;">
-                                                <div style="font-size: 48px; margin-bottom: 20px;">🎉</div>
-                                                <h2 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 28px; font-weight: 600;">Welcome to HiRekruit, {name}!</h2>
-                                                <p style="margin: 0 0 30px 0; color: #666666; font-size: 16px; line-height: 1.6;">
-                                                    Your account has been successfully verified and you're all set to start using HiRekruit.
+                                                <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
+                                                <h2 style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 26px; font-weight: 600;">Welcome to HiRekruit, {name}!</h2>
+                                                <p style="margin: 0 0 8px 0; color: #666666; font-size: 15px; line-height: 1.6;">
+                                                    Your email has been successfully verified.
                                                 </p>
-                                                <p style="margin: 0 0 40px 0; color: #666666; font-size: 16px; line-height: 1.6;">
-                                                    We're excited to have you on board!
+                                                <p style="margin: 0 0 32px 0; color: #666666; font-size: 15px; line-height: 1.6;">
+                                                    Your account is currently <strong>pending admin approval</strong>. You'll receive an email once you're approved and ready to sign in.
                                                 </p>
-                                                
-                                                <!-- CTA Button -->
-                                                <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
-                                                    <tr>
-                                                        <td align="center" style="background: linear-gradient(135deg, #000000 0%, #434343 100%); border-radius: 8px; padding: 16px 40px;">
-                                                            <a href="{frontend_url}" style="color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
-                                                                Get Started
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                </table>
+
+                                                <!-- Contact Box -->
+                                                <div style="background-color: #f0f9ff; border: 1.5px solid #bae0fd; padding: 24px 28px; border-radius: 12px; text-align: left;">
+                                                    <p style="margin: 0 0 12px 0; color: #0c4a6e; font-size: 15px; font-weight: 600;">
+                                                        Need faster approval? Contact us:
+                                                    </p>
+                                                    <p style="margin: 0; color: #0369a1; font-size: 14px; line-height: 2;">
+                                                        📧 <a href="mailto:hirekruit@gmail.com" style="color: #0369a1; text-decoration: none;">hirekruit@gmail.com</a><br>
+                                                        📞 +91 7255892578
+                                                    </p>
+                                                </div>
                                             </td>
                                         </tr>
-                                        
+
                                         <!-- Footer -->
                                         <tr>
-                                            <td style="background-color: #f9f9f9; padding: 30px; text-align: center; border-top: 1px solid #e0e0e0;">
+                                            <td style="background-color: #f9f9f9; padding: 24px 30px; text-align: center; border-top: 1px solid #e0e0e0;">
                                                 <p style="margin: 0; color: #999999; font-size: 12px;">
                                                     © 2025 HiRekruit. All rights reserved.
                                                 </p>
                                             </td>
                                         </tr>
+
                                     </table>
                                 </td>
                             </tr>
                         </table>
                     </body>
                 </html>
-            """
+                """
             },
 
             # ---------------------------------
@@ -883,7 +885,8 @@ class EmailTemplate:
                     </body>
                 </html>
                 """
-            }
+            },
+            
         }
 
     @staticmethod
