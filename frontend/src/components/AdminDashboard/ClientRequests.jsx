@@ -26,14 +26,50 @@ const ClientRequests = () => {
     }
   }, [users, isGettingAllUsers]);
 
-  const handleApprove = (req) => {
-    setRequests((prev) => prev.filter((r) => r._id !== req._id));
-    toast.success(`${req.name} approved`);
+  const handleApprove = async (req) => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/auth/approve-user/${req._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_approved: "approved" }),
+      });
+
+      if (response.ok) {
+        setRequests((prev) => prev.filter((r) => r._id !== req._id));
+        toast.success(`${req.name} approved`);
+      } else {
+        toast.error(`Failed to approve ${req.name}`);
+      }
+    } catch (error) {
+      console.error("Error approving user:", error);
+      toast.error(`An error occurred while approving ${req.name}`);
+    }
   };
 
-  const handleReject = (req) => {
-    setRequests((prev) => prev.filter((r) => r._id !== req._id));
-    toast.error(`${req.name} rejected`);
+  const handleReject = async (req) => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/auth/approve-user/${req._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_approved: "rejected" }),
+      });
+
+      if (response.ok) {
+        setRequests((prev) => prev.filter((r) => r._id !== req._id));
+        toast.success(`${req.name} rejected`);
+      } else {
+        toast.error(`Failed to reject ${req.name}`);
+      }
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      toast.error(`An error occurred while rejecting ${req.name}`);
+    }
   };
 
   const filtered = requests.filter((r) => {
@@ -51,7 +87,7 @@ const ClientRequests = () => {
 
   const counts = {
     all: users.filter((u) => u.is_approved === "pending").length,
-    approved: users.filter((u) => u.is_approved === "accepted").length,
+    approved: users.filter((u) => u.is_approved === "approved").length,
     rejected: users.filter((u) => u.is_approved === "rejected").length,
   };
 

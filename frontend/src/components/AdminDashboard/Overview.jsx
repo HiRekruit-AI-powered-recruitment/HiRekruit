@@ -44,7 +44,7 @@ const Overview = () => {
   const fetchDashboardData = async () => {
     try {
       const acceptedUsers = (users || []).filter(
-        (user) => user.is_approved === "accepted",
+        (user) => user.is_approved === "approved",
       );
 
       const pendingUsers = (users || []).filter(

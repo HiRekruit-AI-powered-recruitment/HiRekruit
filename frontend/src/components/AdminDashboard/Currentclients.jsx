@@ -45,7 +45,7 @@ const CurrentClients = () => {
   useEffect(() => {
     if (!isGettingAllUsers && !isGettingDrives && !isGettingCandidates) {
       const approvedUsers = (users || []).filter(
-        (user) => user.is_approved === "accepted",
+        (user) => user.is_approved === "approved",
       );
 
       setAllUsers(approvedUsers);
