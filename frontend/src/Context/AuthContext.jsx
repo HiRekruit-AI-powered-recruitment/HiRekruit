@@ -2,10 +2,20 @@ import { createContext, useContext, useState, useEffect } from "react";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [companyData, setCompanyData] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => localStorage.getItem("isLoggedIn") === "true"
+  );
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [companyData, setCompanyData] = useState(() => {
+    const savedCompany = localStorage.getItem("companyData");
+    return savedCompany ? JSON.parse(savedCompany) : null;
+  });
+  
+  // Set isLoading to false initially so the UI renders immediately based on localStorage
+  const [isLoading, setIsLoading] = useState(false);
 
   // Check authentication status
   const checkAuth = async () => {
@@ -20,14 +30,29 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUser(data.user);
         setCompanyData(data.company);
+        
+        // Update local storage with fresh data
+        localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("user", JSON.stringify(data.user));
+        if (data.company) {
+          localStorage.setItem("companyData", JSON.stringify(data.company));
+        }
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        setCompanyData(null);
+        localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("user");
+        localStorage.removeItem("companyData");
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       setIsAuthenticated(false);
       setUser(null);
+      setCompanyData(null);
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("user");
+      localStorage.removeItem("companyData");
     } finally {
       setIsLoading(false);
     }
@@ -37,8 +62,12 @@ export const AuthProvider = ({ children }) => {
   const login = async (userData, companyDataParam = null) => {
     setIsAuthenticated(true);
     setUser(userData);
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("user", JSON.stringify(userData));
+    
     if (companyDataParam) {
       setCompanyData(companyDataParam);
+      localStorage.setItem("companyData", JSON.stringify(companyDataParam));
     }
   };
 
@@ -55,6 +84,10 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setIsAuthenticated(false);
       setUser(null);
+      setCompanyData(null);
+      localStorage.removeItem("isLoggedIn");
+      localStorage.removeItem("user");
+      localStorage.removeItem("companyData");
     }
   };
 
