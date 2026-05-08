@@ -106,16 +106,16 @@ const TechnicalInterviewStartCard = ({
           initial={{ opacity: 0, x: -24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-gradient-to-br from-blue-50 via-white to-slate-50 rounded-2xl border border-blue-100 shadow-lg p-8 lg:min-h-[620px]"
+          className="bg-white rounded-lg border border-gray-200 shadow-xl p-8 lg:min-h-[620px]"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md text-sm font-semibold mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-lg text-sm font-semibold mb-8">
             <Code2 className="w-4 h-4" />
             Technical Interview
           </div>
 
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-16 h-16 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center">
-              <Code2 className="w-8 h-8 text-blue-700" />
+            <div className="w-16 h-16 rounded-lg bg-gray-100 border border-gray-200 shadow-sm flex items-center justify-center">
+              <Code2 className="w-8 h-8 text-black" />
             </div>
             <div>
               <p className="text-sm text-gray-500 font-medium">
@@ -150,9 +150,9 @@ const TechnicalInterviewStartCard = ({
               return (
                 <div
                   key={card.label}
-                  className="bg-white rounded-xl border border-gray-100 shadow-sm p-5"
+                  className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 transition-colors hover:bg-gray-50"
                 >
-                  <Icon className="w-6 h-6 text-gray-700 mb-5" />
+                  <Icon className="w-6 h-6 text-black mb-5" />
                   <p className="text-sm text-gray-500 mb-2">{card.label}</p>
                   <p className="text-lg font-semibold text-gray-900">
                     {card.value}
@@ -163,7 +163,7 @@ const TechnicalInterviewStartCard = ({
           </div>
 
           {!canStart && (
-            <div className="mt-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
               <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <p className="text-sm font-medium">
                 Resume data is required before the technical interview can
@@ -191,10 +191,10 @@ const TechnicalInterviewStartCard = ({
             return (
               <div
                 key={section.title}
-                className={`rounded-xl border transition-colors ${
+                className={`rounded-lg border transition-colors ${
                   isOpen
                     ? "bg-white border-gray-300 shadow-sm"
-                    : "bg-gray-50 border-gray-100"
+                    : "bg-white border-gray-200 hover:bg-gray-50"
                 }`}
               >
                 <button
@@ -218,7 +218,7 @@ const TechnicalInterviewStartCard = ({
                     <ul className="space-y-3 text-sm leading-6 text-gray-700">
                       {section.items.map((item) => (
                         <li key={item} className="flex items-start gap-3">
-                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-gray-900 flex-shrink-0" />
+                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-black flex-shrink-0" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -231,7 +231,7 @@ const TechnicalInterviewStartCard = ({
         </motion.section>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 shadow-2xl backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
           <p className="text-base text-gray-900 sm:mr-auto">
             Click <span className="font-semibold">Start</span> to begin the AI
@@ -243,10 +243,10 @@ const TechnicalInterviewStartCard = ({
             disabled={!canStart || isStarting}
             whileHover={{ scale: canStart && !isStarting ? 1.03 : 1 }}
             whileTap={{ scale: canStart && !isStarting ? 0.97 : 1 }}
-            className={`px-8 py-3 rounded-full font-bold text-base flex items-center justify-center gap-2 transition-all shadow-lg ${
+            className={`px-8 py-3 rounded-lg font-bold text-base flex items-center justify-center gap-2 transition-all duration-300 shadow-md ${
               canStart && !isStarting
-                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed shadow-gray-200"
+                ? "bg-black hover:bg-gray-800 text-white border border-black hover:shadow-lg"
+                : "bg-gray-200 text-gray-500 border border-gray-300 cursor-not-allowed"
             }`}
           >
             {isStarting ? (
