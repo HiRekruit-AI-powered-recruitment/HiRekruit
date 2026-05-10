@@ -20,7 +20,6 @@ import logo from "../../assets/HiRekruit.png";
 const items = [
   { label: "Overview", icon: Grid, path: "/admin/overview" },
   { label: "All Companies", icon: Building2, path: "/admin/companies" },
-  { label: "Current Drives", icon: Briefcase, path: "/admin/drives" },
   { label: "All Candidates", icon: UserCheck, path: "/admin/candidates" },
   { label: "Current Clients", icon: UserRound, path: "/admin/currentclients" },
   { label: "Client Requests", icon: UserPlus, path: "/admin/clientrequests" },

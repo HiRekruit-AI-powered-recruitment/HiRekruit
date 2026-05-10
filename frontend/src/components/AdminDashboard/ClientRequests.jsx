@@ -1,33 +1,15 @@
 import React, { useState, useEffect } from "react";
-import {
-  Clock,
-  Search,
-  CheckCircle,
-  XCircle,
-  Eye,
-  MoreVertical,
-  Users,
-  Mail,
-} from "lucide-react";
+import { Clock, Search, CheckCircle, XCircle } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Loader from "../Loader";
 import { useUsers } from "../../Hooks/userHooks/useGetAllUsers";
 
-const STATUS_STYLES = {
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-600",
-  pending: "bg-amber-100 text-amber-700",
-};
-
 const ClientRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [showMenu, setShowMenu] = useState(null);
 
   const { users, loading: isGettingAllUsers } = useUsers();
 
@@ -36,7 +18,7 @@ const ClientRequests = () => {
   useEffect(() => {
     if (!isGettingAllUsers) {
       const pendingUsers = (users || []).filter(
-        (user) => user.is_approved === null || user.is_approved === undefined,
+        (user) => user.is_approved === "pending",
       );
 
       setRequests(pendingUsers);
@@ -44,14 +26,50 @@ const ClientRequests = () => {
     }
   }, [users, isGettingAllUsers]);
 
-  const handleApprove = (req) => {
-    setRequests((prev) => prev.filter((r) => r._id !== req._id));
-    toast.success(`${req.name} approved`);
+  const handleApprove = async (req) => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/auth/approve-user/${req._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_approved: "approved" }),
+      });
+
+      if (response.ok) {
+        setRequests((prev) => prev.filter((r) => r._id !== req._id));
+        toast.success(`${req.name} approved`);
+      } else {
+        toast.error(`Failed to approve ${req.name}`);
+      }
+    } catch (error) {
+      console.error("Error approving user:", error);
+      toast.error(`An error occurred while approving ${req.name}`);
+    }
   };
 
-  const handleReject = (req) => {
-    setRequests((prev) => prev.filter((r) => r._id !== req._id));
-    toast.error(`${req.name} rejected`);
+  const handleReject = async (req) => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const response = await fetch(`${baseUrl}/api/auth/approve-user/${req._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_approved: "rejected" }),
+      });
+
+      if (response.ok) {
+        setRequests((prev) => prev.filter((r) => r._id !== req._id));
+        toast.success(`${req.name} rejected`);
+      } else {
+        toast.error(`Failed to reject ${req.name}`);
+      }
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      toast.error(`An error occurred while rejecting ${req.name}`);
+    }
   };
 
   const filtered = requests.filter((r) => {
@@ -60,16 +78,7 @@ const ClientRequests = () => {
       r.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.role?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const status =
-      r.is_approved === true
-        ? "approved"
-        : r.is_approved === false
-          ? "rejected"
-          : "pending";
-
-    const matchStatus = filterStatus === "all" || status === filterStatus;
-
-    return matchSearch && matchStatus;
+    return matchSearch;
   });
 
   const totalPages = Math.ceil(filtered.length / requestsPerPage);
@@ -77,11 +86,9 @@ const ClientRequests = () => {
   const paginated = filtered.slice(startIndex, startIndex + requestsPerPage);
 
   const counts = {
-    all: users.filter(
-      (u) => u.is_approved === null || u.is_approved === undefined,
-    ).length,
-    approved: users.filter((u) => u.is_approved === true).length,
-    rejected: users.filter((u) => u.is_approved === false).length,
+    all: users.filter((u) => u.is_approved === "pending").length,
+    approved: users.filter((u) => u.is_approved === "approved").length,
+    rejected: users.filter((u) => u.is_approved === "rejected").length,
   };
 
   if (loading) return <Loader />;
@@ -90,7 +97,6 @@ const ClientRequests = () => {
     <div className="min-h-screen bg-gray-50">
       <ToastContainer />
 
-      {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-1">
@@ -106,7 +112,6 @@ const ClientRequests = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <p className="text-xs text-gray-500 mb-1">Total Requests</p>
@@ -126,7 +131,6 @@ const ClientRequests = () => {
           </div>
         </div>
 
-        {/* Search */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -144,7 +148,6 @@ const ClientRequests = () => {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -217,7 +220,6 @@ const ClientRequests = () => {
             </table>
           </div>
 
-          {/* Empty */}
           {filtered.length === 0 && (
             <div className="text-center py-14">
               <Clock className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -230,7 +232,6 @@ const ClientRequests = () => {
             </div>
           )}
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 p-4 border-t border-gray-200">
               <button

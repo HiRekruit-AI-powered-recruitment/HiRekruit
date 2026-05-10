@@ -21,9 +21,11 @@ from src.Utils.Database import db
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
+# Auto-detect environment for cookie settings
+is_production = os.environ.get("FLASK_ENV") == "production"
 app.config.update(
-    SESSION_COOKIE_SAMESITE="None",  # REQUIRED for cross-domain
-    SESSION_COOKIE_SECURE=True,      # REQUIRED for HTTPS
+    SESSION_COOKIE_SAMESITE="None" if is_production else "Lax",
+    SESSION_COOKIE_SECURE=is_production,  # True only for HTTPS (production)
     SESSION_COOKIE_HTTPONLY=True
 )
 

@@ -33,6 +33,7 @@ def register_user():
         password = data.get("password")
         company_name = data.get("company_name")
         role = data.get("role", "hr")
+        is_approved="pending"
 
         # Validation
         if not all([name, email, password, company_name]):
@@ -74,7 +75,8 @@ def register_user():
             email=email,
             company_id=company_id,
             password_hash=password_hash,
-            role=role
+            role=role,
+            is_approved=is_approved,
         )
         user["verification_otp"] = otp
         user["verification_otp_expiry"] = otp_expiry
@@ -169,9 +171,9 @@ def verify_email():
                 }
             }
         )
-        # Create session
-        AuthUtils.create_session(user["_id"], remember_me=False)
-        print("after session creation")
+
+        # NOTE: Session is NOT created here intentionally.
+        # User must log in manually via the login endpoint.
 
         #......................................................
         # Send welcome email
@@ -294,6 +296,14 @@ def login_user():
                 "message": "Please verify your email before logging in",
                 "requires_verification": True
             }), 403
+
+        # Check if approved by admin
+        if user.get("is_approved") != "approved":
+            return jsonify({
+                "message": "Your account is pending admin approval. You will receive an email once approved.",
+                "requires_approval": True
+            }), 403
+
 
         # Update last login
         db.users.update_one(
@@ -617,3 +627,33 @@ def get_all_candidates():
         return jsonify({
             "message": "Failed to fetch candidates"
         }), 500
+
+def approve_user(user_id):
+    try:
+        data = request.get_json()
+        print("===> data:", data)
+        is_approved = data.get("is_approved")
+        print("===> is_approved:", is_approved)
+        print("===> user_id:", user_id)
+
+        result = db.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "is_approved": is_approved,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+
+        print("===> matched:", result.matched_count)
+        print("===> modified:", result.modified_count)
+
+        if result.matched_count == 0:
+            return jsonify({"message": "User not found"}), 404
+
+        return jsonify({"message": "User updated successfully"}), 200
+
+    except Exception as e:
+        print(e)
+        return jsonify({"message": "Failed"}), 500
