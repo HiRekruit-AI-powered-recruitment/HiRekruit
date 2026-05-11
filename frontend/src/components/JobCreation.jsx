@@ -105,9 +105,7 @@ const JobCreation = () => {
     const fetchHRInfo = async () => {
       try {
         const email = user?.email;
-        console.log("Current HR Email :", email);
         if (!email) {
-          console.log("No email found for user");
           toast.error("Unable to fetch user information");
           setFetchingHRInfo(false);
           return;
@@ -244,12 +242,12 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-              ...q,
-              testCases: [
-                ...q.testCases,
-                { input: "", output: "", type: "public" },
-              ],
-            }
+            ...q,
+            testCases: [
+              ...q.testCases,
+              { input: "", output: "", type: "public" },
+            ],
+          }
           : q,
       ),
     }));
@@ -261,9 +259,9 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-              ...q,
-              testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
-            }
+            ...q,
+            testCases: q.testCases.filter((_, idx) => idx !== testCaseIndex),
+          }
           : q,
       ),
     }));
@@ -289,6 +287,7 @@ const JobCreation = () => {
     await extractQuestions(file);
   };
 
+  // Extract Questions with the help of AI.
   const extractQuestions = async (file) => {
     try {
       setIsExtracting(true);
@@ -317,7 +316,7 @@ const JobCreation = () => {
           constraints: q.constraints || "",
           testCases: q.testCases || [{ input: "", output: "", type: "public" }],
         }));
-        console.log(formattedQuestions);
+
         // AUTO-FILL THE MANUAL ENTRY PART
         setJobData((prev) => ({
           ...prev,
@@ -352,11 +351,11 @@ const JobCreation = () => {
       coding_questions: prev.coding_questions.map((q) =>
         q.id === questionId
           ? {
-              ...q,
-              testCases: q.testCases.map((tc, idx) =>
-                idx === testCaseIndex ? { ...tc, [field]: value } : tc,
-              ),
-            }
+            ...q,
+            testCases: q.testCases.map((tc, idx) =>
+              idx === testCaseIndex ? { ...tc, [field]: value } : tc,
+            ),
+          }
           : q,
       ),
     }));
@@ -365,8 +364,6 @@ const JobCreation = () => {
   const handleSubmit = async () => {
     if (loading) return;
     setLoading(true);
-
-    console.log("Inside submission");
 
     if (!jobData.company_id) {
       toast.error("Company ID is missing. Please try refreshing the page.", {
@@ -681,9 +678,8 @@ const JobCreation = () => {
                 <div>
                   <strong>Post on Career Portal:</strong>{" "}
                   <span
-                    className={`font-semibold ${
-                      postJobOnPortal ? "text-green-600" : "text-gray-600"
-                    }`}
+                    className={`font-semibold ${postJobOnPortal ? "text-green-600" : "text-gray-600"
+                      }`}
                   >
                     {postJobOnPortal ? "✓ Yes" : "✗ No"}
                   </span>
@@ -772,9 +768,8 @@ const JobCreation = () => {
                 <button
                   onClick={confirmSubmit}
                   disabled={loading}
-                  className={`px-4 py-2 rounded-md text-white ${
-                    loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
-                  }`}
+                  className={`px-4 py-2 rounded-md text-white ${loading ? "bg-gray-400" : "bg-black hover:bg-gray-900"
+                    }`}
                 >
                   {loading ? "Submitting..." : "Confirm & Submit"}
                 </button>
@@ -1520,9 +1515,8 @@ const JobCreation = () => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${
-              loading ? "opacity-70 cursor-not-allowed" : ""
-            }`}
+            className={`px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-black focus:outline-none focus:ring-2 focus:ring-gray-500 ${loading ? "opacity-70 cursor-not-allowed" : ""
+              }`}
           >
             {loading
               ? isEditMode

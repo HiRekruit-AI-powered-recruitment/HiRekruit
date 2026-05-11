@@ -19,7 +19,14 @@ from src.CodingAssessment.Routes.submission_routes import submission_bp
 # Import the database to initialize connection
 from src.Utils.Database import db
 
+# SocketIO imports
+from src.SocketIO.SocketIO_Instance import socketio
+import src.SocketIO.SocketIO_Events  # To register events
+
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+
+# Initialize SocketIO with app
+socketio.init_app(app)
 
 # Auto-detect environment for cookie settings
 is_production = os.environ.get("FLASK_ENV") == "production"
@@ -74,5 +81,5 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_ENV") == "development"
-    print(f"Flask server started on port {port}")
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    print(f"Flask server started on port {port} (with SocketIO)")
+    socketio.run(app, host="0.0.0.0", port=port, debug=debug)
