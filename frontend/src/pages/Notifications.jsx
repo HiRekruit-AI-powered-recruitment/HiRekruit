@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../Context/AuthContext.jsx";
+import { useNotificationContext } from "../Context/NotificationContext";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -20,82 +21,17 @@ import Loader from "../components/Loader";
 
 const Notifications = () => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearAllNotifications,
+  } = useNotificationContext();
+  const loading = false;
+  
   const [filterType, setFilterType] = useState("all");
   const [showRead, setShowRead] = useState(true);
-
-  // Mock notifications data
-  const mockNotifications = [
-    {
-      id: 1,
-      type: "drive_created",
-      title: "New Drive Created",
-      message: "Software Engineer drive has been created for your company",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      read: false,
-      driveId: "DRV001",
-      priority: "high",
-    },
-    {
-      id: 2,
-      type: "drive_updated",
-      title: "Drive Status Updated",
-      message: "Frontend Developer drive status changed to 'Active'",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      read: false,
-      driveId: "DRV002",
-      priority: "medium",
-    },
-    {
-      id: 3,
-      type: "candidate_applied",
-      title: "New Candidate Application",
-      message: "5 new candidates applied to Data Scientist drive",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5), // 5 hours ago
-      read: true,
-      driveId: "DRV003",
-      priority: "medium",
-    },
-    {
-      id: 4,
-      type: "drive_reminder",
-      title: "Drive Starting Soon",
-      message: "Product Manager drive starts tomorrow at 10:00 AM",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      read: true,
-      driveId: "DRV004",
-      priority: "low",
-    },
-    {
-      id: 5,
-      type: "drive_completed",
-      title: "Drive Completed",
-      message: "Backend Developer drive has been completed successfully",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48), // 2 days ago
-      read: true,
-      driveId: "DRV005",
-      priority: "low",
-    },
-    {
-      id: 6,
-      type: "system_update",
-      title: "System Update",
-      message: "New features have been added to the recruitment system",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72), // 3 days ago
-      read: true,
-      driveId: null,
-      priority: "low",
-    },
-  ];
-
-  useEffect(() => {
-    // Simulate loading notifications
-    setTimeout(() => {
-      setNotifications(mockNotifications);
-      setLoading(false);
-    }, 1000);
-  }, []);
 
   // Filter notifications based on type and read status
   const filteredNotifications = notifications.filter((notification) => {
@@ -104,34 +40,6 @@ const Notifications = () => {
     const matchesRead = showRead || !notification.read;
     return matchesType && matchesRead;
   });
-
-  // Mark notification as read
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((notif) =>
-        notif.id === id ? { ...notif, read: true } : notif,
-      ),
-    );
-    toast.success("Notification marked as read");
-  };
-
-  // Mark all notifications as read
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notif) => ({ ...notif, read: true })));
-    toast.success("All notifications marked as read");
-  };
-
-  // Delete notification
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id));
-    toast.success("Notification deleted");
-  };
-
-  // Clear all notifications
-  const clearAllNotifications = () => {
-    setNotifications([]);
-    toast.success("All notifications cleared");
-  };
 
   // Get notification icon based on type
   const getNotificationIcon = (type) => {
@@ -170,12 +78,13 @@ const Notifications = () => {
   // Format timestamp
   const formatTimestamp = (timestamp) => {
     const now = new Date();
-    const diff = now - timestamp;
+    const dateObj = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    const diff = now - dateObj;
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+    if (minutes < 60) return `${Math.max(0, minutes)} minute${minutes !== 1 ? "s" : ""} ago`;
     if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
     return `${days} day${days !== 1 ? "s" : ""} ago`;
   };

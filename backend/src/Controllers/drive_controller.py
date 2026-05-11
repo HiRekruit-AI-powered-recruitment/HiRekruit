@@ -1,15 +1,14 @@
 import json
 from bson import ObjectId
 from datetime import datetime
-
 import cloudinary.uploader
 from flask import request, jsonify
-
 from src.Utils.Database import db
 from src.Model.Drive import create_drive, JobType, DriveStatus, RoundStatus
 from src.Model.CodingQuestion import create_coding_question
 from src.Model.DriveCandidate import initialize_candidate_rounds
 from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
+from src.SocketIO.SocketIO_Instance import socketio
 from src.Orchestrator.HiringOrchestrator import (
     shortlist_candidates,
     email_candidates,
@@ -61,7 +60,7 @@ def create_drive_controller():
         rounds = json.loads(rounds_data) if isinstance(rounds_data, str) else rounds_data
         
         questions_data = data.get("coding_questions", "[]")
-        manual_questions = json.loads(questions_data) if isinstance(questions_data, str) else questions_data
+        coding_questions = json.loads(questions_data) if isinstance(questions_data, str) else questions_data
 
         # Validation
         if not company_id or not job_id or not candidates_to_hire:
@@ -72,27 +71,10 @@ def create_drive_controller():
         
         print("All drive details are ready now.")
 
-        # 2. Handle PDF Upload & AI Processing
-        all_extracted_questions = []
-        if 'assessment_file' in files:
-            pdf_file = files['assessment_file']
-            print(f"DEBUG: Processing PDF file: {pdf_file.filename}")
-            
-            # Upload to Cloudinary as 'raw' to preserve PDF structure
-            upload_result = cloudinary.uploader.upload(pdf_file, resource_type="raw")
-            pdf_url = upload_result.get("secure_url")
-
-            # Call AI Question Intake Agent
-            agent = QuestionIntakeAgent()
-            ai_questions = agent.process_question_pdf(pdf_url)
-            all_extracted_questions.extend(ai_questions)
-
-        # 3. Combine AI extracted questions and Manual questions
-        combined_questions = all_extracted_questions + manual_questions
+        # 2. Save Questions to coding_questions collection
         coding_question_ids = []
 
-        # 4. Save Questions to coding_questions collection
-        for q in combined_questions:
+        for q in coding_questions:
             # Normalize test cases (ensure keys match what create_coding_question expects)
             processed_test_cases = [
                 {
@@ -115,7 +97,7 @@ def create_drive_controller():
             q_res = db.coding_questions.insert_one(cq_doc)
             coding_question_ids.append(str(q_res.inserted_id))
 
-        # 5. Create the Drive document using Model helper
+        # 3. Create the Drive document using Model helper
         # Handle skills - support both string and array formats
         skills_data = data.get("skills", "[]")
         if isinstance(skills_data, str):
@@ -147,7 +129,7 @@ def create_drive_controller():
             status=DriveStatus.DRIVE_CREATED
         )
 
-        # 6. Insert Drive to DB
+        # 4. Insert Drive to DB
         result = db.drives.insert_one(drive_doc)
         drive_doc["_id"] = str(result.inserted_id)
 
@@ -412,6 +394,15 @@ def update_drive_status(drive_id):
                 {"$set": {"currentStage": next_stage_index, "updated_at": datetime.utcnow()}}
             )
 
+            socketio.emit("pipeline_update", {
+                "id": str(ObjectId()),
+                "type": "drive_updated",
+                "title": "Invitations Sent",
+                "message": f"Emails sent for Drive {job_role}.",
+                "driveId": drive_id,
+                "priority": "high",
+                "timestamp": datetime.utcnow().isoformat()
+            })
 
 
         # ---------------------------------------------------------
@@ -488,6 +479,16 @@ def update_drive_status(drive_id):
                 {"$set": {"currentStage": next_stage_index}}
             )
 
+            socketio.emit("pipeline_update", {
+                "id": str(ObjectId()),
+                "type": "drive_updated",
+                "title": f"Round {round_number} Scheduled",
+                "message": f"{round_type} round scheduling initiated for {job_role}.",
+                "driveId": drive_id,
+                "priority": "medium",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
             return jsonify({
                 "message": f"Round {round_number} scheduling initiated",
                 "round_number": round_number,
@@ -557,6 +558,16 @@ def update_drive_status(drive_id):
 
             next_round = round_number + 1 if round_number < len(rounds) else None
 
+            socketio.emit("pipeline_update", {
+                "id": str(ObjectId()),
+                "type": "drive_completed",
+                "title": f"Round {round_number} Completed",
+                "message": f"Round {round_number} marked as completed for {job_role}.",
+                "driveId": drive_id,
+                "priority": "low",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
             return jsonify({
                 "message": f"Round {round_number} completed",
                 "next_round": next_round,
@@ -575,9 +586,6 @@ def update_drive_status(drive_id):
             
             # Without worker
             task_result = send_final_selection_emails(drive_id)
-
-
-
 
         # ---------------------------------------------------------
         # 📌 6. GENERIC STATUS UPDATE
@@ -602,6 +610,16 @@ def update_drive_status(drive_id):
             if result.modified_count == 0:
                 return jsonify({"error": "Failed to update drive status"}), 500
 
+            socketio.emit("pipeline_update", {
+                "id": str(ObjectId()),
+                "type": "drive_updated",
+                "title": "Drive Status Updated",
+                "message": f"Drive {job_role} moved to {new_status}.",
+                "driveId": drive_id,
+                "priority": "medium",
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
             return jsonify({
                 "message": "Drive status updated successfully",
                 "status": new_status,
@@ -612,7 +630,6 @@ def update_drive_status(drive_id):
     except Exception as e:
         print(f"❌ Error in update_drive_status: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
-
 
 
 def get_drive_progress(drive_id):
@@ -680,9 +697,6 @@ def get_drive_progress(drive_id):
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
 
-from bson import ObjectId
-from datetime import datetime
-
 def serialize_mongo_doc(doc):
     """
     Convert MongoDB document to JSON-serializable dict
@@ -718,7 +732,6 @@ def get_hr_info(hr_mail):
     except Exception as e:
         print(f"Error fetching HR info: {str(e)}")
         return None
-
 
 
 def get_drive_candidates(drive_id):
@@ -1055,7 +1068,6 @@ def get_active_round_deadline(drive_doc):
     return active_round.get("deadline") if active_round else None
 
 # --- Existing Controllers ---
-
 def get_deadline_controller():
     drive_id = request.args.get("drive_id")
     if not drive_id:
@@ -1074,6 +1086,7 @@ def get_deadline_controller():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 def update_round_deadlines(drive_id):
     """
     Updates the deadline for specific rounds in a drive and syncs to candidates.
@@ -1123,10 +1136,6 @@ def update_round_deadlines(drive_id):
         print(f"❌ Error in update_round_deadlines: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
 
-
-
-
-
 def extract_questions_controller():
     # Check if the file is in the request
     if 'assessment_file' not in request.files:
@@ -1152,7 +1161,6 @@ def extract_questions_controller():
     except Exception as e:
         print(f"Extraction Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
 
 def delete_drive(drive_id):
     """
@@ -1181,7 +1189,6 @@ def delete_drive(drive_id):
     except Exception as e:
         print(f"Error in delete_drive: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
-
 
 def update_drive(drive_id):
     """
@@ -1218,29 +1225,3 @@ def update_drive(drive_id):
     except Exception as e:
         print(f"Error in update_drive: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
-
-def extract_questions_controller():
-    # Check if the file is in the request
-    if 'assessment_file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    
-    pdf_file = request.files['assessment_file']
-    
-    if pdf_file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-
-    try:
-        # 1. Upload to Cloudinary (resource_type="raw" for PDFs)
-        upload_res = cloudinary.uploader.upload(pdf_file, resource_type="raw")
-        pdf_url = upload_res.get("secure_url")
-
-        # 2. Call your Agent
-        agent = QuestionIntakeAgent()
-        questions = agent.process_question_pdf(pdf_url)
-
-        # 3. Return the questions to the frontend
-        return jsonify({"questions": questions}), 200
-
-    except Exception as e:
-        print(f"Extraction Error: {str(e)}")
-        return jsonify({"error": str(e)}), 500
