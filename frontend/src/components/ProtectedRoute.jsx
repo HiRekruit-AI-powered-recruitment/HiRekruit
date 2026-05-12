@@ -1,34 +1,9 @@
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import Loader from "./Loader";
+import { useAuth } from "../Context/AuthContext";
 
 export default function ProtectedRoute({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const baseUrl = import.meta.env.VITE_BASE_URL;
-      const response = await fetch(`${baseUrl}/api/auth/me`, {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Loading state
   if (isLoading) {

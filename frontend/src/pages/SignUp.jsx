@@ -27,6 +27,7 @@ export default function SignUp() {
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleInputChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
@@ -62,6 +63,7 @@ export default function SignUp() {
 
       // Redirect to verification page with email
       navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+      setShowSuccessModal(true);
     } catch (err) {
       console.error("SignUp error:", err);
       setErrors([
@@ -96,9 +98,6 @@ export default function SignUp() {
         setErrors([{ message: data.message || "Invalid verification code" }]);
         return;
       }
-
-      // Successful verification - redirect to dashboard
-      window.location.href = "/";
     } catch (err) {
       console.error("Verification error:", err);
       setErrors([
