@@ -59,7 +59,7 @@ const Contact = () => {
         PUBLIC_KEY,
       );
 
-      console.log("Email sent successfully:", result.text);
+      // console.log("Email sent successfully:", result.text);
       setIsSubmitted(true);
 
       // Reset form
@@ -75,7 +75,7 @@ const Contact = () => {
       // Hide success message after 5 seconds
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
-      console.error("Email send failed:", error);
+      // console.error("Email send failed:", error);
       setSubmitError(
         "Failed to send message. Please try again or contact us directly.",
       );

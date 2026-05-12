@@ -45,6 +45,7 @@ import AccessibilityPage from "./components/Footer/Accessibility";
 import CookiePolicy from "./components/Footer/CookiePolicy";
 import Notifications from "./pages/Notifications";
 import Settings from "./pages/Settings";
+import { NotificationProvider } from "./Context/NotificationContext";
 
 // assessment pages
 import Assessment from "./pages/Assessment";
@@ -60,6 +61,11 @@ import SelectedCandidates from "./pages/SelectedCandidates";
 import Overview from "./components/AdminDashboard/Overview";
 import ClientRequests from "./components/AdminDashboard/ClientRequests";
 import Currentclients from "./components/AdminDashboard/Currentclients";
+
+// resources pages
+import API from "./components/Footer/API";
+import Documentation from "./components/Footer/Documentation";
+import HelpCenter from "./components/Footer/HelpCenter";
 
 function AppContent() {
   const location = useLocation();
@@ -95,6 +101,9 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/accessibility" element={<AccessibilityPage />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/api" element={<API />} />
+          <Route path="/docs" element={<Documentation />} />
+          <Route path="/help" element={<HelpCenter />} />
         </Route>
 
         {/* <Route path="/signup" element={<CustomSignUp />} /> */}
@@ -210,7 +219,13 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  return <Router>{showLoader ? <Loader /> : <AppContent />}</Router>;
+  return (
+    <Router>
+      <NotificationProvider>
+        {showLoader ? <Loader /> : <AppContent />}
+      </NotificationProvider>
+    </Router>
+  );
 }
 
 export default App;

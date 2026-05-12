@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNotificationContext } from "../Context/NotificationContext";
 import {
   Menu,
   X,
@@ -42,21 +43,7 @@ const items = [
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [unreadCount, setUnreadCount] = useState(3); // Mock unread count
-
-  // Mock notification count update (in real app, this would come from context/API)
-  useEffect(() => {
-    // Simulate notification updates
-    const interval = setInterval(() => {
-      setUnreadCount((prev) => {
-        // Randomly increase or decrease for demo
-        const change = Math.random() > 0.7 ? 1 : Math.random() > 0.9 ? -1 : 0;
-        return Math.max(0, Math.min(9, prev + change));
-      });
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+  const { unreadCount } = useNotificationContext();
 
   return (
     <aside
