@@ -18,7 +18,7 @@ import Drives from "./components/Drives";
 // Interview pages
 import InterviewLayout from "./pages/InterviewPages/InterviewLayout";
 import InterviewPage from "./pages/InterviewPages/InterviewPage";
-import InterviewStartPage from "./pages/InterviewPages/InterviewStartPage";
+import InterviewStartRoute from "./pages/InterviewPages/InterviewStartRoute";
 import InterviewCompletionPage from "./pages/InterviewPages/InterviewCompletionPage";
 import HRJoinInterviewPage from "./pages/InterviewPages/HRJoinInterviewPage";
 
@@ -162,7 +162,7 @@ function AppContent() {
           />
           <Route
             path="/start-interview/:driveCandidateId/:typeOfInterview"
-            element={<InterviewStartPage />}
+            element={<InterviewStartRoute />}
           />
           <Route
             path="/interview-completion"
