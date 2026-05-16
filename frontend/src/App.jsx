@@ -61,6 +61,7 @@ import SelectedCandidates from "./pages/SelectedCandidates";
 import Overview from "./components/AdminDashboard/Overview";
 import ClientRequests from "./components/AdminDashboard/ClientRequests";
 import Currentclients from "./components/AdminDashboard/Currentclients";
+import AdminFeedback from "./components/AdminDashboard/AdminFeedback";
 
 // resources pages
 import API from "./components/Footer/API";
@@ -203,6 +204,7 @@ function AppContent() {
           <Route path="overview" element={<Overview />} />
           <Route path="clientrequests" element={<ClientRequests />} />
           <Route path="currentclients" element={<Currentclients />} />
+          <Route path="feedback" element={<AdminFeedback />} />
         </Route>
       </Routes>
 
