@@ -13,6 +13,7 @@ import {
   Grid,
   UserRound,
   UserPlus,
+  MessageSquare
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/HiRekruit.png";
@@ -24,6 +25,7 @@ const items = [
   { label: "Current Clients", icon: UserRound, path: "/admin/currentclients" },
   { label: "Client Requests", icon: UserPlus, path: "/admin/clientrequests" },
   { label: "Analytics", icon: BarChart3, path: "/admin/analytics" },
+  { label: "Feedback", icon: MessageSquare, path: "/admin/feedback" },
   { label: "System Settings", icon: Settings, path: "/admin/settings" },
 ];
 

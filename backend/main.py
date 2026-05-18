@@ -10,6 +10,7 @@ from src.Routes.InterviewFeedback_routes import feedback_bp
 from src.Routes.livekit_routes import livekit_bp
 from src.Config.auth_config import AuthConfig
 from src.Routes.companyinfo_routes import companyinfo_bp
+from src.Routes.settings_routes import settings_routes
 
 # for coding-assessment
 from src.CodingAssessment.Routes.problem_routes import problem_bp
@@ -75,6 +76,7 @@ app.register_blueprint(submission_bp, url_prefix="/api/coding-assessment/submiss
 
 # for feedback
 app.register_blueprint(feedback_bp, url_prefix="/api/interview-feedback")
+app.register_blueprint(settings_routes, url_prefix="/api/settings")
 
 
 if __name__ == "__main__":
