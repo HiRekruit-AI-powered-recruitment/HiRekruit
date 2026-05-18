@@ -6,10 +6,11 @@ import React, {
   useMemo,
 } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { AlertCircle, Shield } from "lucide-react";
+import { AlertCircle, Code2, Shield } from "lucide-react";
 import { useAuth } from "../../Context/AuthContext";
 import useLiveKit from "../../Hooks/InterviewHooks/useLiveKit";
 import { useVapi } from "../../Hooks/InterviewHooks/useVapi";
+import TechnicalCodingAssessmentPage from "./Technical rounds/TechnicalCodingAssessmentPage";
 import InterviewHeader from "../../components/Interview/InterviewHeader";
 import AIInterviewerPanel from "../../components/Interview/AIInterviewerPanel";
 import LocalVideoPanel from "../../components/Interview/LocalVideoPanel";
@@ -38,12 +39,19 @@ const InterviewPage = () => {
     location.state?.type ||
     params.interviewType ||
     "general";
+  const driveId = location.state?.driveId || location.state?.drive_id;
+  const candidateId =
+    location.state?.candidateId || location.state?.candidate_id;
+  const isTechnicalRound = String(interviewType)
+    .toLowerCase()
+    .includes("technical");
 
   // Refs
   const vapiListeningRef = useRef(true);
   const initializingRef = useRef(false);
   const mountedRef = useRef(true);
   const hasInitializedRef = useRef(false);
+  const codingAutoSwitchRef = useRef(false);
   const livekitRoomRef = useRef(null); // 🔴 NEW: Create livekitRoomRef here to pass to both hooks
 
   // Core interview states
@@ -122,6 +130,9 @@ const InterviewPage = () => {
   // Transcript states
   const [fullTranscript, setFullTranscript] = useState([]);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [sessionMode, setSessionMode] = useState("interview");
+  const [codingAssessmentSummary, setCodingAssessmentSummary] =
+    useState(null);
 
   // Custom hooks - REORDERED: useLiveKit must be called first to get localVideoRef
   const {
@@ -641,6 +652,58 @@ const InterviewPage = () => {
     vapiClientRef,
     clearSavedInterviewState,
   ]);
+
+  const handleOpenCodingAssessment = useCallback(() => {
+    if (!isTechnicalRound || isHR) return;
+    codingAutoSwitchRef.current = true;
+    setSessionMode("coding");
+  }, [isHR, isTechnicalRound]);
+
+  const handleCodingAssessmentComplete = useCallback(
+    (summary) => {
+      const time = new Date().toISOString();
+      const summaryMessage =
+        "Coding task submitted. Let's return to the technical discussion and wrap up the interview.";
+
+      setCodingAssessmentSummary(summary);
+      setSessionMode("interview");
+      setCurrentQuestion(summaryMessage);
+      setConversation((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          message: summaryMessage,
+          time,
+        },
+      ]);
+      setFullTranscript((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: summaryMessage,
+          timestamp: time,
+        },
+      ]);
+    },
+    [setConversation, setFullTranscript],
+  );
+
+  useEffect(() => {
+    if (!isTechnicalRound || isHR || sessionMode === "coding") return;
+    if (codingAutoSwitchRef.current) return;
+
+    const normalizedQuestion = String(currentQuestion || "").toLowerCase();
+    const shouldSwitchToCoding =
+      normalizedQuestion.includes("switch to the coding assessment") ||
+      normalizedQuestion.includes("begin the coding assessment") ||
+      normalizedQuestion.includes("start the coding task") ||
+      normalizedQuestion.includes("solve a coding problem");
+
+    if (shouldSwitchToCoding) {
+      codingAutoSwitchRef.current = true;
+      setSessionMode("coding");
+    }
+  }, [currentQuestion, isHR, isTechnicalRound, sessionMode]);
 
   // HR Intervention Functions
   const handleHrHandRaise = useCallback(() => {
@@ -1285,37 +1348,76 @@ const InterviewPage = () => {
 
   // Main interview interface - only shown when fully ready
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* HR Present Indicator (for candidate) */}
-      {!isHR && hrPresent && !aiPaused && (
-        <div className="fixed top-4 right-4 z-40">
-          <div className="bg-purple-600 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border-2 border-purple-700">
-            <Shield className="w-4 h-4" />
-            <span className="text-sm font-semibold">HR Observing</span>
+    <div className="relative min-h-screen">
+      <div
+        className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 ${
+          sessionMode === "coding"
+            ? "fixed inset-0 opacity-0 pointer-events-none"
+            : ""
+        }`}
+        aria-hidden={sessionMode === "coding"}
+      >
+        {/* HR Present Indicator (for candidate) */}
+        {!isHR && hrPresent && !aiPaused && (
+          <div className="fixed top-4 right-4 z-40">
+            <div className="bg-purple-600 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 border-2 border-purple-700">
+              <Shield className="w-4 h-4" />
+              <span className="text-sm font-semibold">HR Observing</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="max-w-7xl mx-auto p-4 lg:p-6">
-        {/* Header */}
-        <InterviewHeader
-          isHR={isHR}
-          hrName={hrName}
-          userData={userData}
-          interviewType={interviewType}
-          remoteParticipants={remoteParticipants}
-          interviewStarted={interviewStarted}
-          connectionError={connectionError}
-          isCheckingCompletion={isCheckingCompletion}
-          interviewAlreadyCompleted={interviewAlreadyCompleted}
-          isLoadingLiveKit={isLoadingLiveKit}
-          isConnecting={isConnecting}
-          isVapiReady={isVapiReady}
-          livekitConnected={livekitConnected}
-        />
+        <div className="max-w-7xl mx-auto p-4 lg:p-6">
+          {/* Header */}
+          <InterviewHeader
+            isHR={isHR}
+            hrName={hrName}
+            userData={userData}
+            interviewType={interviewType}
+            remoteParticipants={remoteParticipants}
+            interviewStarted={interviewStarted}
+            connectionError={connectionError}
+            isCheckingCompletion={isCheckingCompletion}
+            interviewAlreadyCompleted={interviewAlreadyCompleted}
+            isLoadingLiveKit={isLoadingLiveKit}
+            isConnecting={isConnecting}
+            isVapiReady={isVapiReady}
+            livekitConnected={livekitConnected}
+          />
 
-        {/* Dynamic Video Grid */}
-        <div className={`grid grid-cols-1 ${gridCols} gap-6 mb-6`}>
+          {isTechnicalRound && !isHR && (
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm p-4 flex flex-col md:flex-row md:items-center gap-4">
+              <div className="w-11 h-11 rounded-lg bg-black text-white flex items-center justify-center flex-shrink-0">
+                <Code2 className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-gray-900">
+                  Technical Coding Mode
+                </h3>
+                <p className="text-sm text-gray-600">
+                  When the AI moves you to a coding problem, the workspace opens
+                  here while the interview session stays active.
+                </p>
+                {codingAssessmentSummary && (
+                  <p className="text-xs text-green-700 font-semibold mt-1">
+                    Coding task submitted. Continue the interview and end when
+                    instructed.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenCodingAssessment}
+                className="px-4 py-2 rounded-lg bg-black text-white text-sm font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+              >
+                <Code2 className="w-4 h-4" />
+                Open Coding Task
+              </button>
+            </div>
+          )}
+
+          {/* Dynamic Video Grid */}
+          <div className={`grid grid-cols-1 ${gridCols} gap-6 mb-6`}>
           {/* AI Interviewer Section */}
           <AIInterviewerPanel
             blinkState={blinkState}
@@ -1397,6 +1499,26 @@ const InterviewPage = () => {
           setShowTranscript={setShowTranscript}
         />
       </div>
+      </div>
+
+      {sessionMode === "coding" && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <TechnicalCodingAssessmentPage
+            driveId={driveId}
+            candidateId={candidateId}
+            userData={userData}
+            currentQuestion={currentQuestion}
+            isSpeaking={isSpeaking}
+            isMuted={isMuted}
+            isVideoOff={isVideoOff}
+            livekitConnected={livekitConnected}
+            onToggleAudio={toggleAudio}
+            onToggleVideo={toggleVideo}
+            onReturnToInterview={() => setSessionMode("interview")}
+            onComplete={handleCodingAssessmentComplete}
+          />
+        </div>
+      )}
     </div>
   );
 };

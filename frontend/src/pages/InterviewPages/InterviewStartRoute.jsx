@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Loader from "../../components/Loader";
 import TechnicalInterviewStartCard from "../../components/Technical rounds/TechnicalInterviewStartCard";
-import { getMockInterviewPrompt } from "../../Prompts/MockInterviewPrompt";
+import { getTechnicalInterviewPrompt } from "../../Prompts/TechnicalInterviewPrompt";
 import InterviewStartPage from "./InterviewStartPage";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -12,6 +12,7 @@ function InterviewStartRoute() {
   const params = useParams();
   const [searchParams] = useSearchParams();
   const [userData, setUserData] = useState(null);
+  const [driveCandidateData, setDriveCandidateData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -34,6 +35,10 @@ function InterviewStartRoute() {
         setError(null);
 
         if (isPreviewMode) {
+          setDriveCandidateData({
+            drive_id: "preview-drive",
+            candidate_id: "preview-candidate",
+          });
           setUserData({
             name: "Candidate",
             email: "candidate@example.com",
@@ -52,6 +57,7 @@ function InterviewStartRoute() {
         }
 
         const data = await response.json();
+        setDriveCandidateData(data);
         setUserData(data.candidate_info);
       } catch (fetchError) {
         console.error("Error fetching technical interview data:", fetchError);
@@ -94,9 +100,12 @@ function InterviewStartRoute() {
       const identity = `candidate_${
         userData.name?.replace(/\s+/g, "_").toLowerCase() || "user"
       }`;
-      const prompt = getMockInterviewPrompt(
+      const prompt = getTechnicalInterviewPrompt(
         userData.resume_content,
         interviewType,
+        userData.job_role || userData.job_title || "",
+        userData.job_location || "",
+        userData.company_name || "",
       );
       const livekitData = await getLiveKitToken(identity);
 
@@ -111,6 +120,8 @@ function InterviewStartRoute() {
           identity: livekitData.identity,
           interviewType,
           driveCandidateId,
+          driveId: driveCandidateData?.drive_id,
+          candidateId: driveCandidateData?.candidate_id,
         },
       });
     } catch (startError) {
