@@ -6,6 +6,7 @@ from flask import request, jsonify
 from src.Utils.Database import db
 from src.Model.Drive import create_drive, JobType, DriveStatus, RoundStatus
 from src.Model.CodingQuestion import create_coding_question
+from src.Model.TechnicalQuestion import create_technical_question
 from src.Model.DriveCandidate import initialize_candidate_rounds
 from src.Agents.QuestionIntakeAgent import QuestionIntakeAgent
 from src.SocketIO.SocketIO_Instance import socketio
@@ -62,6 +63,37 @@ def create_drive_controller():
         questions_data = data.get("coding_questions", "[]")
         coding_questions = json.loads(questions_data) if isinstance(questions_data, str) else questions_data
 
+        technical_questions_data = data.get("technical_questions", "[]")
+        technical_questions = json.loads(technical_questions_data) if isinstance(technical_questions_data, str) else technical_questions_data
+
+        if technical_questions:
+            raw_blocks = []
+            for idx, q in enumerate(technical_questions):
+                if isinstance(q, str):
+                    question_text = q
+                else:
+                    question_text = (
+                        q.get("raw_question")
+                        or q.get("question_text")
+                        or q.get("question")
+                        or q.get("description")
+                        or ""
+                    )
+
+                if str(question_text).strip():
+                    raw_blocks.append(f"{idx + 1}. {str(question_text).strip()}")
+
+            if raw_blocks:
+                try:
+                    agent = QuestionIntakeAgent()
+                    formatted_questions = agent.process_technical_questions_text(
+                        "\n\n".join(raw_blocks)
+                    )
+                    if formatted_questions:
+                        technical_questions = formatted_questions
+                except Exception as format_error:
+                    print(f"Technical question formatting skipped: {format_error}")
+
         # Validation
         if not company_id or not job_id or not candidates_to_hire:
             return jsonify({"error": "Missing required fields (company_id, job_id, or candidates_to_hire)"}), 400
@@ -97,6 +129,39 @@ def create_drive_controller():
             q_res = db.coding_questions.insert_one(cq_doc)
             coding_question_ids.append(str(q_res.inserted_id))
 
+        # 2b. Save Technical-round questions to technical_questions collection.
+        # These are free-form questions answered in text during the live
+        # technical interview assessment switch, not Judge0 coding questions.
+        technical_question_ids = []
+        for q in technical_questions:
+            if isinstance(q, str):
+                q = {"raw_question": q, "question_text": q}
+
+            question_text = (
+                q.get("question_text")
+                or q.get("question")
+                or q.get("description")
+                or q.get("raw_question")
+                or ""
+            )
+            if not str(question_text).strip():
+                continue
+
+            tq_doc = create_technical_question(
+                title=q.get("title") or "Technical Question",
+                question_text=question_text,
+                expected_answer=q.get("expected_answer", ""),
+                evaluation_points=q.get("evaluation_points", []),
+                difficulty=q.get("difficulty", "medium"),
+                tags=q.get("tags", []),
+                company_id=company_id,
+                source_type=q.get("source_type", "manual"),
+                raw_question=q.get("raw_question") or question_text,
+            )
+
+            tq_res = db.technical_questions.insert_one(tq_doc)
+            technical_question_ids.append(str(tq_res.inserted_id))
+
         # 3. Create the Drive document using Model helper
         # Handle skills - support both string and array formats
         skills_data = data.get("skills", "[]")
@@ -121,6 +186,7 @@ def create_drive_controller():
             job_id=job_id,
             internship_duration=internship_duration,
             coding_question_ids=coding_question_ids,
+            technical_question_ids=technical_question_ids,
             experience_type=experience_type,
             experience_min=experience_min,
             experience_max=experience_max,
@@ -133,12 +199,19 @@ def create_drive_controller():
         result = db.drives.insert_one(drive_doc)
         drive_doc["_id"] = str(result.inserted_id)
 
-        print(f"SUCCESS: Drive created with ID {drive_doc['_id']}. Questions: {len(coding_question_ids)}")
+        if technical_question_ids:
+            db.technical_questions.update_many(
+                {"_id": {"$in": [ObjectId(qid) for qid in technical_question_ids]}},
+                {"$set": {"drive_id": str(drive_doc["_id"])}}
+            )
+
+        print(f"SUCCESS: Drive created with ID {drive_doc['_id']}. Coding Questions: {len(coding_question_ids)}. Technical Questions: {len(technical_question_ids)}")
 
         return jsonify({
             "message": "Drive created successfully with AI-processed questions",
             "drive": drive_doc,
-            "questions_count": len(coding_question_ids)
+            "questions_count": len(coding_question_ids),
+            "technical_questions_count": len(technical_question_ids)
         }), 201
 
     except ValueError as ve:
@@ -1160,6 +1233,34 @@ def extract_questions_controller():
 
     except Exception as e:
         print(f"Extraction Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+def extract_technical_questions_controller():
+    try:
+        agent = QuestionIntakeAgent()
+
+        if request.is_json:
+            data = request.get_json() or {}
+            raw_text = data.get("text", "")
+            questions = agent.process_technical_questions_text(raw_text)
+            return jsonify({"questions": questions}), 200
+
+        if 'assessment_file' not in request.files:
+            return jsonify({"error": "No file part or text provided"}), 400
+
+        pdf_file = request.files['assessment_file']
+        if pdf_file.filename == '':
+            return jsonify({"error": "No selected file"}), 400
+
+        upload_res = cloudinary.uploader.upload(pdf_file, resource_type="raw")
+        pdf_url = upload_res.get("secure_url")
+        questions = agent.process_technical_questions_pdf(pdf_url)
+
+        return jsonify({"questions": questions}), 200
+
+    except Exception as e:
+        print(f"Technical Question Extraction Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 def delete_drive(drive_id):

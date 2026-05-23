@@ -5,7 +5,10 @@ from src.CodingAssessment.Controllers.problem_controller import (
     create_problem,
     update_problem,
     delete_problem,
-    get_problem_count_by_drive
+    get_problem_count_by_drive,
+    get_technical_questions_by_drive,
+    submit_technical_question_answers,
+    save_technical_question_draft
 )
 
 problem_bp = Blueprint("problem", __name__)
@@ -122,3 +125,46 @@ def problem_count(drive_id):
         return jsonify(result), status_code
     
     return jsonify(result), 200
+
+
+@problem_bp.route("/technical", methods=["GET"])
+def technical_questions():
+    """
+    GET /api/coding-assessment/problem/technical?drive_id=<drive_id>
+
+    Returns free-form technical questions assigned to a technical round.
+    """
+    drive_id = request.args.get('drive_id')
+    result = get_technical_questions_by_drive(drive_id)
+
+    if isinstance(result, dict) and 'error' in result:
+        status_code = result.pop('status', 500)
+        return jsonify(result), status_code
+
+    return jsonify(result), 200
+
+
+@problem_bp.route("/technical/submit", methods=["POST"])
+def submit_technical_answers():
+    """
+    POST /api/coding-assessment/problem/technical/submit
+
+    Stores candidate text answers for technical-round questions.
+    """
+    data = request.get_json() or {}
+    result = submit_technical_question_answers(data)
+    status_code = result.pop('status', 200)
+    return jsonify(result), status_code
+
+
+@problem_bp.route("/technical/draft", methods=["POST"])
+def autosave_technical_answers():
+    """
+    POST /api/coding-assessment/problem/technical/draft
+
+    Autosaves candidate text answers while the live AI interview continues.
+    """
+    data = request.get_json() or {}
+    result = save_technical_question_draft(data)
+    status_code = result.pop('status', 200)
+    return jsonify(result), status_code

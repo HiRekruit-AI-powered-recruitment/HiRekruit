@@ -7,6 +7,17 @@ from datetime import datetime
 # Assuming you have database access
 from src.Utils.Database import db
 
+
+def serialize_mongo_doc(document):
+    document['_id'] = str(document['_id'])
+
+    if 'created_at' in document and isinstance(document['created_at'], datetime):
+        document['created_at'] = document['created_at'].isoformat()
+    if 'updated_at' in document and isinstance(document['updated_at'], datetime):
+        document['updated_at'] = document['updated_at'].isoformat()
+
+    return document
+
 def get_all_problems(drive_id=None):
     """
     Fetch all coding problems or filter by drive_id's
@@ -42,21 +53,177 @@ def get_all_problems(drive_id=None):
             # Fetch all problems from database
             problems = list(db.coding_questions.find())
         
-        # Convert ObjectId to string for JSON serialization
         for problem in problems:
-            problem['_id'] = str(problem['_id'])
-            
-            # Handle datetime fields
-            if 'created_at' in problem and isinstance(problem['created_at'], datetime):
-                problem['created_at'] = problem['created_at'].isoformat()
-            if 'updated_at' in problem and isinstance(problem['updated_at'], datetime):
-                problem['updated_at'] = problem['updated_at'].isoformat()
+            serialize_mongo_doc(problem)
         
         return problems
         
     except Exception as e:
         print(f"Error fetching problems: {str(e)}")
         return {"error": "Failed to fetch coding problems", "details": str(e), "status": 500}
+
+
+def get_technical_questions_by_drive(drive_id):
+    """
+    Fetch free-form technical interview questions assigned to a drive.
+    """
+    try:
+        if not drive_id:
+            return {"error": "drive_id is required", "status": 400}
+
+        drive = db.drives.find_one({"_id": ObjectId(drive_id)})
+        if not drive:
+            return {"error": "Drive not found", "status": 404}
+
+        technical_question_ids = drive.get('technical_question_ids', [])
+        if not technical_question_ids:
+            return {
+                "error": "No technical questions assigned to this drive",
+                "status": 404
+            }
+
+        object_ids = [
+            ObjectId(qid) if isinstance(qid, str) else qid
+            for qid in technical_question_ids
+        ]
+
+        questions = list(db.technical_questions.find({"_id": {"$in": object_ids}}))
+        for question in questions:
+            serialize_mongo_doc(question)
+
+        return questions
+
+    except Exception as e:
+        print(f"Error fetching technical questions: {str(e)}")
+        return {
+            "error": "Failed to fetch technical questions",
+            "details": str(e),
+            "status": 500
+        }
+
+
+def submit_technical_question_answers(data):
+    """
+    Store candidate text answers for technical-round questions.
+    """
+    try:
+        candidate_id = data.get("candidate_id")
+        drive_id = data.get("drive_id")
+        answers = data.get("answers", [])
+
+        if not candidate_id:
+            return {"error": "candidate_id is required", "status": 400}
+        if not drive_id:
+            return {"error": "drive_id is required", "status": 400}
+        if not isinstance(answers, list) or not answers:
+            return {"error": "answers are required", "status": 400}
+
+        sanitized_answers = []
+        for answer in answers:
+            question_id = answer.get("question_id")
+            response_text = answer.get("answer", "")
+            if not question_id:
+                continue
+            sanitized_answers.append({
+                "question_id": question_id,
+                "answer": str(response_text).strip(),
+                "answered_at": datetime.utcnow()
+            })
+
+        if not sanitized_answers:
+            return {"error": "No valid answers provided", "status": 400}
+
+        result = db.technical_question_submissions.update_one(
+            {"candidate_id": candidate_id, "drive_id": drive_id},
+            {
+                "$set": {
+                    "candidate_id": candidate_id,
+                    "drive_id": drive_id,
+                    "answers": sanitized_answers,
+                    "submitted_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow(),
+                    "status": "submitted"
+                },
+                "$setOnInsert": {
+                    "created_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+
+        return {
+            "message": "Technical answers submitted successfully",
+            "upserted_id": str(result.upserted_id) if result.upserted_id else None,
+            "status": 200
+        }
+
+    except Exception as e:
+        print(f"Error submitting technical answers: {str(e)}")
+        return {"error": "Failed to submit technical answers", "details": str(e), "status": 500}
+
+
+def save_technical_question_draft(data):
+    """
+    Autosave candidate text answers during the live technical interview.
+    """
+    try:
+        drive_candidate_id = data.get("drive_candidate_id")
+        candidate_id = data.get("candidate_id")
+        drive_id = data.get("drive_id")
+        answers = data.get("answers", [])
+
+        if not candidate_id:
+            return {"error": "candidate_id is required", "status": 400}
+        if not drive_id:
+            return {"error": "drive_id is required", "status": 400}
+        if not isinstance(answers, list):
+            return {"error": "answers must be a list", "status": 400}
+
+        sanitized_answers = []
+        for answer in answers:
+            question_id = answer.get("question_id")
+            if not question_id:
+                continue
+
+            sanitized_answers.append({
+                "question_id": question_id,
+                "question_text": str(answer.get("question_text", "")).strip(),
+                "answer": str(answer.get("answer", "")).strip(),
+                "updated_at": datetime.utcnow()
+            })
+
+        update_doc = {
+            "candidate_id": candidate_id,
+            "drive_id": drive_id,
+            "answers": sanitized_answers,
+            "status": "in_progress",
+            "last_autosaved_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+
+        if drive_candidate_id:
+            update_doc["drive_candidate_id"] = drive_candidate_id
+
+        result = db.technical_question_submissions.update_one(
+            {"candidate_id": candidate_id, "drive_id": drive_id},
+            {
+                "$set": update_doc,
+                "$setOnInsert": {
+                    "created_at": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+
+        return {
+            "message": "Technical answers autosaved",
+            "upserted_id": str(result.upserted_id) if result.upserted_id else None,
+            "status": 200
+        }
+
+    except Exception as e:
+        print(f"Error autosaving technical answers: {str(e)}")
+        return {"error": "Failed to autosave technical answers", "details": str(e), "status": 500}
 
 
 def get_problem_by_id(problem_id):
