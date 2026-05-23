@@ -16,6 +16,7 @@ function InterviewStartRoute() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [technicalQuestions, setTechnicalQuestions] = useState([]);
 
   const driveCandidateId = params.driveCandidateId;
   const interviewType = params.typeOfInterview;
@@ -59,6 +60,37 @@ function InterviewStartRoute() {
         const data = await response.json();
         setDriveCandidateData(data);
         setUserData(data.candidate_info);
+
+        // 📝 Fetch technical questions so the AI prompt can include them
+        const driveId = data.drive_id;
+        if (driveId) {
+          try {
+            const driveRes = await fetch(`${BASE_URL}/api/drive/${driveId}`);
+            let drive = {};
+            if (driveRes.ok) {
+              const driveResult = await driveRes.json();
+              drive = driveResult.drive || {};
+            }
+
+            const hasTechQuestions =
+              Array.isArray(drive.technical_question_ids) &&
+              drive.technical_question_ids.length > 0;
+
+            if (hasTechQuestions) {
+              const questionsRes = await fetch(
+                `${BASE_URL}/api/coding-assessment/problem/technical?drive_id=${encodeURIComponent(driveId)}`,
+              );
+              if (questionsRes.ok) {
+                const questions = await questionsRes.json();
+                setTechnicalQuestions(Array.isArray(questions) ? questions : []);
+                console.log(`✅ Fetched ${questions.length} technical questions for AI prompt`);
+              }
+            }
+          } catch (questionsError) {
+            console.warn("⚠️ Could not fetch technical questions for AI prompt (non-blocking):", questionsError);
+            // Non-blocking: interview can still start without questions in the prompt
+          }
+        }
       } catch (fetchError) {
         console.error("Error fetching technical interview data:", fetchError);
         setError(fetchError.message);
@@ -106,6 +138,7 @@ function InterviewStartRoute() {
         userData.job_role || userData.job_title || "",
         userData.job_location || "",
         userData.company_name || "",
+        technicalQuestions,
       );
       const livekitData = await getLiveKitToken(identity);
 
@@ -122,6 +155,7 @@ function InterviewStartRoute() {
           driveCandidateId,
           driveId: driveCandidateData?.drive_id,
           candidateId: driveCandidateData?.candidate_id,
+          technicalQuestions,
         },
       });
     } catch (startError) {

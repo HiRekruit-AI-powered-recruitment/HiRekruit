@@ -124,3 +124,9 @@ drive_bp.route("/job", methods=["GET"])(get_drive_id_by_job)
 def extract_questions_only():
     from src.Controllers.drive_controller import extract_questions_controller
     return extract_questions_controller()
+
+
+@drive_bp.route('/extract-technical-questions', methods=['POST'])
+def extract_technical_questions_only():
+    from src.Controllers.drive_controller import extract_technical_questions_controller
+    return extract_technical_questions_controller()

@@ -131,8 +131,8 @@ const InterviewPage = () => {
   const [fullTranscript, setFullTranscript] = useState([]);
   const [showTranscript, setShowTranscript] = useState(false);
   const [sessionMode, setSessionMode] = useState("interview");
-  const [codingAssessmentSummary, setCodingAssessmentSummary] =
-    useState(null);
+  const [technicalAnswerDrafts, setTechnicalAnswerDrafts] = useState([]);
+  const lastSentAnswersRef = useRef(""); // 📝 Track last sent answers to avoid duplicate AI updates
 
   // Custom hooks - REORDERED: useLiveKit must be called first to get localVideoRef
   const {
@@ -172,6 +172,7 @@ const InterviewPage = () => {
     updateMuteState,
     restoreAudioAfterRemoteJoin, // 🔴 GET THIS FIRST
     captureAndPublishVapiAudio, // 🔴 NEW: Capture Vapi audio and publish to LiveKit
+    sendWrittenAnswerUpdate, // 📝 NEW: Send written answer updates to AI
   } = useVapi({
     resumeText,
     interviewAlreadyCompleted,
@@ -616,6 +617,18 @@ const InterviewPage = () => {
         timestamp: m.time,
         secondsFromStart: m.secondsFromStart,
       }));
+    const technicalAnswerTranscript = technicalAnswerDrafts
+      .filter((answer) => String(answer.answer || "").trim())
+      .map((answer, index) => ({
+        role: "user",
+        content: `Written technical answer ${index + 1}\nQuestion: ${answer.question_text}\nAnswer: ${answer.answer}`,
+        timestamp: new Date().toISOString(),
+        source: "technical_question_draft",
+      }));
+    const finalConversationData = [
+      ...conversationData,
+      ...technicalAnswerTranscript,
+    ];
 
     setInterviewStarted(false);
     setIsRecording(false);
@@ -632,7 +645,7 @@ const InterviewPage = () => {
           driveCandidateId,
           interviewType,
           resumeText,
-          conversation: conversationData,
+          conversation: finalConversationData,
         },
       });
     } else {
@@ -651,6 +664,7 @@ const InterviewPage = () => {
     isHR,
     vapiClientRef,
     clearSavedInterviewState,
+    technicalAnswerDrafts,
   ]);
 
   const handleOpenCodingAssessment = useCallback(() => {
@@ -659,34 +673,47 @@ const InterviewPage = () => {
     setSessionMode("coding");
   }, [isHR, isTechnicalRound]);
 
-  const handleCodingAssessmentComplete = useCallback(
-    (summary) => {
-      const time = new Date().toISOString();
-      const summaryMessage =
-        "Coding task submitted. Let's return to the technical discussion and wrap up the interview.";
+  const handleTechnicalAnswersChange = useCallback((answers) => {
+    setTechnicalAnswerDrafts(Array.isArray(answers) ? answers : []);
+  }, []);
 
-      setCodingAssessmentSummary(summary);
-      setSessionMode("interview");
-      setCurrentQuestion(summaryMessage);
-      setConversation((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          message: summaryMessage,
-          time,
-        },
-      ]);
-      setFullTranscript((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: summaryMessage,
-          timestamp: time,
-        },
-      ]);
-    },
-    [setConversation, setFullTranscript],
-  );
+  // 📝 Debounced effect: send written answer updates to AI every 5 seconds
+  useEffect(() => {
+    // Only send when candidate is in coding mode with an active interview
+    if (!isTechnicalRound || isHR) return;
+    if (!interviewStarted) return;
+    if (technicalAnswerDrafts.length === 0) return;
+
+    // Build a fingerprint of current answers to detect actual changes
+    const currentFingerprint = technicalAnswerDrafts
+      .map((a) => `${a.question_id || ""}:${String(a.answer || "").trim()}`)
+      .join("|");
+
+    // Skip if nothing changed since last send
+    if (currentFingerprint === lastSentAnswersRef.current) return;
+
+    const debounceTimer = setTimeout(() => {
+      // Check again that answers haven't been cleared
+      if (technicalAnswerDrafts.length === 0) return;
+
+      // Only send if at least one answer has content
+      const hasContent = technicalAnswerDrafts.some(
+        (a) => String(a.answer || "").trim().length > 0,
+      );
+      if (!hasContent) return;
+
+      sendWrittenAnswerUpdate(technicalAnswerDrafts);
+      lastSentAnswersRef.current = currentFingerprint;
+    }, 5000);
+
+    return () => clearTimeout(debounceTimer);
+  }, [
+    technicalAnswerDrafts,
+    interviewStarted,
+    isTechnicalRound,
+    isHR,
+    sendWrittenAnswerUpdate,
+  ]);
 
   useEffect(() => {
     if (!isTechnicalRound || isHR || sessionMode === "coding") return;
@@ -1398,10 +1425,12 @@ const InterviewPage = () => {
                   When the AI moves you to a coding problem, the workspace opens
                   here while the interview session stays active.
                 </p>
-                {codingAssessmentSummary && (
+                {technicalAnswerDrafts.some((answer) =>
+                  String(answer.answer || "").trim(),
+                ) && (
                   <p className="text-xs text-green-700 font-semibold mt-1">
-                    Coding task submitted. Continue the interview and end when
-                    instructed.
+                    Technical written answers are autosaved and will be included
+                    in the final evaluation.
                   </p>
                 )}
               </div>
@@ -1504,6 +1533,7 @@ const InterviewPage = () => {
       {sessionMode === "coding" && (
         <div className="fixed inset-0 z-50 bg-white">
           <TechnicalCodingAssessmentPage
+            driveCandidateId={driveCandidateId}
             driveId={driveId}
             candidateId={candidateId}
             userData={userData}
@@ -1515,7 +1545,7 @@ const InterviewPage = () => {
             onToggleAudio={toggleAudio}
             onToggleVideo={toggleVideo}
             onReturnToInterview={() => setSessionMode("interview")}
-            onComplete={handleCodingAssessmentComplete}
+            onAnswersChange={handleTechnicalAnswersChange}
           />
         </div>
       )}

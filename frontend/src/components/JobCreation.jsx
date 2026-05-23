@@ -32,7 +32,11 @@ const JobCreation = () => {
   const [companyId, setCompanyId] = useState(null);
   const [fetchingHRInfo, setFetchingHRInfo] = useState(true);
   const [showCodingQuestions, setShowCodingQuestions] = useState(false);
+  const [showTechnicalQuestions, setShowTechnicalQuestions] = useState(false);
+  const [showTechnicalManualEntry, setShowTechnicalManualEntry] =
+    useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [isExtractingTechnical, setIsExtractingTechnical] = useState(false);
   const [postJobOnPortal, setPostJobOnPortal] = useState(false);
   const [jobData, setJobData] = useState({
     company_id: "",
@@ -52,6 +56,8 @@ const JobCreation = () => {
     job_type: "full-time",
     internship_duration: "",
     coding_questions: [],
+    technical_questions: [],
+    technical_questions_text: "",
 
     //setting time duration
     assessment_duration_hours: "1",
@@ -150,19 +156,31 @@ const JobCreation = () => {
     }
   }, [user, isEditMode, companyId]);
 
-  // Check if any round is "Coding" type
+  // Check if any round needs assessment questions
   useEffect(() => {
     if (jobData.rounds) {
       const hasCodingRound = jobData.rounds.some(
         (round) => round.type === "Coding",
       );
+      const hasTechnicalRound = jobData.rounds.some(
+        (round) => round.type === "Technical",
+      );
       setShowCodingQuestions(hasCodingRound);
+      setShowTechnicalQuestions(hasTechnicalRound);
 
       // If no coding round, clear coding questions?
       // In Edit mode, we might want to preserve them even if toggled temporarily?
       // But logic says:
       if (!hasCodingRound && !isEditMode) {
         setJobData((prev) => ({ ...prev, coding_questions: [] }));
+      }
+      if (!hasTechnicalRound && !isEditMode) {
+        setJobData((prev) => ({
+          ...prev,
+          technical_questions: [],
+          technical_questions_text: "",
+        }));
+        setShowTechnicalManualEntry(false);
       }
     }
   }, [jobData.rounds, isEditMode]);
@@ -227,6 +245,13 @@ const JobCreation = () => {
     }));
   };
 
+  const handleTechnicalQuestionsTextChange = (value) => {
+    setJobData((prev) => ({
+      ...prev,
+      technical_questions_text: value,
+    }));
+  };
+
   const handleQuestionChange = (questionId, field, value) => {
     setJobData((prev) => ({
       ...prev,
@@ -287,6 +312,24 @@ const JobCreation = () => {
     await extractQuestions(file);
   };
 
+  const handleTechnicalFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+
+    setJobData((prev) => ({
+      ...prev,
+      technical_questions_pdf: file,
+      technical_questions_pdf_name: file.name,
+    }));
+
+    await extractTechnicalQuestionsFromPdf(file);
+  };
+
   // Extract Questions with the help of AI.
   const extractQuestions = async (file) => {
     try {
@@ -337,11 +380,74 @@ const JobCreation = () => {
     }
   };
 
+  const extractTechnicalQuestionsFromPdf = async (file) => {
+    try {
+      setIsExtractingTechnical(true);
+      toast.info("AI is extracting technical questions from your PDF...");
+
+      const formData = new FormData();
+      formData.append("assessment_file", file);
+
+      const response = await fetch(
+        `${BASE_URL}/api/drive/extract-technical-questions`,
+        {
+          method: "POST",
+          body: formData,
+        },
+      );
+
+      if (!response.ok) throw new Error("Technical question extraction failed");
+
+      const extractedData = await response.json();
+
+      if (extractedData.questions && extractedData.questions.length > 0) {
+        const formattedQuestions = extractedData.questions.map((q, index) => ({
+          id: Date.now() + index,
+          number: jobData.technical_questions.length + index + 1,
+          raw_question: q.question_text || q.question || q.description || "",
+          title: q.title || "",
+          expected_answer: q.expected_answer || "",
+          evaluation_points: q.evaluation_points || [],
+          difficulty: q.difficulty || "medium",
+          tags: q.tags || [],
+          source_type: "pdf",
+        }));
+
+        setJobData((prev) => ({
+          ...prev,
+          technical_questions: [
+            ...prev.technical_questions,
+            ...formattedQuestions,
+          ],
+        }));
+
+        toast.success(
+          `${extractedData.questions.length} technical questions extracted successfully!`,
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        "AI could not read the PDF. Please enter technical questions manually.",
+      );
+    } finally {
+      setIsExtractingTechnical(false);
+    }
+  };
+
   const removeFile = () => {
     setJobData((prev) => ({
       ...prev,
       assessment_pdf: null,
       assessment_pdf_name: "",
+    }));
+  };
+
+  const removeTechnicalFile = () => {
+    setJobData((prev) => ({
+      ...prev,
+      technical_questions_pdf: null,
+      technical_questions_pdf_name: "",
     }));
   };
 
@@ -508,6 +614,22 @@ const JobCreation = () => {
       }
     }
 
+    if (
+      showTechnicalQuestions &&
+      jobData.technical_questions.length === 0 &&
+      !jobData.technical_questions_text?.trim()
+    ) {
+      toast.error(
+        "Please upload or manually enter technical round questions",
+        {
+          position: "top-right",
+          autoClose: 3000,
+        },
+      );
+      setLoading(false);
+      return;
+    }
+
     console.log("Submitting job data:", jobData);
 
     // show custom react modal to confirm submission
@@ -532,9 +654,31 @@ const JobCreation = () => {
       // We should be careful about _id
       const payload = { ...jobData };
       if (payload._id) delete payload._id;
+
+      const manualTechnicalQuestionsText =
+        payload.technical_questions_text?.trim();
+      const extractedTechnicalQuestions = Array.isArray(
+        payload.technical_questions,
+      )
+        ? payload.technical_questions
+        : [];
+
+      payload.technical_questions = manualTechnicalQuestionsText
+        ? [
+            ...extractedTechnicalQuestions,
+            {
+              raw_question: manualTechnicalQuestionsText,
+              source_type: "manual",
+            },
+          ]
+        : extractedTechnicalQuestions;
+
       // Clean up fields that shouldn't be in the JSON payload
       delete payload.assessment_pdf;
       delete payload.assessment_pdf_name;
+      delete payload.technical_questions_pdf;
+      delete payload.technical_questions_pdf_name;
+      delete payload.technical_questions_text;
 
       console.log(`Submitting to URL: ${url} using method: ${method}`);
 
@@ -755,6 +899,35 @@ const JobCreation = () => {
                       <div className="mt-1 text-sm text-gray-700">N/A</div> */}
                     </>
                   )}
+                </div>
+                <div className="md:col-span-2">
+                  {jobData.technical_questions?.length > 0 ||
+                  jobData.technical_questions_text?.trim() ? (
+                    <>
+                      <strong>Technical Round Questions:</strong>
+                      <div className="mt-1 text-sm text-gray-700 space-y-1">
+                        {jobData.technical_questions.map((q, idx) => (
+                          <div key={q.id || idx} className="pl-2">
+                            {idx + 1}.{" "}
+                            <span className="font-medium">
+                              {(q.raw_question || q.question_text || "")
+                                .slice(0, 80)}
+                              {(q.raw_question || q.question_text || "")
+                                .length > 80
+                                ? "..."
+                                : ""}
+                            </span>
+                          </div>
+                        ))}
+                        {jobData.technical_questions_text?.trim() && (
+                          <div className="pl-2">
+                            Manual entry added. AI will split and format it
+                            before saving.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -1061,6 +1234,152 @@ const JobCreation = () => {
             </p>
           </div>
         )}
+
+        {showTechnicalQuestions && (
+          <div className="border-t pt-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <label className="block text-gray-700 font-medium">
+                  Technical Round Questions
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload a PDF or paste all questions in one textbox. AI will
+                  format them before saving.
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 hover:border-black transition-colors relative">
+              <label className="block text-gray-700 font-medium mb-2">
+                Upload Technical Question Document (PDF)
+              </label>
+
+              {!jobData.technical_questions_pdf_name ? (
+                <div className="flex flex-col items-center justify-center py-4">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleTechnicalFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="text-gray-400 mb-2">
+                    <svg
+                      className="w-10 h-10 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    PDF only. Questions can be coding, math, physics, or
+                    client-specific prompts.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 truncate max-w-[260px]">
+                      {jobData.technical_questions_pdf_name}
+                    </p>
+                    <p className="text-xs text-gray-500">Ready to process</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeTechnicalFile}
+                    className="p-1 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative flex py-4 items-center">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold tracking-widest uppercase">
+                OR Manual Entry
+              </span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            {isExtractingTechnical && (
+              <div className="flex items-center justify-center p-4 bg-black text-white rounded-lg mb-4 animate-pulse">
+                <Loader size="sm" className="mr-2" />
+                <span className="text-sm font-medium">
+                  AI is reading your technical question document...
+                </span>
+              </div>
+            )}
+
+            {jobData.technical_questions.length > 0 && (
+              <div className="rounded-md border border-green-200 bg-green-50 text-green-700 px-4 py-3 text-sm mb-4">
+                {jobData.technical_questions.length} question
+                {jobData.technical_questions.length > 1 ? "s" : ""} extracted
+                from PDF. They will be saved after AI formatting.
+              </div>
+            )}
+
+            {!showTechnicalManualEntry ? (
+              <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-md border border-gray-200 mb-6">
+                <p className="text-sm mb-3">
+                  Want to type questions manually?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowTechnicalManualEntry(true)}
+                  className="px-4 py-2 text-sm bg-black cursor-pointer text-white rounded-md hover:bg-gray-800"
+                >
+                  Add Manually
+                </button>
+              </div>
+            ) : (
+              <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-medium text-gray-900">
+                      Manual Technical Questions
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Paste all questions here. Use a new line or numbering for
+                      each question.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTechnicalManualEntry(false);
+                      handleTechnicalQuestionsTextChange("");
+                    }}
+                    className="px-2 py-1 text-sm text-red-600 hover:bg-red-100 rounded-md"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <textarea
+                  value={jobData.technical_questions_text}
+                  onChange={(e) =>
+                    handleTechnicalQuestionsTextChange(e.target.value)
+                  }
+                  placeholder={"Example:\n1. Explain event loop in JavaScript with one practical scenario.\n2. A block slides down an inclined plane. Explain the forces acting on it.\n3. Design a simple URL shortener and explain trade-offs."}
+                  rows="8"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {showCodingQuestions && (
           <>
             {" "}
