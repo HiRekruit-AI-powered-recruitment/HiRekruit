@@ -78,3 +78,71 @@ class QuestionIntakeAgent:
         
         questions = self.safe_json_parse(response.content)
         return questions if questions else []
+
+    def _fallback_technical_questions(self, raw_text):
+        chunks = [
+            line.strip(" -\t")
+            for line in raw_text.splitlines()
+            if line.strip(" -\t")
+        ]
+        if not chunks and raw_text.strip():
+            chunks = [raw_text.strip()]
+
+        return [
+            {
+                "title": f"Technical Question {idx + 1}",
+                "question_text": chunk,
+                "expected_answer": "",
+                "evaluation_points": [],
+                "difficulty": "medium",
+                "tags": [],
+            }
+            for idx, chunk in enumerate(chunks)
+        ]
+
+    def process_technical_questions_text(self, raw_text):
+        """
+        Convert free-form HR-entered technical questions into a consistent
+        schema. The question can be coding, math, physics, architecture, or
+        any client-specific technical prompt.
+        """
+        if not raw_text or not raw_text.strip():
+            return []
+
+        system_prompt = """
+            You are a technical interview question formatter.
+            Convert the HR-provided text into structured technical interview questions.
+
+            Rules:
+            - Preserve the HR's intent.
+            - Split clearly separate questions into separate objects.
+            - Do not invent answers if the expected answer is not present.
+            - Questions may be coding, math, physics, system design, debugging,
+              theory, or client-specific scenario questions.
+            - Return ONLY valid JSON array. No markdown. No intro text.
+
+            Schema:
+            [
+                {
+                    "title": "short title",
+                    "question_text": "complete question candidates should answer",
+                    "expected_answer": "optional expected answer or empty string",
+                    "evaluation_points": ["optional scoring point"],
+                    "difficulty": "easy|medium|hard",
+                    "tags": ["optional tag"]
+                }
+            ]
+        """
+
+        human_prompt = f"Format these technical interview questions:\n\n{raw_text}"
+        messages = self.prompt_builder.build(system_prompt, human_prompt)
+        response = self.llm.invoke(messages)
+
+        questions = self.safe_json_parse(response.content)
+        return questions if questions else self._fallback_technical_questions(raw_text)
+
+    def process_technical_questions_pdf(self, pdf_url):
+        print(f"Agent analyzing Technical Question PDF: {pdf_url}")
+        pdf_bytes = self.download_pdf(pdf_url)
+        raw_text = self.extract_text(pdf_bytes)
+        return self.process_technical_questions_text(raw_text)

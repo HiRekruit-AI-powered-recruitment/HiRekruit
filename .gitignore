@@ -11,3 +11,4 @@ token.json
 uploads/
 venv/
 .cache/
+.venv/

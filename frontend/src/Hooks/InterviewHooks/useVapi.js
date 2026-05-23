@@ -604,6 +604,48 @@ export const useVapi = ({
     }
   }, [interviewStarted, isHR, captureAndPublishVapiAudio, localVideoRef]);
 
+  // 📝 NEW: Send written answer updates to the AI mid-conversation
+  const sendWrittenAnswerUpdate = useCallback((answers) => {
+    const client = vapiClientRef.current;
+    if (!client || typeof client.send !== "function") {
+      console.warn("⚠️ VAPI client not ready, skipping written answer update");
+      return;
+    }
+
+    if (!Array.isArray(answers) || answers.length === 0) {
+      return;
+    }
+
+    const answerLines = answers
+      .map((a, index) => {
+        const questionText = a.question_text || `Question ${index + 1}`;
+        const answerText = String(a.answer || "").trim();
+        return `Question ${index + 1}: "${questionText}"
+Candidate's current written answer: ${answerText || "(not yet answered)"}`;
+      })
+      .join("\n\n");
+
+    const message = `[WRITTEN ANSWER UPDATE]
+The candidate's current written answers in the technical question workspace:
+
+${answerLines}
+
+Remember: Do NOT comment on these answers unless the candidate explicitly asks you for feedback. Continue the conversation naturally.`;
+
+    try {
+      client.send({
+        type: "add-message",
+        message: {
+          role: "system",
+          content: message,
+        },
+      });
+      console.log("📝 Sent written answer update to AI");
+    } catch (error) {
+      console.error("❌ Error sending written answer update to AI:", error);
+    }
+  }, []);
+
   return {
     vapiClientRef,
     initializeVapi,
@@ -611,5 +653,6 @@ export const useVapi = ({
     updateMuteState, // ✅ NEW: Export the mute state updater
     restoreAudioAfterRemoteJoin, // 🔴 NEW: Export audio restoration function
     captureAndPublishVapiAudio, // 🔴 NEW: Export Vapi audio capture/publish function
+    sendWrittenAnswerUpdate, // 📝 NEW: Export written answer update function
   };
 };
