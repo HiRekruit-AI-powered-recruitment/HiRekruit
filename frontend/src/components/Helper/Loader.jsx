@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import loaderVideo from "../assets/loader2.mp4";
+import loaderVideo from "../../assets/loader2.mp4";
 
 const Loader = ({ onFinish }) => {
   const videoRef = useRef(null);

@@ -3,7 +3,7 @@ import { MessageSquare, Search, CheckCircle, Clock } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
-import Loader from "../Loader";
+import Loader from "../Helper/Loader";
 
 const AdminFeedback = () => {
   const [feedbacks, setFeedbacks] = useState([]);
@@ -35,7 +35,7 @@ const AdminFeedback = () => {
       const newStatus = currentStatus === "pending" ? "resolved" : "pending";
       await axios.put(`${BASE_URL}/api/settings/feedback/${id}/status`, { status: newStatus });
       toast.success(`Feedback marked as ${newStatus}`);
-      
+
       // Update local state
       setFeedbacks(prev => prev.map(f => f._id === id ? { ...f, status: newStatus } : f));
     } catch (error) {
@@ -222,11 +222,10 @@ const AdminFeedback = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded text-sm ${
-                    currentPage === i + 1
+                  className={`px-3 py-1 border rounded text-sm ${currentPage === i + 1
                       ? "bg-blue-600 text-white border-blue-600"
                       : ""
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </button>

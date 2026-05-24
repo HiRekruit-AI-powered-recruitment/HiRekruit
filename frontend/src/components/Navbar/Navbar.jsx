@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import logo from "../assets/HiRekruit.png";
+import logo from "../../assets/HiRekruit.png";
 import { Menu, X, LogOut, User, ChevronDown } from "lucide-react";
 import { NavLink, useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext.jsx";
+import { useAuth } from "../../Context/AuthContext.jsx";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -14,10 +14,9 @@ const Navbar = () => {
   const { isAuthenticated, user, isLoading, logout } = useAuth();
 
   const navLinkClasses = ({ isActive }) =>
-    `text-sm font-medium py-2 px-3 rounded-lg transition-all duration-200 ${
-      isActive
-        ? "text-black bg-gray-100"
-        : "text-gray-600 hover:text-black hover:bg-gray-100"
+    `text-sm font-medium py-2 px-3 rounded-lg transition-all duration-200 ${isActive
+      ? "text-black bg-gray-100"
+      : "text-gray-600 hover:text-black hover:bg-gray-100"
     }`;
 
   const handleSignUp = async () => {
@@ -104,9 +103,8 @@ const Navbar = () => {
                   </span>
                   <ChevronDown
                     size={16}
-                    className={`transition-transform duration-200 ${
-                      isUserDropdownOpen ? "rotate-180" : ""
-                    }`}
+                    className={`transition-transform duration-200 ${isUserDropdownOpen ? "rotate-180" : ""
+                      }`}
                   />
                 </button>
 
@@ -159,9 +157,8 @@ const Navbar = () => {
                 <button
                   onClick={handleSignUp}
                   disabled={isNavigating}
-                  className={`bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 shadow-md hover:shadow-lg ${
-                    isNavigating ? "animate-pulse" : ""
-                  }`}
+                  className={`bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 shadow-md hover:shadow-lg ${isNavigating ? "animate-pulse" : ""
+                    }`}
                 >
                   {isNavigating ? (
                     <div className="flex items-center space-x-2">
@@ -187,9 +184,8 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         <div
-          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-            isMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="border-t border-gray-200/60 pt-4 pb-2">
             <div className="flex flex-col space-y-2">
@@ -285,9 +281,8 @@ const Navbar = () => {
                         setIsMenuOpen(false);
                       }}
                       disabled={isNavigating}
-                      className={`w-full bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 ${
-                        isNavigating ? "animate-pulse" : ""
-                      }`}
+                      className={`w-full bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition-all duration-300 disabled:opacity-50 ${isNavigating ? "animate-pulse" : ""
+                        }`}
                     >
                       {isNavigating ? "Loading..." : "Sign Up"}
                     </button>

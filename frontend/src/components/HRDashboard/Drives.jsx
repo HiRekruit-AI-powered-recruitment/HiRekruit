@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Filter, Briefcase } from "lucide-react";
-import DriveCard from "./DriveCard";
-import Loader from "./Loader";
+import DriveCard from "./DriveCard.jsx";
+import Loader from "../Helper/Loader.jsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from "../Context/AuthContext.jsx";
+import { useAuth } from "../../Context/AuthContext.jsx";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -337,11 +337,10 @@ const Drives = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${
-                    currentPage === i + 1
-                      ? "bg-gray-900 text-white border-gray-900"
-                      : "border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-3 py-1 border rounded-md transition-colors text-sm font-medium ${currentPage === i + 1
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "border-gray-300 hover:bg-gray-50"
+                    }`}
                 >
                   {i + 1}
                 </button>

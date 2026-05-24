@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, FileText, Award, Users, ArrowLeft } from "lucide-react";
 
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 

@@ -9,7 +9,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import { useAuth } from "../../Context/AuthContext";
 
 export default function SignIn() {
   const navigate = useNavigate();

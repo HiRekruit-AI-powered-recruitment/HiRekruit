@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/HiRekruit.png";
+import logo from "../../assets/HiRekruit.png";
 import TagManager from "react-gtm-module";
 import {
   Menu,
@@ -23,8 +23,8 @@ import {
   Filter,
   Shield,
 } from "lucide-react";
-import Testimonials from "../components/Testimonials";
-import ClientLogos from "../components/ClientLogos";
+import Testimonials from "./Testimonials";
+import ClientLogos from "../ClientLogos";
 
 const Home = () => {
   const navigate = useNavigate();

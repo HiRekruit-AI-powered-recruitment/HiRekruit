@@ -1,7 +1,7 @@
 // ConnectionStatus.jsx
 import React from "react";
 import { AlertCircle } from "lucide-react";
-import Loader from "../Loader";
+import Loader from "../Helper/Loader";
 
 const ConnectionStatus = ({
   isCheckingCompletion,

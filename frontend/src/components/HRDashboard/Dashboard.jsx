@@ -17,7 +17,7 @@ import {
   Copy,
   X,
 } from "lucide-react";
-import { createJobInHiKareers } from "../api/hikareersApi";
+import { createJobInHiKareers } from "../../api/hikareersApi";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 const CAREER_PORTAL_URL = import.meta.env.VITE_CAREER_PORTAL_URL;
@@ -232,9 +232,9 @@ const Dashboard = () => {
         driveVisibility: visibility || "public",
         interviewRounds: Array.isArray(jobData.rounds)
           ? jobData.rounds.map((r) => ({
-              type: r.type || "Interview",
-              description: r.description || "",
-            }))
+            type: r.type || "Interview",
+            description: r.description || "",
+          }))
           : [],
       };
 
@@ -289,11 +289,10 @@ const Dashboard = () => {
                 <button
                   onClick={handlePostJobToCareerPortal}
                   disabled={!isSettingsValid || isPosting}
-                  className={`px-4 py-2 text-sm text-white rounded-md shadow-sm transition-all active:scale-95 ${
-                    !isSettingsValid || isPosting
+                  className={`px-4 py-2 text-sm text-white rounded-md shadow-sm transition-all active:scale-95 ${!isSettingsValid || isPosting
                       ? "bg-indigo-300 cursor-not-allowed opacity-70"
                       : "bg-indigo-600 hover:bg-indigo-700"
-                  }`}
+                    }`}
                 >
                   {isPosting ? "Posting..." : "Post Job"}
                 </button>
@@ -303,11 +302,10 @@ const Dashboard = () => {
                   disabled={
                     !jobData?.role?.trim() || files.length === 0 || processing
                   }
-                  className={`px-4 py-2 text-sm rounded-md transition-all ${
-                    !jobData?.role?.trim() || files.length === 0 || processing
+                  className={`px-4 py-2 text-sm rounded-md transition-all ${!jobData?.role?.trim() || files.length === 0 || processing
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50"
                       : "bg-gray-900 text-white hover:bg-black"
-                  }`}
+                    }`}
                 >
                   {processing ? "Processing..." : "Process Resumes"}
                 </button>

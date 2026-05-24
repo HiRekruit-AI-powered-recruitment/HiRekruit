@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Send, X, User, ShipWheel } from "lucide-react";
-import saarthiImage from "../assets/image.png"; // Saarthi logo
+import saarthiImage from "../../assets/image.png"; // Saarthi logo
 import { motion } from "framer-motion";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -192,8 +192,8 @@ const Chatbot = () => {
           level === 1
             ? "text-base font-bold mb-2 mt-3"
             : level === 2
-            ? "text-sm font-bold mb-2 mt-2"
-            : "text-sm font-semibold mb-2 mt-2";
+              ? "text-sm font-bold mb-2 mt-2"
+              : "text-sm font-semibold mb-2 mt-2";
 
         elements.push(
           <div key={`heading-${index}`} className={className}>
@@ -266,10 +266,9 @@ const Chatbot = () => {
       {/* Chat window */}
       <div
         className={`mb-1 w-80 max-w-[92vw] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden transition-all duration-300 ease-out transform
-          ${
-            isOpen
-              ? "translate-y-0 opacity-100 pointer-events-auto"
-              : "translate-y-6 opacity-0 pointer-events-none"
+          ${isOpen
+            ? "translate-y-0 opacity-100 pointer-events-auto"
+            : "translate-y-6 opacity-0 pointer-events-none"
           }`}
       >
         {/* Header */}
@@ -300,24 +299,21 @@ const Chatbot = () => {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${
-                message.sender === "user" ? "justify-end" : "justify-start"
-              }`}
+              className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"
+                }`}
               style={{ animation: "fadeInSlide 0.35s ease-out" }}
             >
               <div
-                className={`flex items-start space-x-2 max-w-[85%] ${
-                  message.sender === "user"
+                className={`flex items-start space-x-2 max-w-[85%] ${message.sender === "user"
                     ? "flex-row-reverse space-x-reverse"
                     : ""
-                }`}
+                  }`}
               >
                 <div
-                  className={`flex items-center justify-center flex-shrink-0 ${
-                    message.sender === "user"
+                  className={`flex items-center justify-center flex-shrink-0 ${message.sender === "user"
                       ? "w-6 h-6 rounded-full bg-black text-white"
                       : "w-8 h-8 rounded-full bg-white"
-                  }`}
+                    }`}
                 >
                   {message.sender === "user" ? (
                     <User className="w-4 h-4" />
@@ -326,11 +322,10 @@ const Chatbot = () => {
                   )}
                 </div>
                 <div
-                  className={`px-4 py-3 rounded-2xl ${
-                    message.sender === "user"
+                  className={`px-4 py-3 rounded-2xl ${message.sender === "user"
                       ? "bg-black text-white rounded-br-md"
                       : "bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm"
-                  }`}
+                    }`}
                 >
                   <div className="text-sm">
                     {message.sender === "bot" ? (
@@ -340,11 +335,10 @@ const Chatbot = () => {
                     )}
                   </div>
                   <p
-                    className={`text-xs mt-2 ${
-                      message.sender === "user"
+                    className={`text-xs mt-2 ${message.sender === "user"
                         ? "text-gray-300"
                         : "text-gray-400"
-                    }`}
+                      }`}
                   >
                     {formatTime(message.timestamp)}
                   </p>
@@ -426,10 +420,9 @@ const Chatbot = () => {
         <motion.button
           onClick={() => setIsOpen((s) => !s)}
           className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white overflow-hidden pointer-events-auto transition-all
-            ${
-              isOpen
-                ? "bg-gray-600"
-                : "bg-gradient-to-r from-black to-gray-800 hover:shadow-xl"
+            ${isOpen
+              ? "bg-gray-600"
+              : "bg-gradient-to-r from-black to-gray-800 hover:shadow-xl"
             }`}
           animate={{ rotate: isOpen ? 0 : 360 }}
           transition={{
