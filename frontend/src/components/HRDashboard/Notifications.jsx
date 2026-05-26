@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "../Context/AuthContext.jsx";
-import { useNotificationContext } from "../Context/NotificationContext";
+import { useAuth } from "../../Context/AuthContext.jsx";
+import { useNotificationContext } from "../../Context/NotificationContext.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -17,7 +17,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader.jsx";
 
 const Notifications = () => {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ const Notifications = () => {
     clearAllNotifications,
   } = useNotificationContext();
   const loading = false;
-  
+
   const [filterType, setFilterType] = useState("all");
   const [showRead, setShowRead] = useState(true);
 
@@ -151,11 +151,10 @@ const Notifications = () => {
           {/* Show/Hide Read */}
           <button
             onClick={() => setShowRead(!showRead)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
-              showRead
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${showRead
                 ? "bg-gray-100 border-gray-300 text-gray-700"
                 : "bg-blue-100 border-blue-300 text-blue-700"
-            }`}
+              }`}
           >
             {showRead ? (
               <EyeOff className="w-4 h-4" />
@@ -195,19 +194,17 @@ const Notifications = () => {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`bg-white rounded-lg border transition-all hover:shadow-md ${
-                  !notification.read
+                className={`bg-white rounded-lg border transition-all hover:shadow-md ${!notification.read
                     ? "border-blue-200 bg-blue-50"
                     : "border-gray-200"
-                }`}
+                  }`}
               >
                 <div className="p-6">
                   <div className="flex items-start gap-4">
                     {/* Icon */}
                     <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        !notification.read ? "bg-blue-100" : "bg-gray-100"
-                      }`}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${!notification.read ? "bg-blue-100" : "bg-gray-100"
+                        }`}
                     >
                       {getNotificationIcon(notification.type)}
                     </div>
@@ -218,11 +215,10 @@ const Notifications = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <h3
-                              className={`text-base font-medium ${
-                                !notification.read
+                              className={`text-base font-medium ${!notification.read
                                   ? "text-gray-900"
                                   : "text-gray-700"
-                              }`}
+                                }`}
                             >
                               {notification.title}
                             </h3>

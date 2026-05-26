@@ -46,9 +46,9 @@ const Footer = () => {
     ],
     legal: [
       { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Terms of Service", href: "/terms" },
+      { label: "Terms of Service", href: "/terms-of-service" },
       { label: "Cookie Policy", href: "/cookie-policy" },
-      // { label: "Compliance", href: "/compliance" },
+
     ],
   };
 

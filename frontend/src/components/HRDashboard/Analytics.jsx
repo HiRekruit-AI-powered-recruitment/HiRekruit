@@ -37,7 +37,7 @@ import {
   Title,
 } from "chart.js";
 import { Doughnut, Bar, Line, Pie } from "react-chartjs-2";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
 
@@ -501,11 +501,10 @@ export default function Analytics() {
                     <button
                       key={metric}
                       onClick={() => setSelectedMetric(metric)}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${
-                        selectedMetric === metric
+                      className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${selectedMetric === metric
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-gray-500 hover:text-gray-700"
-                      }`}
+                        }`}
                     >
                       {metric}
                     </button>
@@ -620,9 +619,8 @@ function KPICard({ title, value, change, trend, icon: Icon, color }) {
           <Icon className="w-6 h-6" />
         </div>
         <div
-          className={`flex items-center gap-1 text-sm ${
-            trend === "up" ? "text-green-600" : "text-red-600"
-          }`}
+          className={`flex items-center gap-1 text-sm ${trend === "up" ? "text-green-600" : "text-red-600"
+            }`}
         >
           {trend === "up" ? (
             <TrendingUp className="w-4 h-4" />

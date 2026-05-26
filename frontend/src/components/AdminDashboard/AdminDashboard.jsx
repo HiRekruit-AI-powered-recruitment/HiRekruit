@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Loader from ".././Loader";
+import Loader from "../Helper/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 

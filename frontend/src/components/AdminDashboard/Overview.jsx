@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Loader from ".././Loader";
+import Loader from "../Helper/Loader";
 import { useUsers } from "../../Hooks/userHooks/useGetAllUsers";
 import { useGetAllDrives } from "../../Hooks/drives hooks/useGetAllDrives";
 import { useGetAllCandidates } from "../../Hooks/candidate hooks/useGetAllCandidates";

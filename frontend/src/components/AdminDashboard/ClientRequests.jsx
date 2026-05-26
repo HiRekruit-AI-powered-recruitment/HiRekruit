@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Clock, Search, CheckCircle, XCircle } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Loader from "../Loader";
+import Loader from "../Helper/Loader";
 import { useUsers } from "../../Hooks/userHooks/useGetAllUsers";
 
 const ClientRequests = () => {
@@ -246,11 +246,10 @@ const ClientRequests = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded text-sm ${
-                    currentPage === i + 1
+                  className={`px-3 py-1 border rounded text-sm ${currentPage === i + 1
                       ? "bg-blue-600 text-white border-blue-600"
                       : ""
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </button>

@@ -15,7 +15,7 @@ import {
     User,
     CheckCircle2
 } from "lucide-react";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader";
 import { toast } from "react-toastify";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
