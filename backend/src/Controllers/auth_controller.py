@@ -592,9 +592,12 @@ def get_all_users():
         }), 500
     
 
+from bson import ObjectId
+
 def get_all_candidates():
+    print(">>>>>>>> NEW VERSION OF GET_ALL_CANDIDATES <<<<<<<<")
     """
-    Fetch all candidates
+    Fetch all candidates with role and status
     """
     try:
         candidates_cursor = db.candidates.find()
@@ -602,10 +605,64 @@ def get_all_candidates():
         candidates = []
 
         for candidate in candidates_cursor:
+
+            candidate_id = str(candidate["_id"])
+
+            drive_candidate = db.drive_candidates.find_one({
+                "candidate_id": candidate_id
+            })
+
+            role = "Not Assigned"
+            status = "Applied"
+
+            if drive_candidate:
+
+                # Get Role from drives collection
+                try:
+                    drive = db.drives.find_one({
+                        "_id": ObjectId(drive_candidate["drive_id"])
+                    })
+
+                    if drive:
+                        role = drive.get("role", "Not Assigned")
+
+                except Exception as e:
+                    print(f"Drive lookup error: {e}")
+
+                # Status Logic
+                if drive_candidate.get("selected") == "yes":
+                    status = "Selected"
+
+                elif drive_candidate.get("rounds_status"):
+
+                    round_status = drive_candidate["rounds_status"][0]
+
+                    if round_status.get("status") == "in_progress":
+                        status = "Interview In Progress"
+
+                    elif round_status.get("completed") == "yes":
+
+                        if round_status.get("result") == "failed":
+                            status = "Rejected"
+                        else:
+                            status = "Interview Completed"
+
+                elif drive_candidate.get("interview_scheduled") == "yes":
+                    status = "Interview Scheduled"
+
+                elif drive_candidate.get("resume_shortlisted") == "yes":
+                    status = "Shortlisted"
+
             candidates.append({
-                "_id": str(candidate["_id"]),
+                "_id": candidate_id,
                 "name": candidate.get("name"),
                 "email": candidate.get("email"),
+
+                # REAL VALUES
+                "role": role,
+                "status": status,
+                "test_field": "WORKING",
+
                 "resume_content": candidate.get("resume_content"),
                 "resume_url": candidate.get("resume_url"),
                 "public_id": candidate.get("public_id"),

@@ -79,8 +79,16 @@ import ClientRequests from "./components/AdminDashboard/ClientRequests";
 import Currentclients from "./components/AdminDashboard/Currentclients";
 import AdminFeedback from "./components/AdminDashboard/AdminFeedback";
 
+
 // resources pages
 import API from "./components/Footer/API";
+
+// Analytical Dashboard Page
+import AnalyticsDashboard from "./components/AnalyticalPage/AnalyticsDashboard";
+
+// All Candidates Page
+import TotalCandidates from "./components/TotalCandidates/TotalCandidates";
+
 
 function AppContent() {
   const location = useLocation();
@@ -214,8 +222,17 @@ function AppContent() {
             </AdminLayout>
           }
         >
+
+          {/* Analytical Dashbopard Page Routes  */}
+          <Route
+            path="analytics-dashboard"
+            element={<AnalyticsDashboard />}
+          />
+
+          <Route path="analytics" element={<AnalyticsDashboard />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="companies" element={<AdminCompanies />} />
+          <Route path="candidates" element={<TotalCandidates />} />
           <Route path="overview" element={<Overview />} />
           <Route path="clientrequests" element={<ClientRequests />} />
           <Route path="currentclients" element={<Currentclients />} />
