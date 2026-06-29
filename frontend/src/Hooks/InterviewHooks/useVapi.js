@@ -66,7 +66,7 @@ export const useVapi = ({
   const ensureAudioOutput = useCallback(async () => {
     try {
       if (!audioContextRef.current) {
-        audioContextRef.current = new (
+        audioContextRef.current = window.__prewarmedAudioContext || new (
           window.AudioContext || window.webkitAudioContext
         )();
       }

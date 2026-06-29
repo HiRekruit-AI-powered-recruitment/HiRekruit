@@ -129,6 +129,45 @@ function InterviewStartRoute() {
     try {
       setIsStarting(true);
 
+      // 🛡️ Step 1: Check camera/mic permission state WITHOUT grabbing devices.
+      // We avoid getUserMedia here because stopping and re-acquiring tracks
+      // interferes with VAPI's internal audio setup later.
+      try {
+        const [camPerm, micPerm] = await Promise.all([
+          navigator.permissions.query({ name: "camera" }),
+          navigator.permissions.query({ name: "microphone" }),
+        ]);
+        if (camPerm.state === "denied" || micPerm.state === "denied") {
+          alert("Camera and microphone access is required to start the interview. Please allow access in your browser settings and try again.");
+          setIsStarting(false);
+          return;
+        }
+      } catch (permErr) {
+        // Permissions API not supported — continue anyway, useLiveKit will handle it
+        console.warn("🛡️ Permissions API not available:", permErr.message);
+      }
+
+      // 🛡️ Step 1.5: Pre-warm AudioContext while we have user gesture.
+      // VAPI needs a running AudioContext to start a voice call. Chrome blocks
+      // AudioContext resume without a gesture, so we create it now.
+      try {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === "suspended") await ac.resume();
+        window.__prewarmedAudioContext = ac;
+        console.log("🛡️ AudioContext pre-warmed, state:", ac.state);
+      } catch (acErr) {
+        console.warn("🛡️ AudioContext pre-warm failed:", acErr.message);
+      }
+
+      // 🛡️ Step 2: Enter fullscreen on the user's click gesture
+      try {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) await elem.requestFullscreen();
+        else if (elem.webkitRequestFullscreen) await elem.webkitRequestFullscreen();
+      } catch (fsErr) {
+        console.warn("🛡️ Could not enter fullscreen:", fsErr.message);
+      }
+
       const identity = `candidate_${
         userData.name?.replace(/\s+/g, "_").toLowerCase() || "user"
       }`;

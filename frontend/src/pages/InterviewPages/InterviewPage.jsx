@@ -10,6 +10,7 @@ import { AlertCircle, Code2, Shield } from "lucide-react";
 import { useAuth } from "../../Context/AuthContext";
 import useLiveKit from "../../Hooks/InterviewHooks/useLiveKit";
 import { useVapi } from "../../Hooks/InterviewHooks/useVapi";
+import useProctoring from "../../Hooks/InterviewHooks/useProctoring";
 import TechnicalCodingAssessmentPage from "./Technical rounds/TechnicalCodingAssessmentPage";
 import InterviewHeader from "../../components/Interview/InterviewHeader";
 import AIInterviewerPanel from "../../components/Interview/AIInterviewerPanel";
@@ -19,6 +20,7 @@ import HRControls from "../../components/Interview/HRControls";
 import TranscriptPanel from "../../components/Interview/TranscriptPanel";
 import InterviewControls from "../../components/Interview/InterviewControls";
 import DependencyPipeline from "../../components/Interview/DependencyPipeline";
+import ProctoringOverlay from "../../components/Interview/ProctoringOverlay";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -192,6 +194,21 @@ const InterviewPage = () => {
     vapiListeningRef,
     livekitRoomRef, // 🔴 PASS THIS INSTEAD OF NULL
     localVideoRef, // 🔴 NEW: Pass localVideoRef for synchronization
+  });
+
+  // 🛡️ Proctoring: fullscreen enforcement + tab/window switch detection
+  const {
+    activeWarning: proctoringWarning,
+    warningStage: proctoringStage,
+    exitFullscreen,
+    dismissWarning: dismissProctoringWarning,
+  } = useProctoring({
+    enabled: !isHR,
+    interviewStarted,
+    onAutoSubmit: () => {
+      console.error("🛡️ Proctoring: Auto-submitting interview due to repeated violations");
+      handleEndInterview();
+    },
   });
 
   const interviewStorageKey = useMemo(() => {
@@ -608,6 +625,13 @@ const InterviewPage = () => {
     }
 
     stopCamera(localTracks);
+
+    // Exit fullscreen when interview ends
+    if (!isHR) {
+      try {
+        if (document.fullscreenElement) document.exitFullscreen();
+      } catch (_) { /* ignore */ }
+    }
 
     const conversationData = conversation
       .filter((m) => m.role === "user" || m.role === "assistant")
@@ -1376,6 +1400,14 @@ const InterviewPage = () => {
   // Main interview interface - only shown when fully ready
   return (
     <div className="relative min-h-screen">
+      {/* 🛡️ Proctoring warning overlay */}
+      {!isHR && (
+        <ProctoringOverlay
+          activeWarning={proctoringWarning}
+          warningStage={proctoringStage}
+          onDismiss={dismissProctoringWarning}
+        />
+      )}
       <div
         className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 ${
           sessionMode === "coding"

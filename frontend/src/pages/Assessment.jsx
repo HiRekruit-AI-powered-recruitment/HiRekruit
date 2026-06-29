@@ -31,6 +31,7 @@ export default function Assessment() {
   const [timeRemaining, setTimeRemaining] = useState(3600);
   const [timerActive, setTimerActive] = useState(false);
   const [startTime, setStartTime] = useState(null);
+  const [assessmentDurationMinutes, setAssessmentDurationMinutes] = useState(60);
 
   const [problemCode, setProblemCode] = useState({});
   const [language, setLanguage] = useState("python");
@@ -49,10 +50,13 @@ export default function Assessment() {
   const [isVerticalDragging, setIsVerticalDragging] = useState(false);
   const [isInputOutputDragging, setIsInputOutputDragging] = useState(false);
 
-  // Fullscreen states
+  // Fullscreen & proctoring states
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showFullscreenModal, setShowFullscreenModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [warningCount, setWarningCount] = useState(0);
+  const warningCountRef = useRef(0);
+  const cooldownRef = useRef(0); // prevents double-fire from blur+visibilitychange
 
   const containerRef = useRef(null);
   const rightPanelRef = useRef(null);
@@ -111,20 +115,70 @@ export default function Assessment() {
     }
   }, [assessmentStarted]);
 
+  // 🛡️ Proctoring: handle a violation (fullscreen exit, tab switch, window blur)
+  const handleProctoringViolation = (type) => {
+    if (!assessmentStarted || isSubmitting) return;
+
+    // Cooldown: prevent blur + visibilitychange from double-firing
+    const now = Date.now();
+    if (now < cooldownRef.current) return;
+    cooldownRef.current = now + 3000;
+
+    const currentCount = warningCountRef.current;
+
+    if (currentCount === 0) {
+      // First violation → show warning
+      console.warn(`🛡️ Assessment Proctoring [WARNING]: ${type}`);
+      warningCountRef.current = 1;
+      setWarningCount(1);
+      setShowFullscreenModal(true);
+    } else {
+      // Second violation → auto-submit
+      console.error(`🛡️ Assessment Proctoring [AUTO-SUBMIT]: ${type}`);
+      warningCountRef.current = 2;
+      setWarningCount(2);
+      setShowFullscreenModal(false);
+      handleFinalSubmit();
+    }
+  };
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
 
-      // Only show modal if user exits fullscreen and assessment hasn't been submitted
+      // Only trigger if user exits fullscreen while assessment is active
       if (!isCurrentlyFullscreen && assessmentStarted && !isSubmitting) {
-        setShowFullscreenModal(true);
+        handleProctoringViolation("fullscreen_exit");
       }
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [assessmentStarted, isSubmitting]);
+
+  // 🛡️ Tab switch / minimize / window blur detection
+  useEffect(() => {
+    if (!assessmentStarted || isSubmitting) return;
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        handleProctoringViolation("tab_switch");
+      }
+    };
+
+    const onWindowBlur = () => {
+      handleProctoringViolation("window_blur");
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+    };
   }, [assessmentStarted, isSubmitting]);
 
   const enterFullscreen = () => {
@@ -199,6 +253,7 @@ export default function Assessment() {
       const finalTime = Math.min(allocatedSeconds, secondsUntilRoundEnd);
       
       setTimeRemaining(finalTime);
+      setAssessmentDurationMinutes(Math.ceil(allocatedSeconds / 60));
       setCanStartTest(true);
 
       // 4. Fetch Problems
@@ -491,7 +546,7 @@ export default function Assessment() {
         onStartAssessment={handleStartAssessment}
         darkMode={darkMode}
         totalQuestions={problems.length}
-        timeLimit={60}
+        timeLimit={assessmentDurationMinutes}
       />
     );
   }
@@ -904,20 +959,35 @@ export default function Assessment() {
                 color: darkMode ? "#e0e0e0" : "#000000",
               }}
             >
-              Please Stay in Fullscreen
+              ⚠️ Assessment Warning
             </h2>
             <p
               style={{
-                marginBottom: "28px",
+                marginBottom: "16px",
                 color: darkMode ? "#999" : "#666",
                 lineHeight: "1.6",
                 fontSize: "15px",
               }}
             >
               You must remain in fullscreen mode during the assessment for
-              security purposes. Click the button below to return to fullscreen
-              and continue your assessment.
+              security purposes. Do not switch tabs, minimize, or exit fullscreen.
             </p>
+            <div
+              style={{
+                marginBottom: "28px",
+                padding: "12px 16px",
+                backgroundColor: darkMode ? "#3b1a1a" : "#fef2f2",
+                border: `1px solid ${darkMode ? "#7f1d1d" : "#fecaca"}`,
+                borderRadius: "8px",
+                color: darkMode ? "#fca5a5" : "#dc2626",
+                fontSize: "14px",
+                fontWeight: "600",
+                lineHeight: "1.5",
+              }}
+            >
+              ⛔ If you switch tabs, minimize, or exit fullscreen again, your
+              assessment will be automatically submitted.
+            </div>
             <button
               onClick={() => {
                 setShowFullscreenModal(false);
@@ -925,7 +995,7 @@ export default function Assessment() {
               }}
               style={{
                 padding: "14px 36px",
-                backgroundColor: "#22c55e",
+                backgroundColor: "#ef4444",
                 color: "#fff",
                 border: "none",
                 borderRadius: "8px",
@@ -935,13 +1005,13 @@ export default function Assessment() {
                 transition: "background-color 0.2s",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#16a34a";
+                e.currentTarget.style.backgroundColor = "#dc2626";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#22c55e";
+                e.currentTarget.style.backgroundColor = "#ef4444";
               }}
             >
-              Return to Fullscreen
+              Return to Fullscreen & Continue
             </button>
           </div>
         </div>
