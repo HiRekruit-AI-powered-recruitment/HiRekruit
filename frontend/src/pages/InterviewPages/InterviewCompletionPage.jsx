@@ -16,7 +16,7 @@ import {
   Clock,
 } from "lucide-react";
 
-import Loader from "../../components/Loader";
+import Loader from "../../components/Helper/Loader";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -427,18 +427,16 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("overall_experience", rating)
                   }
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
-                    feedbackData.overall_experience === rating
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${feedbackData.overall_experience === rating
                       ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   <Star
-                    className={`w-5 h-5 ${
-                      feedbackData.overall_experience >= rating
+                    className={`w-5 h-5 ${feedbackData.overall_experience >= rating
                         ? "fill-current"
                         : ""
-                    }`}
+                      }`}
                   />
                   <span className="font-semibold">{rating}</span>
                 </button>
@@ -468,11 +466,10 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("interview_difficulty", option.value)
                   }
-                  className={`px-4 py-3 rounded-xl border-3 transition-all transform hover:scale-105 font-semibold ${
-                    feedbackData.interview_difficulty === option.value
+                  className={`px-4 py-3 rounded-xl border-3 transition-all transform hover:scale-105 font-semibold ${feedbackData.interview_difficulty === option.value
                       ? "border-purple-600 bg-purple-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -493,18 +490,16 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("technical_relevance", rating)
                   }
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
-                    feedbackData.technical_relevance === rating
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${feedbackData.technical_relevance === rating
                       ? "border-blue-600 bg-blue-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   <Star
-                    className={`w-5 h-5 ${
-                      feedbackData.technical_relevance >= rating
+                    className={`w-5 h-5 ${feedbackData.technical_relevance >= rating
                         ? "fill-current"
                         : ""
-                    }`}
+                      }`}
                   />
                   <span className="font-semibold">{rating}</span>
                 </button>
@@ -525,18 +520,16 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("interviewer_behavior", rating)
                   }
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
-                    feedbackData.interviewer_behavior === rating
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${feedbackData.interviewer_behavior === rating
                       ? "border-green-600 bg-green-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   <Star
-                    className={`w-5 h-5 ${
-                      feedbackData.interviewer_behavior >= rating
+                    className={`w-5 h-5 ${feedbackData.interviewer_behavior >= rating
                         ? "fill-current"
                         : ""
-                    }`}
+                      }`}
                   />
                   <span className="font-semibold">{rating}</span>
                 </button>
@@ -557,18 +550,16 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("platform_usability", rating)
                   }
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${
-                    feedbackData.platform_usability === rating
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl border-3 transition-all transform hover:scale-105 ${feedbackData.platform_usability === rating
                       ? "border-orange-600 bg-orange-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   <Star
-                    className={`w-5 h-5 ${
-                      feedbackData.platform_usability >= rating
+                    className={`w-5 h-5 ${feedbackData.platform_usability >= rating
                         ? "fill-current"
                         : ""
-                    }`}
+                      }`}
                   />
                   <span className="font-semibold">{rating}</span>
                 </button>
@@ -593,11 +584,10 @@ const InterviewCompletionPage = () => {
                   onClick={() =>
                     handleFeedbackChange("would_recommend", option.value)
                   }
-                  className={`px-6 py-4 rounded-xl border-3 transition-all transform hover:scale-105 font-bold text-lg ${
-                    feedbackData.would_recommend === option.value
+                  className={`px-6 py-4 rounded-xl border-3 transition-all transform hover:scale-105 font-bold text-lg ${feedbackData.would_recommend === option.value
                       ? "border-indigo-600 bg-indigo-600 text-white shadow-lg"
                       : "border-gray-300 hover:border-gray-400 bg-white"
-                  }`}
+                    }`}
                 >
                   {option.label}
                 </button>

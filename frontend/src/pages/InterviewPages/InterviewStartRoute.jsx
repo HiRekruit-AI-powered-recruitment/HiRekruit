@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import Loader from "../../components/Loader";
+import Loader from "../../components/Helper/Loader";
 import TechnicalInterviewStartCard from "../../components/Technical rounds/TechnicalInterviewStartCard";
 import { getTechnicalInterviewPrompt } from "../../Prompts/TechnicalInterviewPrompt";
 import InterviewStartPage from "./InterviewStartPage";
@@ -168,9 +168,8 @@ function InterviewStartRoute() {
         console.warn("🛡️ Could not enter fullscreen:", fsErr.message);
       }
 
-      const identity = `candidate_${
-        userData.name?.replace(/\s+/g, "_").toLowerCase() || "user"
-      }`;
+      const identity = `candidate_${userData.name?.replace(/\s+/g, "_").toLowerCase() || "user"
+        }`;
       const prompt = getTechnicalInterviewPrompt(
         userData.resume_content,
         interviewType,

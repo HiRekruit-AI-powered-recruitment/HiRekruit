@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Search, FileText, ChevronDown, Download } from "lucide-react";
-import { useAuth } from "../Context/AuthContext.jsx";
+import { useAuth } from "../../Context/AuthContext.jsx";
 import { toast } from "react-hot-toast";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader.jsx";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -233,11 +233,10 @@ const ResumeLibrary = () => {
           <button
             onClick={() => fetchCandidatesByJob(searchJobId)}
             disabled={searchingByJob}
-            className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors ${
-              searchingByJob
+            className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors ${searchingByJob
                 ? "bg-gray-400 text-white cursor-not-allowed"
                 : "bg-gray-900 text-white hover:bg-black"
-            }`}
+              }`}
           >
             {searchingByJob ? "Searching..." : "Search"}
           </button>
@@ -373,11 +372,10 @@ const ResumeLibrary = () => {
                   <button
                     key={i}
                     onClick={() => setCurrentPage(i + 1)}
-                    className={`px-3 py-1 border rounded transition-colors ${
-                      currentPage === i + 1
+                    className={`px-3 py-1 border rounded transition-colors ${currentPage === i + 1
                         ? "bg-gray-900 text-white font-medium"
                         : "hover:bg-gray-50"
-                    }`}
+                      }`}
                   >
                     {i + 1}
                   </button>

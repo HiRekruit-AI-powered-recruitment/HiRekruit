@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from "../Context/AuthContext.jsx";
-import Loader from "./Loader";
+import { useAuth } from "../../Context/AuthContext.jsx";
+import Loader from "../Helper/Loader";
 import SkillFilter from "./SkillFilter";
 const VITE_BASE_URL = import.meta.env.VITE_BASE_URL;
 let BASE_URL = VITE_BASE_URL;
@@ -665,12 +665,12 @@ const JobCreation = () => {
 
       payload.technical_questions = manualTechnicalQuestionsText
         ? [
-            ...extractedTechnicalQuestions,
-            {
-              raw_question: manualTechnicalQuestionsText,
-              source_type: "manual",
-            },
-          ]
+          ...extractedTechnicalQuestions,
+          {
+            raw_question: manualTechnicalQuestionsText,
+            source_type: "manual",
+          },
+        ]
         : extractedTechnicalQuestions;
 
       // Clean up fields that shouldn't be in the JSON payload
@@ -902,7 +902,7 @@ const JobCreation = () => {
                 </div>
                 <div className="md:col-span-2">
                   {jobData.technical_questions?.length > 0 ||
-                  jobData.technical_questions_text?.trim() ? (
+                    jobData.technical_questions_text?.trim() ? (
                     <>
                       <strong>Technical Round Questions:</strong>
                       <div className="mt-1 text-sm text-gray-700 space-y-1">

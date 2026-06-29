@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useAuth } from "../Context/AuthContext.jsx";
+import { useAuth } from "../../Context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -11,7 +11,7 @@ import {
   MessageSquare,
   Send
 } from "lucide-react";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader.jsx";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -28,7 +28,7 @@ const Settings = () => {
     company: "",
     timezone: "UTC",
     language: "english",
-    
+
     // Feedback
     feedbackMessage: "",
   });
@@ -79,7 +79,7 @@ const Settings = () => {
       await axios.post(`${BASE_URL}/api/settings/feedback/submit`, payload, {
         headers: { "Content-Type": "application/json" }
       });
-      
+
       toast.success("Feedback submitted successfully. Thank you!");
       handleInputChange("feedbackMessage", ""); // clear message
     } catch (error) {

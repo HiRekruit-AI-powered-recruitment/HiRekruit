@@ -16,7 +16,7 @@ import {
   Clock,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader";
 
 const BaseURL = import.meta.env.VITE_BASE_URL;
 

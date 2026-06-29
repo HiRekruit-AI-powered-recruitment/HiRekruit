@@ -13,8 +13,8 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useAuth } from "../Context/AuthContext";
-import Loader from "../components/Loader";
+import { useAuth } from "../../Context/AuthContext";
+import Loader from "../Helper/Loader";
 
 const Profile = () => {
   const navigate = useNavigate();

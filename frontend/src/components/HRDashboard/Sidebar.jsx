@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNotificationContext } from "../Context/NotificationContext";
+import { useNotificationContext } from "../../Context/NotificationContext";
 import {
   Menu,
   X,
@@ -18,7 +18,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import logo from "../assets/HiRekruit.png";
+import logo from "../../assets/HiRekruit.png";
 
 const items = [
   {
@@ -84,18 +84,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               }}
               key={item.label}
               className={`w-full text-left px-4 py-3 text-sm flex items-center gap-3 transition-all duration-200 relative
-                ${
-                  isActive
-                    ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
-                    : "text-gray-600 hover:bg-gray-50"
+                ${isActive
+                  ? "text-gray-900 font-medium bg-gray-100 border-r-4 border-black"
+                  : "text-gray-600 hover:bg-gray-50"
                 }`}
               title={!isOpen ? item.label : ""}
             >
               <IconComponent size={20} className="flex-shrink-0" />
               <span
-                className={`transition-all duration-200 overflow-hidden ${
-                  isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
-                }`}
+                className={`transition-all duration-200 overflow-hidden ${isOpen ? "opacity-100 w-auto" : "opacity-0 w-0"
+                  }`}
               >
                 {item.label}
               </span>
@@ -103,9 +101,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
               {/* Notification Badge */}
               {showBadge && (
                 <span
-                  className={`absolute top-3 right-3 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-all duration-200 ${
-                    isOpen ? "scale-100" : "scale-90"
-                  }`}
+                  className={`absolute top-3 right-3 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center transition-all duration-200 ${isOpen ? "scale-100" : "scale-90"
+                    }`}
                 >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>

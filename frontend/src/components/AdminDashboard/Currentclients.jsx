@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Loader from "../Loader";
+import Loader from "../Helper/Loader";
 import { useUsers } from "../../Hooks/userHooks/useGetAllUsers";
 import { useGetAllDrives } from "../../Hooks/drives hooks/useGetAllDrives";
 import { useGetAllCandidates } from "../../Hooks/candidate hooks/useGetAllCandidates";
@@ -247,11 +247,10 @@ const CurrentClients = () => {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`px-3 py-1 border rounded ${
-                    currentPage === i + 1
+                  className={`px-3 py-1 border rounded ${currentPage === i + 1
                       ? "bg-blue-600 text-white border-blue-600"
                       : ""
-                  }`}
+                    }`}
                 >
                   {i + 1}
                 </button>

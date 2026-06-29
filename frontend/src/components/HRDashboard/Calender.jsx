@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../Context/AuthContext.jsx";
+import { useAuth } from "../../Context/AuthContext.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import {
@@ -17,7 +17,7 @@ import {
   Users,
   TrendingUp,
 } from "lucide-react";
-import Loader from "./Loader";
+import Loader from "../Helper/Loader.jsx";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -543,31 +543,28 @@ const Calendar = () => {
               <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode("month")}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    viewMode === "month"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === "month"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setViewMode("week")}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    viewMode === "week"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === "week"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   Week
                 </button>
                 <button
                   onClick={() => setViewMode("day")}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    viewMode === "day"
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${viewMode === "day"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
                 >
                   Day
                 </button>
@@ -622,15 +619,13 @@ const Calendar = () => {
                     <div
                       key={index}
                       onClick={() => hasDrives && handleDateClick(day.date)}
-                      className={`min-h-20 p-1.5 border rounded-md transition-all ${
-                        !day.isCurrentMonth
-                          ? "bg-gray-50 text-gray-400"
-                          : "bg-white"
-                      } ${isToday(day.date) ? "border-blue-500 border-2" : ""} ${
-                        hasDrives
+                      className={`min-h-20 p-1.5 border rounded-md transition-all ${!day.isCurrentMonth
+                        ? "bg-gray-50 text-gray-400"
+                        : "bg-white"
+                        } ${isToday(day.date) ? "border-blue-500 border-2" : ""} ${hasDrives
                           ? "cursor-pointer hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
                           : ""
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="text-xs font-medium">
@@ -675,11 +670,10 @@ const Calendar = () => {
                           {day}
                         </div>
                         <div
-                          className={`text-xs font-medium py-1 ${
-                            isToday(weekDay.date)
-                              ? "text-blue-600 font-bold"
-                              : "text-gray-900"
-                          }`}
+                          className={`text-xs font-medium py-1 ${isToday(weekDay.date)
+                            ? "text-blue-600 font-bold"
+                            : "text-gray-900"
+                            }`}
                         >
                           {weekDay.date.getDate()}
                         </div>
@@ -699,15 +693,13 @@ const Calendar = () => {
                     <div
                       key={index}
                       onClick={() => hasDrives && handleDateClick(day.date)}
-                      className={`min-h-32 p-2 border rounded-md transition-all ${
-                        !day.isCurrentMonth
-                          ? "bg-gray-50 text-gray-400"
-                          : "bg-white"
-                      } ${isToday(day.date) ? "border-blue-500 border-2" : ""} ${
-                        hasDrives
+                      className={`min-h-32 p-2 border rounded-md transition-all ${!day.isCurrentMonth
+                        ? "bg-gray-50 text-gray-400"
+                        : "bg-white"
+                        } ${isToday(day.date) ? "border-blue-500 border-2" : ""} ${hasDrives
                           ? "cursor-pointer hover:shadow-md hover:border-blue-300 hover:bg-blue-50"
                           : ""
-                      }`}
+                        }`}
                     >
                       {hasDrives && (
                         <div className="space-y-1">
@@ -839,11 +831,10 @@ const Calendar = () => {
                         </h4>
                       </div>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          drive.job_type === "full-time"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-purple-100 text-purple-700"
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${drive.job_type === "full-time"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-purple-100 text-purple-700"
+                          }`}
                       >
                         {drive.job_type === "full-time"
                           ? "Full-Time"
@@ -906,11 +897,10 @@ const Calendar = () => {
                   <button
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      currentPage === 1
-                        ? "text-gray-300 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={`p-1.5 rounded-md transition-colors ${currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-200"
+                      }`}
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -920,11 +910,10 @@ const Calendar = () => {
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className={`p-1.5 rounded-md transition-colors ${
-                      currentPage === totalPages
-                        ? "text-gray-300 cursor-not-allowed"
-                        : "text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={`p-1.5 rounded-md transition-colors ${currentPage === totalPages
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-700 hover:bg-gray-200"
+                      }`}
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

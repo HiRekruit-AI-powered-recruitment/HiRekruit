@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import PRESET_SKILLS from "../constants/skills.js";
+import PRESET_SKILLS from "../../constants/skills.js";
 
 const SkillFilter = ({ skills, setSkills }) => {
   const [query, setQuery] = useState("");

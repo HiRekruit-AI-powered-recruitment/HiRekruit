@@ -2,13 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Sun, Moon, Maximize } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Instructions from "./Instructions";
-import Sidebar from "../components/CodingAssessment/Sidebar";
-import Problem from "../components/CodingAssessment/Problem";
-import CodeEditor from "../components/CodingAssessment/CodeEditor";
-import Input from "../components/CodingAssessment/Input";
-import Output from "../components/CodingAssessment/Output";
+import Sidebar from "./Sidebar";
+import Problem from "./Problem";
+import CodeEditor from "./CodeEditor";
+import Input from "./Input";
+import Output from "./Output";
 import { useParams } from "react-router-dom";
-import Loader from "../components/Loader";
+import Loader from "../Helper/Loader";
 import { Clock, AlertCircle, Mail, Home, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -27,7 +27,7 @@ export default function Assessment() {
   const [driveId, setDriveId] = useState(null);
   const [candidateId, setCandidateId] = useState(null);
   const [deadline, setDeadline] = useState(null);
-  const [canStartTest,setCanStartTest] = useState(false);
+  const [canStartTest, setCanStartTest] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(3600);
   const [timerActive, setTimerActive] = useState(false);
   const [startTime, setStartTime] = useState(null);
@@ -103,7 +103,7 @@ export default function Assessment() {
   }, [timerActive, timeRemaining]);
 
   useEffect(() => {
-    if ( problems.length === 0) {
+    if (problems.length === 0) {
       fetchProblems();
     }
   }, [assessmentStarted]);
@@ -251,7 +251,7 @@ export default function Assessment() {
       // Final time is the SHORTER of the two
       // (You get your 1 hour, UNLESS the round ends in 10 minutes)
       const finalTime = Math.min(allocatedSeconds, secondsUntilRoundEnd);
-      
+
       setTimeRemaining(finalTime);
       setAssessmentDurationMinutes(Math.ceil(allocatedSeconds / 60));
       setCanStartTest(true);
@@ -259,7 +259,7 @@ export default function Assessment() {
       // 4. Fetch Problems
       const questionsResponse = await fetch(`${BASE_URL}/api/coding-assessment/problem?drive_id=${drive_id}`);
       if (!questionsResponse.ok) throw new Error("Failed to fetch coding questions");
-      
+
       const questions = await questionsResponse.json();
       const transformedQuestions = questions.map((q, index) => ({
         _id: q._id,
@@ -268,16 +268,16 @@ export default function Assessment() {
         title: q.title,
         description: q.description,
         constraints: q.constraints,
-        testCases: q.test_cases.filter((tc) => tc.type === "public") 
+        testCases: q.test_cases.filter((tc) => tc.type === "public")
           .map((tc) => ({ input: tc.input, output: tc.output })),
-        allTestCasesMetadata: q.test_cases.map(tc => tc.type), 
+        allTestCasesMetadata: q.test_cases.map(tc => tc.type),
         difficulty: q.difficulty,
         tags: q.tags,
       }));
-      
+
       setProblems(transformedQuestions);
       setSelectedProblem(transformedQuestions[0]);
-      
+
       const initialCode = {};
       transformedQuestions.forEach((problem) => {
         initialCode[problem._id] = getDefaultCode(language);
@@ -363,34 +363,34 @@ export default function Assessment() {
 
       const testCaseTypes = selectedProblem.allTestCasesMetadata || [];
       const filteredResults = data.results.map((res, idx) => {
-      // Check metadata by index since backend doesn't provide the 'type' in results
-      const isPrivate = testCaseTypes[idx] === 'private';
+        // Check metadata by index since backend doesn't provide the 'type' in results
+        const isPrivate = testCaseTypes[idx] === 'private';
 
-      if (isPrivate) {
+        if (isPrivate) {
+          return {
+            ...res,
+            type: 'private',     // Inject the type for Output.js to use
+            stdin: "[Hidden]",    // Mask the input
+            expected: "[Hidden]", // Mask the expected output
+            stdout: res.status?.id === 3 ? "[Hidden]" : "Hidden case failed",
+            stderr: res.stderr ? "Error in hidden case" : null
+          };
+        }
+
         return {
           ...res,
-          type: 'private',     // Inject the type for Output.js to use
-          stdin: "[Hidden]",    // Mask the input
-          expected: "[Hidden]", // Mask the expected output
-          stdout: res.status?.id === 3 ? "[Hidden]" : "Hidden case failed",
-          stderr: res.stderr ? "Error in hidden case" : null
+          type: 'public' // Mark as public for Output.js
         };
-      }
-      
-      return {
-        ...res,
-        type: 'public' // Mark as public for Output.js
-      };
-    });
+      });
 
-    setProblemStatus((prev) => ({
-      ...prev,
-      [selectedProblem._id]: {
-        result: data.result,
-        testCasesPassed: data.test_cases_passed,
-        totalTestCases: data.total_test_cases,
-      },
-    }));
+      setProblemStatus((prev) => ({
+        ...prev,
+        [selectedProblem._id]: {
+          result: data.result,
+          testCasesPassed: data.test_cases_passed,
+          totalTestCases: data.total_test_cases,
+        },
+      }));
 
 
 
@@ -556,14 +556,14 @@ export default function Assessment() {
   }
 
 
- if (canStartTest === false) {
-  return (
-    <AssessmentBlocked 
-      darkMode={darkMode} 
-      error={error} 
-    />
-  );
-}
+  if (canStartTest === false) {
+    return (
+      <AssessmentBlocked
+        darkMode={darkMode}
+        error={error}
+      />
+    );
+  }
 
   if (error) {
     return (
@@ -670,8 +670,8 @@ export default function Assessment() {
                     timeRemaining < 300
                       ? "#fef2f2"
                       : darkMode
-                      ? "#1a1a1a"
-                      : "#fafafa",
+                        ? "#1a1a1a"
+                        : "#fafafa",
                   borderRadius: "6px",
                   fontWeight: "700",
                   fontSize: "16px",
@@ -680,11 +680,10 @@ export default function Assessment() {
                     timeRemaining < 300
                       ? "#dc2626"
                       : darkMode
-                      ? "#e0e0e0"
-                      : "#000000",
-                  border: `1px solid ${
-                    timeRemaining < 300 ? "#dc2626" : borderColor
-                  }`,
+                        ? "#e0e0e0"
+                        : "#000000",
+                  border: `1px solid ${timeRemaining < 300 ? "#dc2626" : borderColor
+                    }`,
                 }}
               >
                 {formatTime(timeRemaining)}
@@ -908,7 +907,7 @@ export default function Assessment() {
                     flexDirection: "column",
                   }}
                 >
-                  
+
                   <Output output={output} darkMode={darkMode} />
                 </div>
               </div>
@@ -1028,12 +1027,11 @@ export default function Assessment() {
 const AssessmentBlocked = ({ error, darkMode }) => {
   return (
     <div className={`min-h-screen flex items-center justify-center p-6 ${darkMode ? 'bg-[#0d0d0d]' : 'bg-slate-50'}`}>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border ${
-          darkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-slate-200'
-        }`}
+        className={`max-w-md w-full rounded-2xl shadow-2xl overflow-hidden border ${darkMode ? 'bg-[#1a1a1a] border-white/10' : 'bg-white border-slate-200'
+          }`}
       >
         {/* Top Banner with Icon */}
         <div className={`h-32 flex items-center justify-center ${darkMode ? 'bg-red-950/30' : 'bg-red-50'}`}>
@@ -1047,28 +1045,27 @@ const AssessmentBlocked = ({ error, darkMode }) => {
           <h1 className={`text-2xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
             Access Restricted
           </h1>
-          
+
           <p className={`text-sm leading-relaxed mb-8 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
             {error || "It looks like the assessment deadline has passed or has not been scheduled yet. Please reach out to your HR coordinator for further instructions."}
           </p>
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => window.location.href = "mailto:hr@company.com"} // Replace with dynamic email
               className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-black hover:bg-slate-800 text-white rounded-xl font-semibold transition-all active:scale-95"
             >
               <Mail size={18} />
               Contact HR Support
             </button>
-            
-            <button 
+
+            <button
               onClick={() => window.history.back()}
-              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all border ${
-                darkMode 
-                ? 'border-white/10 text-white hover:bg-white/5' 
+              className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-semibold transition-all border ${darkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
                 : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+                }`}
             >
               <ArrowLeft size={18} />
               Go Back
