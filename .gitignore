@@ -12,3 +12,4 @@ uploads/
 venv/
 .cache/
 .venv/
+temp_files/
