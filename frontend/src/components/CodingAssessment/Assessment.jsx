@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Sun, Moon, Maximize } from "lucide-react";
+import { Sun, Moon, Maximize, Camera, CameraOff, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Instructions from "./Instructions";
 import Sidebar from "./Sidebar";
@@ -11,6 +11,9 @@ import { useParams } from "react-router-dom";
 import Loader from "../Helper/Loader";
 import { Clock, AlertCircle, Mail, Home, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import useAIProctoring from "../../Hooks/CodingAssessmentHooks/useAIProctoring";
+import useAudioProctoring from "../../Hooks/CodingAssessmentHooks/useAudioProctoring";
+import AIProctoringOverlay from "./AIProctoringOverlay";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
 export default function Assessment() {
@@ -56,6 +59,9 @@ export default function Assessment() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [warningCount, setWarningCount] = useState(0);
   const warningCountRef = useRef(0);
+  const [violationMessage, setViolationMessage] = useState("");
+  const [violationType, setViolationType] = useState("");
+  const videoRef = useRef(null);
   const cooldownRef = useRef(0); // prevents double-fire from blur+visibilitychange
 
   const containerRef = useRef(null);
@@ -115,8 +121,8 @@ export default function Assessment() {
     }
   }, [assessmentStarted]);
 
-  // 🛡️ Proctoring: handle a violation (fullscreen exit, tab switch, window blur)
-  const handleProctoringViolation = (type) => {
+  // 🛡️ Proctoring: handle a violation (fullscreen exit, tab switch, window blur, AI detections)
+  const handleProctoringViolation = (type, message) => {
     if (!assessmentStarted || isSubmitting) return;
 
     // Cooldown: prevent blur + visibilitychange from double-firing
@@ -124,13 +130,23 @@ export default function Assessment() {
     if (now < cooldownRef.current) return;
     cooldownRef.current = now + 3000;
 
+    // Default messages for browser-level violations
+    const defaultMessages = {
+      fullscreen_exit: "You exited fullscreen mode. Please stay in fullscreen during the assessment.",
+      tab_switch: "You switched away from the assessment tab. Please stay on the assessment page.",
+      window_blur: "You moved away from the assessment window. Please stay focused on the assessment.",
+    };
+    const violationMsg = message || defaultMessages[type] || "Suspicious activity detected.";
+
     const currentCount = warningCountRef.current;
 
     if (currentCount === 0) {
-      // First violation → show warning
-      console.warn(`🛡️ Assessment Proctoring [WARNING]: ${type}`);
+      // First violation → show warning with specific reason
+      console.warn(`🛡️ Assessment Proctoring [WARNING]: ${type} — ${violationMsg}`);
       warningCountRef.current = 1;
       setWarningCount(1);
+      setViolationMessage(violationMsg);
+      setViolationType(type);
       setShowFullscreenModal(true);
     } else {
       // Second violation → auto-submit
@@ -141,6 +157,38 @@ export default function Assessment() {
       handleFinalSubmit();
     }
   };
+
+  // 🤖 AI Proctoring: Guard 1 — TensorFlow.js browser-side detection
+  const {
+    isModelLoading,
+    modelError,
+    faceCount,
+    isLookingAway,
+    detectionStatus,
+    cameraBlocked,
+    firstDetectionDone,
+    modelsReady,
+  } = useAIProctoring({
+    enabled: true,
+    assessmentStarted,
+    onViolation: handleProctoringViolation,
+    videoRef,
+  });
+
+  // 🎤 Audio Proctoring: Modular browser-side voice detection
+  const {
+    isAudioReady,
+    currentVolume,
+    isTalkingDetected,
+    audioBlocked,
+  } = useAudioProctoring({
+    enabled: true,
+    assessmentStarted,
+    onViolation: handleProctoringViolation,
+  });
+
+  // AI proctoring is ready when both face models + audio are initialized
+  const isAIReady = modelsReady && isAudioReady;
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -539,20 +587,132 @@ export default function Assessment() {
     };
   }, [isInputOutputDragging]);
 
+  // 🎥 Video element for AI proctoring — ALWAYS in DOM (off-screen)
+  // This must render before early returns so videoRef is available to the hook
+  const videoElement = (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      width={640}
+      height={480}
+      style={{
+        position: "fixed",
+        bottom: "0px",
+        right: "0px",
+        width: "1px",
+        height: "1px",
+        opacity: 0.01,
+        pointerEvents: "none",
+        overflow: "hidden",
+      }}
+    />
+  );
+
+  // 🤖 Camera or mic access denied → block the assessment entirely
+  if (cameraBlocked || audioBlocked) {
+    return (
+      <>
+        {videoElement}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+            backgroundColor: darkMode ? "#0d0d0d" : "#f8fafc",
+            fontFamily: "system-ui, -apple-system, sans-serif",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: "440px",
+              textAlign: "center",
+              padding: "48px 32px",
+              backgroundColor: darkMode ? "#1a1a1a" : "#ffffff",
+              borderRadius: "20px",
+              border: `2px solid ${darkMode ? "#7f1d1d" : "#fecaca"}`,
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
+            }}
+          >
+            <div
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "50%",
+                backgroundColor: darkMode ? "#7f1d1d30" : "#fef2f2",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 24px",
+              }}
+            >
+              <CameraOff size={36} color="#ef4444" />
+            </div>
+            <h2
+              style={{
+                fontSize: "22px",
+                fontWeight: "700",
+                color: darkMode ? "#f5f5f5" : "#111",
+                marginBottom: "12px",
+              }}
+            >
+              {cameraBlocked ? "Camera" : "Microphone"} Access Required
+            </h2>
+            <p
+              style={{
+                fontSize: "15px",
+                lineHeight: "1.6",
+                color: darkMode ? "#999" : "#666",
+                marginBottom: "28px",
+              }}
+            >
+              This assessment requires camera and microphone access for proctoring.
+              Please allow permissions in your browser settings and reload the page.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: "14px 32px",
+                backgroundColor: "#ef4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: "12px",
+                cursor: "pointer",
+                fontSize: "15px",
+                fontWeight: "600",
+                transition: "background-color 0.2s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#dc2626")}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#ef4444")}
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (!assessmentStarted) {
     console.log(problems.length);
     return (
-      <Instructions
-        onStartAssessment={handleStartAssessment}
-        darkMode={darkMode}
-        totalQuestions={problems.length}
-        timeLimit={assessmentDurationMinutes}
-      />
+      <>
+        {videoElement}
+        <Instructions
+          onStartAssessment={handleStartAssessment}
+          darkMode={darkMode}
+          totalQuestions={problems.length}
+          timeLimit={assessmentDurationMinutes}
+          isAIReady={isAIReady}
+        />
+      </>
     );
   }
 
   if (loading) {
-    return <Loader />;
+    return <>{videoElement}<Loader /></>;
   }
 
 
@@ -622,6 +782,7 @@ export default function Assessment() {
 
   return (
     <>
+      {videoElement}
       <div
         style={{
           display: "flex",
@@ -916,7 +1077,23 @@ export default function Assessment() {
         </div>
       </div>
 
-      {/* Fullscreen Exit Modal */}
+      {/* 🤖 AI Proctoring: top-center floating status bar */}
+      {assessmentStarted && (
+        <AIProctoringOverlay
+          videoRef={videoRef}
+          detectionStatus={detectionStatus}
+          faceCount={faceCount}
+          isLookingAway={isLookingAway}
+          isModelLoading={isModelLoading}
+          firstDetectionDone={firstDetectionDone}
+          isAudioReady={isAudioReady}
+          isTalkingDetected={isTalkingDetected}
+          currentVolume={currentVolume}
+          audioBlocked={audioBlocked}
+        />
+      )}
+
+      {/* Proctoring Violation Warning Modal */}
       {showFullscreenModal && (
         <div
           style={{
@@ -936,23 +1113,25 @@ export default function Assessment() {
             style={{
               backgroundColor: darkMode ? "#1a1a1a" : "#ffffff",
               padding: "40px",
-              borderRadius: "12px",
-              maxWidth: "450px",
+              borderRadius: "16px",
+              maxWidth: "480px",
+              width: "90%",
               textAlign: "center",
-              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.3)",
+              boxShadow: "0 20px 50px rgba(0, 0, 0, 0.4)",
+              border: `2px solid ${darkMode ? "#7f1d1d" : "#fecaca"}`,
             }}
           >
-            <Maximize
+            <ShieldAlert
               size={56}
               style={{
                 color: "#ef4444",
                 marginBottom: "20px",
-                strokeWidth: 2,
+                strokeWidth: 1.8,
               }}
             />
             <h2
               style={{
-                marginBottom: "16px",
+                marginBottom: "8px",
                 fontSize: "22px",
                 fontWeight: "700",
                 color: darkMode ? "#e0e0e0" : "#000000",
@@ -962,34 +1141,56 @@ export default function Assessment() {
             </h2>
             <p
               style={{
-                marginBottom: "16px",
-                color: darkMode ? "#999" : "#666",
-                lineHeight: "1.6",
-                fontSize: "15px",
+                marginBottom: "6px",
+                fontSize: "12px",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: darkMode ? "#f87171" : "#dc2626",
               }}
             >
-              You must remain in fullscreen mode during the assessment for
-              security purposes. Do not switch tabs, minimize, or exit fullscreen.
+              {violationType.replace(/_/g, " ")}
             </p>
+
+            {/* Specific violation reason */}
+            <div
+              style={{
+                marginBottom: "16px",
+                padding: "14px 18px",
+                backgroundColor: darkMode ? "#1e1e2e" : "#f8fafc",
+                border: `1px solid ${darkMode ? "#333" : "#e2e8f0"}`,
+                borderRadius: "10px",
+                color: darkMode ? "#d1d5db" : "#374151",
+                fontSize: "15px",
+                lineHeight: "1.6",
+                textAlign: "left",
+              }}
+            >
+              {violationMessage}
+            </div>
+
+            {/* Next-time auto-submit warning */}
             <div
               style={{
                 marginBottom: "28px",
                 padding: "12px 16px",
                 backgroundColor: darkMode ? "#3b1a1a" : "#fef2f2",
                 border: `1px solid ${darkMode ? "#7f1d1d" : "#fecaca"}`,
-                borderRadius: "8px",
+                borderRadius: "10px",
                 color: darkMode ? "#fca5a5" : "#dc2626",
                 fontSize: "14px",
                 fontWeight: "600",
                 lineHeight: "1.5",
               }}
             >
-              ⛔ If you switch tabs, minimize, or exit fullscreen again, your
-              assessment will be automatically submitted.
+              ⛔ If another violation is detected, your assessment will be
+              automatically submitted.
             </div>
             <button
               onClick={() => {
                 setShowFullscreenModal(false);
+                setViolationMessage("");
+                setViolationType("");
                 enterFullscreen();
               }}
               style={{
@@ -997,11 +1198,12 @@ export default function Assessment() {
                 backgroundColor: "#ef4444",
                 color: "#fff",
                 border: "none",
-                borderRadius: "8px",
+                borderRadius: "10px",
                 cursor: "pointer",
                 fontSize: "16px",
                 fontWeight: "600",
-                transition: "background-color 0.2s",
+                transition: "all 0.2s",
+                width: "100%",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = "#dc2626";
@@ -1010,7 +1212,7 @@ export default function Assessment() {
                 e.currentTarget.style.backgroundColor = "#ef4444";
               }}
             >
-              Return to Fullscreen & Continue
+              I Understand — Continue Assessment
             </button>
           </div>
         </div>
