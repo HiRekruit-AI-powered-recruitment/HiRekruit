@@ -30,3 +30,27 @@ def download(candidate_id):
 @resume_bp.route('/api/drives/candidates-summary', methods=['GET'])
 def get_drives_candidates_summary():
     return get_all_drives_candidates_controller()
+
+# Temporary route 
+@resume_bp.route('/debug-drive-candidates', methods=['GET'])
+def debug_drive_candidates():
+    from src.Utils.Database import db
+
+    data = list(db["drive_candidates"].find().limit(5))
+
+    for item in data:
+        item["_id"] = str(item["_id"])
+
+    return {"data": data}
+
+# Temporary checking @resume_bp.route('/debug-drives', methods=['GET'])
+@resume_bp.route('/debug-drives', methods=['GET'])
+def debug_drives():
+    from src.Utils.Database import db
+
+    drives = list(db["drives"].find().limit(5))
+
+    for drive in drives:
+        drive["_id"] = str(drive["_id"])
+
+    return {"data": drives}

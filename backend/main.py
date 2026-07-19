@@ -85,3 +85,5 @@ if __name__ == "__main__":
     debug = os.environ.get("FLASK_ENV") == "development"
     print(f"Flask server started on port {port} (with SocketIO)")
     socketio.run(app, host="0.0.0.0", port=port, debug=debug)
+
+print(app.url_map)

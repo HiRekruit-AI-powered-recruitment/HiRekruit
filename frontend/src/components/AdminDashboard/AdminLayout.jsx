@@ -3,10 +3,36 @@ import AdminSidebar from "./AdminSidebar";
 import { Link } from "react-router-dom";
 import { Bell, User, LogOut } from "lucide-react";
 import logo from "../../assets/HiRekruit.png";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const AdminLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+
+      const response = await axios.post(
+        `${baseUrl}/api/auth/logout`,
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+
+      console.log("Logout Response:", response.data);
+
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+
+      navigate("/signin");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -14,9 +40,8 @@ const AdminLayout = ({ children }) => {
 
       {/* Main content */}
       <div
-        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? "ml-56" : "ml-16"
-        }`}
+        className={`flex-1 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? "ml-56" : "ml-16"
+          }`}
       >
         <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200">
           <div className="px-6 py-4 flex items-center justify-between">
@@ -71,7 +96,7 @@ const AdminLayout = ({ children }) => {
                     <button
                       onClick={() => {
                         setShowProfileMenu(false);
-                        // Add logout logic here
+                        handleLogout();
                       }}
                       className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
