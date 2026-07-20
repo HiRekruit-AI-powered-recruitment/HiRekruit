@@ -1,12 +1,14 @@
-import { CheckCircle, AlertCircle, Clock, Code, Award } from "lucide-react";
+import { CheckCircle, AlertCircle, Clock, Code, Award, ShieldCheck } from "lucide-react";
 
 export default function Instructions({
   onStartAssessment,
   darkMode,
   totalQuestions = 3,
   timeLimit = 60,
+  isAIReady = false,
 }) {
   const handleStartClick = () => {
+    if (!isAIReady) return;
     console.log("Start button clicked");
     if (typeof onStartAssessment === "function") {
       onStartAssessment();
@@ -115,113 +117,43 @@ export default function Instructions({
             <div
               style={{ display: "flex", flexDirection: "column", gap: "16px" }}
             >
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
+              {[
+                { icon: "Code", title: "Real Coding Problems", desc: "Multiple test cases validation" },
+                { icon: "Clock", title: "Timed Challenge", desc: `${timeLimit} minutes to complete` },
+                { icon: "CheckCircle", title: "Instant Feedback", desc: "Immediate test case results" },
+                { icon: "Award", title: "Auto-graded", desc: "Automated evaluation system" },
+              ].map((feature, idx) => (
                 <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "8px",
-                    backgroundColor: "#f5f5f5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
+                  key={idx}
+                  style={{ display: "flex", gap: "12px", alignItems: "center" }}
                 >
-                  <Code size={20} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: "600", fontSize: "15px" }}>
-                    Real Coding Problems
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "8px",
+                      backgroundColor: "#f5f5f5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {idx === 0 && <Code size={20} />}
+                    {idx === 1 && <Clock size={20} />}
+                    {idx === 2 && <CheckCircle size={20} />}
+                    {idx === 3 && <Award size={20} />}
                   </div>
-                  <div style={{ fontSize: "14px", color: "#666666" }}>
-                    Multiple test cases validation
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "8px",
-                    backgroundColor: "#f5f5f5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Clock size={20} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: "600", fontSize: "15px" }}>
-                    Timed Challenge
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#666666" }}>
-                    {timeLimit} minutes to complete
+                  <div>
+                    <div style={{ fontWeight: "600", fontSize: "15px" }}>
+                      {feature.title}
+                    </div>
+                    <div style={{ fontSize: "14px", color: "#666666" }}>
+                      {feature.desc}
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "8px",
-                    backgroundColor: "#f5f5f5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <CheckCircle size={20} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: "600", fontSize: "15px" }}>
-                    Instant Feedback
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#666666" }}>
-                    Immediate test case results
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                <div
-                  style={{
-                    width: "40px",
-                    height: "40px",
-                    borderRadius: "8px",
-                    backgroundColor: "#f5f5f5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Award size={20} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: "600", fontSize: "15px" }}>
-                    Auto-graded
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#666666" }}>
-                    Automated evaluation system
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
 
@@ -366,7 +298,7 @@ export default function Instructions({
                 border: "1px solid #fbbf24",
                 display: "flex",
                 gap: "10px",
-                marginBottom: "28px",
+                marginBottom: "16px",
               }}
             >
               <AlertCircle
@@ -396,32 +328,78 @@ export default function Instructions({
               </div>
             </div>
 
+            {/* Proctoring Note */}
+            <div
+              style={{
+                padding: "14px",
+                backgroundColor: "#f0f9ff",
+                borderRadius: "8px",
+                border: "1px solid #7dd3fc",
+                display: "flex",
+                gap: "10px",
+                marginBottom: "28px",
+              }}
+            >
+              <ShieldCheck
+                size={18}
+                style={{ marginTop: "2px", flexShrink: 0, color: "#0ea5e9" }}
+              />
+              <div>
+                <div
+                  style={{
+                    fontWeight: "600",
+                    marginBottom: "4px",
+                    fontSize: "13px",
+                    color: "#0c4a6e",
+                  }}
+                >
+                  AI Proctoring Enabled
+                </div>
+                <div
+                  style={{
+                    fontSize: "13px",
+                    color: "#666666",
+                    lineHeight: "1.5",
+                  }}
+                >
+                  Camera and microphone access are required. Stay visible, face
+                  the screen, and remain silent during the assessment.
+                </div>
+              </div>
+            </div>
+
             {/* Start Button */}
             <button
               onClick={handleStartClick}
               type="button"
+              disabled={!isAIReady}
               style={{
                 padding: "16px 32px",
-                backgroundColor: "#000000",
+                backgroundColor: isAIReady ? "#000000" : "#999999",
                 color: "#ffffff",
                 border: "none",
                 borderRadius: "10px",
                 fontSize: "16px",
                 fontWeight: "600",
-                cursor: "pointer",
+                cursor: isAIReady ? "pointer" : "not-allowed",
                 transition: "all 0.2s",
                 width: "100%",
+                opacity: isAIReady ? 1 : 0.7,
               }}
               onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#333333";
-                e.target.style.transform = "translateY(-2px)";
+                if (isAIReady) {
+                  e.target.style.backgroundColor = "#333333";
+                  e.target.style.transform = "translateY(-2px)";
+                }
               }}
               onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "#000000";
-                e.target.style.transform = "translateY(0)";
+                if (isAIReady) {
+                  e.target.style.backgroundColor = "#000000";
+                  e.target.style.transform = "translateY(0)";
+                }
               }}
             >
-              Start Assessment →
+              {isAIReady ? "Start Assessment →" : "⏳ Preparing..."}
             </button>
 
             <div
@@ -432,7 +410,7 @@ export default function Instructions({
                 textAlign: "center",
               }}
             >
-              Good luck! 🚀
+              {isAIReady ? "Good luck! 🚀" : "Camera & AI models loading..."}
             </div>
           </div>
         </div>
