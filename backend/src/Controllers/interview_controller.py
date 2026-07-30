@@ -143,16 +143,46 @@ def evaluate_interview_controller(resume_text, transcript, driveCandidateId, int
 
 def get_candidate_info(drive_candidate_id):
     try:
-        # here we fetch drive_candidate using drive_candidate_id
-        drive_candidate = db.drive_candidates.find_one({"_id": ObjectId(drive_candidate_id)}, {"_id": 0})
-        # we need the candidte details as well
-        candidate_info = db.candidates.find_one({"_id": ObjectId(drive_candidate['candidate_id'])}, {"_id": 0, "password": 0})
-        drive_candidate['candidate_info'] = candidate_info
-        if not drive_candidate:
-            return jsonify({"error": "Drive Candidate not found"}), 404
-        return jsonify(drive_candidate), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
-    
+        print("Fetching candidate:", drive_candidate_id)
 
+        # Fetch drive candidate
+        drive_candidate = db.drive_candidates.find_one(
+            {"_id": ObjectId(drive_candidate_id)}
+        )
+
+        if not drive_candidate:
+            return jsonify({
+                "error": "Drive Candidate not found"
+            }), 404
+
+
+        # Fetch candidate details
+        candidate_info = db.candidates.find_one(
+            {"_id": ObjectId(drive_candidate["candidate_id"])},
+            {"password": 0}
+        )
+
+
+        # Convert ObjectId to string
+        drive_candidate["_id"] = str(drive_candidate["_id"])
+
+        if "candidate_id" in drive_candidate:
+            drive_candidate["candidate_id"] = str(
+                drive_candidate["candidate_id"]
+            )
+
+
+        if candidate_info:
+            candidate_info["_id"] = str(candidate_info["_id"])
+
+            drive_candidate["candidate_info"] = candidate_info
+
+
+        return jsonify(drive_candidate), 200
+
+
+    except Exception as e:
+        print("ERROR IN get_candidate_info:", e)
+        return jsonify({
+            "error": str(e)
+        }), 500

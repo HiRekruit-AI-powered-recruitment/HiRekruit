@@ -270,10 +270,10 @@ isReady =
 isReady =
   dependencyStates.completionCheck &&
   dependencyStates.livekit &&
-  dependencyStates.vapi &&
+  dependencyStates.sarvam&&
   dependencyStates.permissions &&
   dependencyStates.videoElement &&
-  dependencyStates.vapiAudio;
+  dependencyStates.sarvamAudio;
 ```
 
 ---
