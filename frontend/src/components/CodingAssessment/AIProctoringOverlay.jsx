@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { CameraOff, Loader, Mic, MicOff } from "lucide-react";
+import { CameraOff, Loader, Mic, MicOff, Wifi, WifiOff } from "lucide-react";
 
 /**
  * AIProctoringOverlay — Floating proctoring status bar at top-center.
@@ -21,6 +21,10 @@ const AIProctoringOverlay = ({
   isTalkingDetected = false,
   currentVolume = 0,
   audioBlocked = false,
+  // Guard 2 (Server) props
+  serverActive = false,
+  isServerConnected = false,
+  lastAnalysis = null,
 }) => {
   const canvasRef = useRef(null);
   const animFrameRef = useRef(null);
@@ -102,6 +106,24 @@ const AIProctoringOverlay = ({
   } else {
     audioDotColor = "#22c55e";
     audioStatusText = "Audio OK";
+  }
+
+  // ── Guard 2 (Server) status ──
+  let serverDotColor = "#6b7280";
+  let serverStatusText = "Server";
+
+  if (!isServerConnected) {
+    serverDotColor = "#6b7280";
+    serverStatusText = "Offline";
+  } else if (!serverActive) {
+    serverDotColor = "#eab308";
+    serverStatusText = "Connecting";
+  } else if (lastAnalysis?.is_violation) {
+    serverDotColor = "#ef4444";
+    serverStatusText = "Alert!";
+  } else {
+    serverDotColor = "#22c55e";
+    serverStatusText = "Server OK";
   }
 
   if (detectionStatus === "disabled") return null;
@@ -223,6 +245,31 @@ const AIProctoringOverlay = ({
 
         <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
           {audioStatusText}
+        </span>
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: "1px", height: "28px", backgroundColor: "rgba(255,255,255,0.12)" }} />
+
+      {/* Guard 2 — Server status */}
+      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        {isServerConnected ? (
+          <Wifi size={13} color={serverActive ? "rgba(255,255,255,0.6)" : "#eab308"} />
+        ) : (
+          <WifiOff size={13} color="#6b7280" />
+        )}
+        <div
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            backgroundColor: serverDotColor,
+            boxShadow: `0 0 6px ${serverDotColor}80`,
+            transition: "background-color 0.3s",
+          }}
+        />
+        <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.8)", whiteSpace: "nowrap" }}>
+          {serverStatusText}
         </span>
       </div>
 

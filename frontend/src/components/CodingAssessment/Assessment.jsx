@@ -13,6 +13,7 @@ import { Clock, AlertCircle, Mail, Home, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import useAIProctoring from "../../Hooks/CodingAssessmentHooks/useAIProctoring";
 import useAudioProctoring from "../../Hooks/CodingAssessmentHooks/useAudioProctoring";
+import useServerProctoring from "../../Hooks/CodingAssessmentHooks/useServerProctoring";
 import AIProctoringOverlay from "./AIProctoringOverlay";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -185,6 +186,20 @@ export default function Assessment() {
     enabled: true,
     assessmentStarted,
     onViolation: handleProctoringViolation,
+  });
+
+  // 🧠 Server Proctoring: Guard 2 — Groq Vision + Whisper on server
+  const {
+    serverActive,
+    lastAnalysis,
+    isConnected: isServerConnected,
+  } = useServerProctoring({
+    enabled: true,
+    assessmentStarted,
+    onViolation: handleProctoringViolation,
+    videoRef,
+    candidateId: candidateId || routeCandidateId || "",
+    driveId: driveId || routeDriveId || "",
   });
 
   // AI proctoring is ready when both face models + audio are initialized
@@ -1090,6 +1105,9 @@ export default function Assessment() {
           isTalkingDetected={isTalkingDetected}
           currentVolume={currentVolume}
           audioBlocked={audioBlocked}
+          serverActive={serverActive}
+          isServerConnected={isServerConnected}
+          lastAnalysis={lastAnalysis}
         />
       )}
 
